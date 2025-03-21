@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import API from "../../utils/api";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AiOutlineEye, AiOutlineEyeInvisible, AiFillExclamationCircle } from "react-icons/ai";
 
 // Add this CSS before the component
@@ -30,9 +30,17 @@ export default function Login() {
   const [showRepeatPassword, setShowRepeatPassword] = useState(false);
 
   //reset password
-  const [isResetPassword, setIsResetPassword] = useState(false);
-  const [resetToken, setResetToken] = useState('');
+  const searchParams = useSearchParams();
+  const [isResetPassword, setIsResetPassword] = useState(!!searchParams.get('isReset'));
+  const token = searchParams.get('token');
+  const email = searchParams.get('email');
   const [emailReset, setEmailReset] = useState('');
+  const isReset = searchParams.get('isReset');
+
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -41,11 +49,9 @@ export default function Login() {
 
   const resetFormFields = () => {
     setFormData({ email: "", password: "", username: "", repeatPassword: "" });
-    setResetToken('');
-    // setNewPassword('');
+    // setResetToken('');
     setShowPassword(false);
     setShowRepeatPassword(false);
-    // setShowNewPassword(false);
     setErrorMessage('');
   };
 
@@ -70,6 +76,35 @@ export default function Login() {
     } catch (error: any) {
       console.error('Reset Error:', error);
       setErrorMessage(error.response?.data?.message || 'Password reset email could not be sent.');
+    }
+  };
+
+  const handlePasswordResetSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mounted) return;
+
+    try {
+      if (newPassword !== confirmNewPassword) {
+        setErrorMessage('Passwords do not match');
+        return;
+      }
+
+      if (newPassword.length < 8 || /\s/.test(newPassword)) {
+        setErrorMessage('Password must be at least 8 characters long and cannot contain spaces');
+        return;
+      }
+
+      setErrorMessage('');
+      const { data } = await API.post('/reset-password/verify', {
+        email,
+        token,
+        newPassword
+      });
+      alert('Password reset successful!');
+      router.push('/');
+    } catch (error: any) {
+      console.error('Reset Error:', error);
+      setErrorMessage(error.response?.data?.message || 'Password reset failed');
     }
   };
 
@@ -126,8 +161,8 @@ export default function Login() {
           <img src="/metatown.png" alt="Metatown" width={250} height={150} className="absolute z-99 top-10 mx-auto md:pt-12 md:pr-24 md:top-0 md:right-0"/>
 
           {/* Update both form containers with animation */}
-          {isResetPassword ? (
-            <form onSubmit={handleResetPassword} className="flex flex-col gap-4 w-full max-w-sm p-6 rounded-lg shadow-lg bg-white hover:shadow-2xl transition-all duration-300 " style={{ animation: 'float 3s ease-in-out infinite' }}>
+          {isReset ? (
+            <form onSubmit={handlePasswordResetSubmit} className="flex flex-col gap-4 w-full max-w-sm p-6 rounded-lg shadow-lg bg-white hover:shadow-2xl transition-all duration-300" style={{ animation: 'float 3s ease-in-out infinite' }}>
               <h1 className="text-4xl font-bold mb-4 text-left text-[#BB30C9]">Reset Password</h1>
               {errorMessage && (
                 <p className="bg-[#FF4C4C] text-white text-justify rounded-2xl p-4 flex items-center gap-2">
@@ -135,123 +170,181 @@ export default function Login() {
                   {errorMessage}
                 </p>
               )}
-              <input
-                type="email"
-                name="emailReset"
-                placeholder="Email"
-                value={emailReset}
-                onChange={(e) => setEmailReset(e.target.value)}
-                className="border-2 border-[#656572] bg-transparent rounded-lg p-3 text-black pl-6"
-                required
-              />
-              <button type="submit" className="bg-[#BB30C4] font-bold cursor-pointer rounded-lg text-background hover:bg-[#961C9FFF] transition-colors p-4">
-                Send Code
-              </button>
-              <button type="button" onClick={() => {
-                setIsResetPassword(false);
-                resetFormFields();
-              }} className="text-[#BB30C4] hover:underline cursor-pointer">
-                Back to Login
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full max-w-sm p-6 rounded-lg shadow-lg bg-white hover:shadow-2xl transition-all duration-300" style={{ animation: 'float 3s ease-in-out infinite' }}>
-              {/* Error Messages */}
-              <h1 className="text-4xl font-bold mb-4 text-left text-[#BB30C9]">{isLogin ? "Login" : "Sign Up"}</h1>
-              {errorMessage && (
-                <p className="bg-[#FF4C4C] text-white text-justify rounded-2xl p-4 flex items-center gap-2">
-                  <AiFillExclamationCircle size={24} style={{ flex: "none" }} />
-                  {errorMessage}
-                </p>
-              )}
-              {!isLogin && (
-                <input
-                  type="text"
-                  name="username"
-                  placeholder="Username"
-                  value={formData.username || ""}
-                  onChange={handleInputChange}
-                  className="border-2 border-[#656572] bg-transparent rounded-lg p-3 text-black pl-6"
-                  required
-                />
-              )}
-              <input
-                type={isLogin ? "text" : "email"}
-                name="email"
-                placeholder={isLogin ? "Username / Email" : "Email"}
-                value={formData.email || ""}
-                onChange={handleInputChange}
-                className="border-2 border-[#656572] bg-transparent rounded-lg p-3 text-black pl-6 sm:border-[#656572]"
-                required
-              />
               <div className="relative">
                 <input
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  placeholder="Password"
-                  value={formData.password.trim() || ""}
-                  onChange={handleInputChange}
+                  type={showNewPassword ? "text" : "password"}
+                  name="newPassword"
+                  placeholder="New Password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
                   className="border-2 border-[#656572] bg-transparent rounded-lg p-3 text-black pl-6 w-full"
                   required
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={() => setShowNewPassword(!showNewPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
                 >
-                  {showPassword ? <AiOutlineEyeInvisible size={20} /> : <AiOutlineEye size={20} />}
+                  {showNewPassword ? <AiOutlineEyeInvisible size={20} /> : <AiOutlineEye size={20} />}
                 </button>
               </div>
-              {isLogin && (
-                <button 
-                  type="button" 
-                  onClick={() => {
-                    setIsResetPassword(true);
-                    resetFormFields();
-                  }} 
-                  className="text-[#BB30C4] font-bold hover:underline text-left cursor-pointer"
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  name="confirmNewPassword"
+                  placeholder="Confirm New Password"
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  className="border-2 border-[#656572] bg-transparent rounded-lg p-3 text-black pl-6 w-full"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
                 >
-                  Forgot Password?
+                  {showConfirmPassword ? <AiOutlineEyeInvisible size={20} /> : <AiOutlineEye size={20} />}
                 </button>
-              )}
-              {!isLogin && (
+              </div>
+              <button type="submit" className="bg-[#BB30C4] font-bold cursor-pointer rounded-lg text-background hover:bg-[#961C9FFF] transition-colors p-4">
+                Reset Password
+              </button>
+              <button 
+                type="button" 
+                onClick={() => { setIsResetPassword(false); router.push('/'); }}
+                className="text-[#BB30C4] hover:underline cursor-pointer"
+              >
+                Back to Login
+              </button>
+            </form>
+          ) : (
+            isResetPassword ? (
+              <form onSubmit={handleResetPassword} className="flex flex-col gap-4 w-full max-w-sm p-6 rounded-lg shadow-lg bg-white hover:shadow-2xl transition-all duration-300 " style={{ animation: 'float 3s ease-in-out infinite' }}>
+                <h1 className="text-4xl font-bold mb-4 text-left text-[#BB30C9]">Reset Password</h1>
+                {errorMessage && (
+                  <p className="bg-[#FF4C4C] text-white text-justify rounded-2xl p-4 flex items-center gap-2">
+                    <AiFillExclamationCircle size={24} />
+                    {errorMessage}
+                  </p>
+                )}
+                <input
+                  type="email"
+                  name="emailReset"
+                  placeholder="Email"
+                  value={emailReset}
+                  onChange={(e) => setEmailReset(e.target.value)}
+                  className="border-2 border-[#656572] bg-transparent rounded-lg p-3 text-black pl-6"
+                  required
+                />
+                <button type="submit" className="bg-[#BB30C4] font-bold cursor-pointer rounded-lg text-background hover:bg-[#961C9FFF] transition-colors p-4">
+                  Send Code
+                </button>
+                <button type="button" onClick={() => {
+                  setIsResetPassword(false);
+                  resetFormFields();
+                }} className="text-[#BB30C4] hover:underline cursor-pointer">
+                  Back to Login
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full max-w-sm p-6 rounded-lg shadow-lg bg-white hover:shadow-2xl transition-all duration-300" style={{ animation: 'float 3s ease-in-out infinite' }}>
+                {/* Error Messages */}
+                <h1 className="text-4xl font-bold mb-4 text-left text-[#BB30C9]">{isLogin ? "Login" : "Sign Up"}</h1>
+                {errorMessage && (
+                  <p className="bg-[#FF4C4C] text-white text-justify rounded-2xl p-4 flex items-center gap-2">
+                    <AiFillExclamationCircle size={24} style={{ flex: "none" }} />
+                    {errorMessage}
+                  </p>
+                )}
+                {!isLogin && (
+                  <input
+                    type="text"
+                    name="username"
+                    placeholder="Username"
+                    value={formData.username || ""}
+                    onChange={handleInputChange}
+                    className="border-2 border-[#656572] bg-transparent rounded-lg p-3 text-black pl-6"
+                    required
+                  />
+                )}
+                <input
+                  type={isLogin ? "text" : "email"}
+                  name="email"
+                  placeholder={isLogin ? "Username / Email" : "Email"}
+                  value={formData.email || ""}
+                  onChange={handleInputChange}
+                  className="border-2 border-[#656572] bg-transparent rounded-lg p-3 text-black pl-6 sm:border-[#656572]"
+                  required
+                />
                 <div className="relative">
                   <input
-                    type={showRepeatPassword ? "text" : "password"}
-                    name="repeatPassword"
-                    placeholder="Repeat Password"
-                    value={formData.repeatPassword.trim()|| ""}
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    placeholder="Password"
+                    value={formData.password.trim() || ""}
                     onChange={handleInputChange}
                     className="border-2 border-[#656572] bg-transparent rounded-lg p-3 text-black pl-6 w-full"
                     required
                   />
                   <button
                     type="button"
-                    onClick={() => setShowRepeatPassword(!showRepeatPassword)}
+                    onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
                   >
-                    {showRepeatPassword ? <AiOutlineEyeInvisible size={20} /> : <AiOutlineEye size={20} />}
+                    {showPassword ? <AiOutlineEyeInvisible size={20} /> : <AiOutlineEye size={20} />}
                   </button>
                 </div>
-              )}
-              <button type="submit" className="bg-[#BB30C4] font-bold cursor-pointer rounded-lg text-background hover:bg-[#961C9FFF] transition-colors p-4">
-                {isLogin ? "Login" : "Sign Up"}
-              </button>
-              <button type="button" onClick={() => {
-                setIsLogin(!isLogin);
-                resetFormFields();
-              }} className="text-[#BB30C4] hover:underline cursor-pointer">
-                {isLogin ? (
-                  <>
-                    Don't have an account? <strong className="italic md:italic">Sign Up</strong>
-                  </>
-                ) : (
-                  <>
-                    Already have an account? <strong className="italic md:italic">Login</strong>
-                  </>
+                {isLogin && (
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      setIsResetPassword(true);
+                      resetFormFields();
+                    }} 
+                    className="text-[#BB30C4] font-bold hover:underline text-left cursor-pointer"
+                  >
+                    Forgot Password?
+                  </button>
                 )}
-              </button>
-            </form>
+                {!isLogin && (
+                  <div className="relative">
+                    <input
+                      type={showRepeatPassword ? "text" : "password"}
+                      name="repeatPassword"
+                      placeholder="Repeat Password"
+                      value={formData.repeatPassword.trim()|| ""}
+                      onChange={handleInputChange}
+                      className="border-2 border-[#656572] bg-transparent rounded-lg p-3 text-black pl-6 w-full"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowRepeatPassword(!showRepeatPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    >
+                      {showRepeatPassword ? <AiOutlineEyeInvisible size={20} /> : <AiOutlineEye size={20} />}
+                    </button>
+                  </div>
+                )}
+                <button type="submit" className="bg-[#BB30C4] font-bold cursor-pointer rounded-lg text-background hover:bg-[#961C9FFF] transition-colors p-4">
+                  {isLogin ? "Login" : "Sign Up"}
+                </button>
+                <button type="button" onClick={() => {
+                  setIsLogin(!isLogin);
+                  resetFormFields();
+                }} className="text-[#BB30C4] hover:underline cursor-pointer">
+                  {isLogin ? (
+                    <>
+                      Don't have an account? <strong className="italic md:italic">Sign Up</strong>
+                    </>
+                  ) : (
+                    <>
+                      Already have an account? <strong className="italic md:italic">Login</strong>
+                    </>
+                  )}
+                </button>
+              </form>
+            )
           )}
         </div>
       </div>
