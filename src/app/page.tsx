@@ -49,7 +49,7 @@ export default function Login() {
 
   const resetFormFields = () => {
     setFormData({ email: "", password: "", username: "", repeatPassword: "" });
-    // setResetToken('');
+    setEmailReset('');
     setShowPassword(false);
     setShowRepeatPassword(false);
     setErrorMessage('');
@@ -162,7 +162,7 @@ export default function Login() {
 
           {/* Update both form containers with animation */}
           {isReset ? (
-            <form onSubmit={handlePasswordResetSubmit} className="flex flex-col gap-4 w-full max-w-sm p-6 rounded-lg shadow-lg bg-white hover:shadow-2xl transition-all duration-300" style={{ animation: 'float 3s ease-in-out infinite' }}>
+            <form onSubmit={handlePasswordResetSubmit} className="cursor-pointer flex flex-col gap-4 w-full max-w-sm p-6 rounded-lg shadow-lg bg-white hover:shadow-2xl transition-all duration-300" style={{ animation: 'float 3s ease-in-out infinite' }}>
               <h1 className="text-4xl font-bold mb-4 text-left text-[#BB30C9]">Reset Password</h1>
               {errorMessage && (
                 <p className="bg-[#FF4C4C] text-white text-justify rounded-2xl p-4 flex items-center gap-2">
@@ -219,7 +219,7 @@ export default function Login() {
             </form>
           ) : (
             isResetPassword ? (
-              <form onSubmit={handleResetPassword} className="flex flex-col gap-4 w-full max-w-sm p-6 rounded-lg shadow-lg bg-white hover:shadow-2xl transition-all duration-300 " style={{ animation: 'float 3s ease-in-out infinite' }}>
+              <form onSubmit={handleResetPassword} className="cursor-pointer flex flex-col gap-4 w-full max-w-sm p-6 rounded-lg shadow-lg bg-white hover:shadow-2xl transition-all duration-300 " style={{ animation: 'float 3s ease-in-out infinite' }}>
                 <h1 className="text-4xl font-bold mb-4 text-left text-[#BB30C9]">Reset Password</h1>
                 {errorMessage && (
                   <p className="bg-[#FF4C4C] text-white text-justify rounded-2xl p-4 flex items-center gap-2">
@@ -247,7 +247,7 @@ export default function Login() {
                 </button>
               </form>
             ) : (
-              <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full max-w-sm p-6 rounded-lg shadow-lg bg-white hover:shadow-2xl transition-all duration-300" style={{ animation: 'float 3s ease-in-out infinite' }}>
+              <form onSubmit={handleSubmit} className="cursor-pointer flex flex-col gap-4 w-full max-w-sm p-6 rounded-lg shadow-lg bg-white hover:shadow-2xl transition-all duration-300" style={{ animation: 'float 3s ease-in-out infinite' }}>
                 {/* Error Messages */}
                 <h1 className="text-4xl font-bold mb-4 text-left text-[#BB30C9]">{isLogin ? "Login" : "Sign Up"}</h1>
                 {errorMessage && (
