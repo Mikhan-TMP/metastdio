@@ -21,6 +21,7 @@ const floatAnimation = `
 `;
 
 export default function Login() {
+  
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({ email: "", password: "", username: "", repeatPassword: ""});
   const [errorMessage, setErrorMessage] = useState<string>(''); // Add this line
@@ -36,6 +37,7 @@ export default function Login() {
   const email = searchParams.get('email');
   const [emailReset, setEmailReset] = useState('');
   const isReset = searchParams.get('isReset');
+  const isVerify = searchParams.get('isVerify') === 'true';
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
@@ -54,8 +56,31 @@ export default function Login() {
     setShowRepeatPassword(false);
     setErrorMessage('');
   };
+  useEffect(() => {
+    if (isVerify) {
+      handleVerifyEmail();
+    }
+    }, [isVerify]);
+    
+  const handleVerifyEmail = async () => {
+    const token = searchParams.get('token');
+    const email = searchParams.get('email');
+    console.log(token, email);
+    try {
+      const response = await API.post('/verify-email', {
+        email: email,
+        token: token
+      });
+      console.log(response);
+      alert(response.data.message);
+      router.push('/');
+    } catch (error) {
+      console.error(error);
+    }
+  }
 
-  
+
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
@@ -132,9 +157,12 @@ export default function Login() {
           return;
         }
         const { data } = await API.post('/signup', formData);
-        alert('Signup successful!');
-        //then do verification.
-        //after verification, do go to login or direct to dashboard. DEPENDS ON THE Verification Method.
+        if (data.status === 'success') {
+          alert(data.message);
+          setIsLogin(true);
+        } else {
+          setErrorMessage(data.message);
+        }
       }
     } catch (error: any) {
       console.error('Auth Error:', error);
