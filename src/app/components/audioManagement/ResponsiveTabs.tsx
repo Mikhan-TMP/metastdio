@@ -11,7 +11,7 @@ export default function ResponsiveTabs({ currentView, setCurrentView }) {
         <div className="sm:hidden relative">
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="px-4 py-2 flex items-center justify-between w-full border-b-2 border-blue-600 text-blue-600"
+            className="px-4 py-2 flex items-center justify-between w-full border-b-2 border-[#9B25A7] text-[#9B25A7]"
           >
             {currentView === "script"
               ? "New AI Script"
@@ -59,7 +59,7 @@ export default function ResponsiveTabs({ currentView, setCurrentView }) {
             onClick={() => setCurrentView("script")}
             className={`px-4 py-2 flex items-center gap-2 border-b-2 ${
               currentView === "script"
-                ? "border-blue-500 text-blue-600"
+                ? "border-[#9B25A7] text-[#9B25A7]"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
@@ -70,7 +70,7 @@ export default function ResponsiveTabs({ currentView, setCurrentView }) {
             onClick={() => setCurrentView("manager")}
             className={`px-4 py-2 flex items-center gap-2 border-b-2 ${
               currentView === "manager"
-                ? "border-blue-500 text-blue-600"
+                ? "border-[#9B25A7] text-[#9B25A7]"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
@@ -81,7 +81,7 @@ export default function ResponsiveTabs({ currentView, setCurrentView }) {
             onClick={() => setCurrentView("voice")}
             className={`px-4 py-2 flex items-center gap-2 border-b-2 ${
               currentView === "voice"
-                ? "border-blue-500 text-blue-600"
+                ? "border-[#9B25A7] text-[#9B25A7]"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >

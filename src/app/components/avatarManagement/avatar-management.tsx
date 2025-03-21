@@ -129,6 +129,7 @@ const AvatarManagement = () => {
   const [notification, setNotification] = useState("");
   const [notificationType, setNotificationType] = useState("info");
   const [downloadFileName, setDownloadFileName] = useState("");
+  const [referenceImage, setReferenceImage] = useState(null);
 
   const addAvatarToList = (avatar) => {
     if (!myAvatars.some((a) => a.id === avatar.id)) {
@@ -153,9 +154,26 @@ const AvatarManagement = () => {
 
     const avatarPrompt = `Create a detailed avatar with the following characteristics:
       - Gender: ${gender}
-      - skin: ${skin}
+      - Skin: ${skin}
       - Style: ${style}
     `;
+
+    const formData = new FormData();
+    formData.append("prompt", avatarPrompt);
+    if (referenceImage) {
+      if (referenceImage instanceof File) {
+        formData.append("referenceImage", referenceImage); // Append the file directly
+      } else {
+        showNotification("Invalid reference image format.", "error");
+        return;
+      }
+    }
+
+    // Debugging: Log FormData content
+    console.log("FormData content:");
+    for (const [key, value] of formData.entries()) {
+      console.log(`${key}:`, value);
+    }
 
     setIsGenerating(true);
     setGeneratedAvatar(null);
@@ -164,11 +182,16 @@ const AvatarManagement = () => {
       // Show blue notification for generating
       showNotification("Generating your avatar...", "generating");
 
-      // Make API request with responseType blob to receive binary data
+      // Make API request with FormData
       const response = await axios.post(
         "http://192.168.1.71:8083/avatar_gen/generate_avatar",
-        { prompt: avatarPrompt },
-        { responseType: "blob" } // This is the key change - specify blob response type
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data", // Set the correct content type
+          },
+          responseType: "blob", // Specify blob response type
+        }
       );
 
       // Check if response is successful
@@ -197,10 +220,9 @@ const AvatarManagement = () => {
       // Detailed error logging and user-friendly message
       console.error("Error generating avatar:", error);
 
-      // Determine error message
-      const errorMessage = error.response
-        ? "Server error occurred"
-        : error.message || "Unknown error occurred";
+      // Extract server error message if available
+      const errorMessage =
+        error.response?.data?.message || error.message || "Unknown error occurred";
 
       // Show error notification
       showNotification(`Failed to generate avatar: ${errorMessage}`, "error");
@@ -239,6 +261,13 @@ const AvatarManagement = () => {
     }
   };
 
+  const handleReferenceImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setReferenceImage(file); // Store the file directly
+    }
+  };
+
   // Function to convert blob to base64 for download (optional alternative method)
   const blobToBase64 = (blob) => {
     return new Promise((resolve, reject) => {
@@ -249,6 +278,56 @@ const AvatarManagement = () => {
     });
   };
 
+  const CustomDropdown = () => {
+    const [selected, setSelected] = useState("Select an option");
+    const [isOpen, setIsOpen] = useState(false);
+    const options = ["Realistic", "Cartoon", "Natural", "Robotic"];
+
+    return (
+      <div className="relative w-full">
+        {/* Dropdown Button */}
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full p-3 text-black bg-white border-2 border-[#9B25A7] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9B25A7] flex justify-between items-center"
+        >
+          {selected}
+          <svg
+            className={`w-4 h-4 text-[#9B25A7] transition-transform ${
+              isOpen ? "rotate-180" : ""
+            }`}
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </button>
+
+        {/* Dropdown List */}
+        {isOpen && (
+          <ul className="absolute w-full mt-1 bg-white border-2 border-[#9B25A7] rounded-lg shadow-lg z-10">
+            {options.map((option, index) => (
+              <li
+                key={index}
+                onClick={() => {
+                  setSelected(option);
+                  setIsOpen(false);
+                }}
+                className="p-3 hover:bg-[#9B25A7] hover:text-white cursor-pointer transition-all"
+              >
+                {option}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col h-screen bg-gray-100 p-4">
       {/* Top Navigation */}
@@ -256,11 +335,13 @@ const AvatarManagement = () => {
       {/* Main Content */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Settings */}
-        <div className="bg-white p-4 shadow rounded">
-          <h3 className="text-lg font-semibold mb-2 text-black">Settings</h3>
+        <div className="bg-white p-4 shadow-md rounded-lg border-gray-100 transition-all hover:shadow-lg">
+          <h3 className="text-lg font-semibold mb-4 text-black">Settings</h3>
+
+          {/* Avatar Name Input */}
           <input
             placeholder="Enter avatar name"
-            className="p-2 w-full mb-2 text-black bg-white border-[3px] border-transparent focus:outline-none focus:ring-0 rounded-full"
+            className="p-2 w-full mb-4 text-black bg-white border-[3px] border-transparent focus:outline-none focus:ring-0 rounded-full"
             style={{
               background:
                 "linear-gradient(white, white) padding-box, linear-gradient(to right, #9B25A7, purple) border-box",
@@ -269,66 +350,86 @@ const AvatarManagement = () => {
             }}
           />
 
-          <select
-            className="border p-2 w-full mb-2 rounded text-black"
-            style={{
-              background:
-                "linear-gradient(white, white) padding-box, linear-gradient(to right, #9B25A7, purple) border-box",
-              border: "2px solid transparent",
-              borderRadius: "5px",
-            }}
-          >
-            <option>Realistic</option>
-            <option>Cartoon</option>
-            <option>Natural</option>
-            <option>Robotic</option>
-          </select>
+          {/* Custom Dropdown */}
+          <CustomDropdown />
         </div>
 
         {/* Avatar Preview */}
-        <div className="bg-white p-4 shadow rounded flex flex-col justify-center items-center">
+        <div className="bg-white p-8 shadow-md rounded-xl flex flex-col justify-center items-center border border-gray-100 transition-all hover:shadow-xl">
           {selectedAvatar ? (
             <>
-              <img
-                src={selectedAvatar.imgSrc}
-                alt={selectedAvatar.name}
-                className="w-40 h-40 rounded-full mb-2"
-              />
-              <p className="text-black font-medium">{selectedAvatar.name}</p>
+              <div className="relative w-64 h-64 mb-6 rounded-xl overflow-hidden group">
+                <img
+                  src={selectedAvatar.imgSrc}
+                  alt={selectedAvatar.name}
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                  <p className="text-white font-semibold text-xl">
+                    {selectedAvatar.name}
+                  </p>
+                </div>
+              </div>
             </>
           ) : (
-            <div className="text-black">Select an avatar to preview</div>
+            <div className="text-gray-600 text-lg flex flex-col items-center">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-16 w-16 mb-4 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                />
+              </svg>
+              <p className="text-center">
+                No avatar selected. <br /> Choose one to preview.
+              </p>
+            </div>
           )}
         </div>
 
         {/* My Avatars */}
-        <div className="bg-white p-4 shadow rounded">
-          <h3 className="text-lg font-semibold mb-2 text-black">My Avatars</h3>
+        <div className="bg-white p-4 shadow-md rounded-lg border-gray-100 transition-all hover:shadow-xl">
+  <h3 className="text-lg font-semibold mb-4 text-black">My Avatars</h3>
 
-          {/* Scrollable Container */}
-          <div className="max-h-64 overflow-y-auto border-none rounded p-2">
-            {myAvatars.map((avatar) => (
-              <div
-                key={avatar.id}
-                className="p-2 border-none rounded mb-2 text-black flex items-center cursor-pointer hover:bg-gray-100 transition"
-                onClick={() => setSelectedAvatar(avatar)}
-              >
-                <img
-                  src={avatar.imgSrc}
-                  alt={avatar.name}
-                  className="w-10 h-14 object-cover rounded-lg mr-3"
-                />
-                {avatar.name}
-              </div>
-            ))}
-          </div>
-        </div>
+  {/* Scrollable Container */}
+  <div className="h-64 overflow-y-auto p-2 rounded-lg border border-gray-200">
+    {myAvatars.map((avatar) => (
+      <div
+        key={avatar.id}
+        className={`flex items-center p-3 mb-2 rounded-md cursor-pointer transition-all 
+          ${
+            selectedAvatar?.id === avatar.id
+              ? "bg-[#9B25A7]/10 border-b-2" // Active state with 10% opacity of #9B25A7 and bottom border
+              : "hover:bg-gray-50" // Hover state
+          }`}
+        style={{
+          borderBottomColor: selectedAvatar?.id === avatar.id ? "#9B25A7" : "transparent", // Use #9B25A7 for active state bottom border
+        }}
+        onClick={() => setSelectedAvatar(avatar)}
+      >
+        <img
+          src={avatar.imgSrc}
+          alt={avatar.name}
+          className="w-12 h-12 object-cover rounded-lg mr-3 border-2 border-gray-200"
+        />
+        <span className="text-black flex-1">{avatar.name}</span>
+      </div>
+    ))}
+  </div>
+</div>
       </div>
 
       {/* Pre-existing Avatars Grid */}
-      <div className="bg-white p-4 shadow rounded mt-4">
-        <div class="flex flex-col md:flex-row">
-          <div class="w-full md:w-1/2 bg-[transparent] p-4">
+      <div className="bg-white p-4 shadow-md rounded mt-4">
+        <div className="flex flex-col md:flex-row">
+          <div className="w-full md:w-1/2 bg-[transparent] p-4">
             {" "}
             <h3 className="text-lg font-semibold my-2 text-black">
               Select an Avatar
@@ -338,53 +439,113 @@ const AvatarManagement = () => {
           <div className="w-full md:w-2/3 lg:w-1/2 bg-[transparent] p-4">
             <div className="flex flex-col md:flex-row md:justify-end gap-4">
               {/* New Avatar Button */}
+              {/* New Avatar Button */}
               <button
-  className="relative rounded-md flex items-center justify-center gap-2 hover:bg-gray-50 
-             w-full md:w-48 h-12 px-5 py-3 md:text-sm md:w-60"
-  onClick={() => setIsModalOpen(true)}
-  style={{
-    color: "#9B25A7", // Custom text color
-    background: "linear-gradient(white, white) padding-box, linear-gradient(to right, #9B25A7, purple) border-box",
-    border: "2px solid transparent",
-    borderRadius: "8px"
-  }}
->
-  <Plus size={16} /> New Avatar
-</button>
+                className="relative rounded-md flex items-center justify-center gap-2 w-full md:w-48 h-12 px-5 py-3 md:text-sm md:w-60 transition-all duration-300"
+                onClick={() => setIsModalOpen(true)}
+                style={{
+                  color: "#9B25A7", // Custom text color
+                  background:
+                    "linear-gradient(white, white) padding-box, linear-gradient(to right, #9B25A7, purple) border-box",
+                  border: "2px solid transparent",
+                  borderRadius: "8px",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background =
+                    "linear-gradient(to right, #9B25A7, purple) padding-box, linear-gradient(to right, #9B25A7, purple) border-box";
+                  e.currentTarget.style.color = "white"; // Change text color on hover
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background =
+                    "linear-gradient(white, white) padding-box, linear-gradient(to right, #9B25A7, purple) border-box";
+                  e.currentTarget.style.color = "#9B25A7"; // Revert text color
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.background =
+                    "linear-gradient(to right, #9B25A7, purple) border-box";
+                  e.currentTarget.style.color = "white"; // Change text color on active
+                }}
+                onMouseUp={(e) => {
+                  e.currentTarget.style.background =
+                    "linear-gradient(to right, #9B25A7, purple) padding-box, linear-gradient(to right, #9B25A7, purple) border-box";
+                  e.currentTarget.style.color = "white"; // Keep text color on hover after active
+                }}
+              >
+                <Plus size={16} /> New Avatar
+              </button>
 
-{/* Import Button */}
-<label
-  className="relative rounded-md flex items-center justify-center gap-2 hover:bg-gray-50 cursor-pointer
-             w-full md:w-48 h-12 px-5 py-3 md:text-sm md:w-60"
-  style={{
-    color: "#9B25A7", // Custom text color
-    background: "linear-gradient(white, white) padding-box, linear-gradient(to right, #9B25A7, purple) border-box",
-    border: "2px solid transparent",
-    borderRadius: "8px"
-  }}
->
-  <Upload size={16} /> Import
-  <input
-    type="file"
-    accept="image/png,image/jpeg,image/jpg"
-    className="hidden"
-    onChange={handleFileUpload}
-  />
-</label>
-
-
+              {/* Import Button */}
+              <label
+                className="relative rounded-md flex items-center justify-center gap-2 cursor-pointer w-full md:w-48 h-12 px-5 py-3 md:text-sm md:w-60 transition-all duration-300"
+                style={{
+                  color: "#9B25A7", // Custom text color
+                  background:
+                    "linear-gradient(white, white) padding-box, linear-gradient(to right, #9B25A7, purple) border-box",
+                  border: "2px solid transparent",
+                  borderRadius: "8px",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background =
+                    "linear-gradient(to right, #9B25A7, purple) padding-box, linear-gradient(to right, #9B25A7, purple) border-box";
+                  e.currentTarget.style.color = "white"; // Change text color on hover
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background =
+                    "linear-gradient(white, white) padding-box, linear-gradient(to right, #9B25A7, purple) border-box";
+                  e.currentTarget.style.color = "#9B25A7"; // Revert text color
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.background =
+                    "linear-gradient(to right, #9B25A7, purple) border-box";
+                  e.currentTarget.style.color = "white"; // Change text color on active
+                }}
+                onMouseUp={(e) => {
+                  e.currentTarget.style.background =
+                    "linear-gradient(to right, #9B25A7, purple) padding-box, linear-gradient(to right, #9B25A7, purple) border-box";
+                  e.currentTarget.style.color = "white"; // Keep text color on hover after active
+                }}
+              >
+                <Upload size={16} /> Import
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                />
+              </label>
 
               {/* Save Changes Button */}
               <button
-  className="text-white rounded-md flex items-center justify-center gap-2 hover:opacity-80 w-full md:w-48 h-12 px-5 py-3 md:text-sm md:w-60"
-  style={{
-    background: "linear-gradient(to right, #9B25A7, purple)"
-  }}
->
-  <Save size={16} /> Save Changes
-</button>
-
-
+                className="relative rounded-md flex items-center justify-center gap-2 w-full md:w-48 h-12 px-5 py-3 md:text-sm md:w-60 transition-all duration-300"
+                style={{
+                  color: "white", // White text by default
+                  background: "linear-gradient(to right, #9B25A7, purple)", // Gradient background by default
+                  border: "2px solid transparent", // Transparent border by default
+                  borderRadius: "8px",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background =
+                    "linear-gradient(white, white) padding-box, linear-gradient(to right, #9B25A7, purple) border-box";
+                  e.currentTarget.style.color = "#9B25A7"; // Change text color to purple on hover
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background =
+                    "linear-gradient(to right, #9B25A7, purple)";
+                  e.currentTarget.style.color = "white"; // Revert text color to white
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.background =
+                    "linear-gradient(white, white) padding-box, linear-gradient(to right, #9B25A7, purple) border-box";
+                  e.currentTarget.style.color = "#9B25A7"; // Change text color to purple on active
+                }}
+                onMouseUp={(e) => {
+                  e.currentTarget.style.background =
+                    "linear-gradient(white, white) padding-box, linear-gradient(to right, #9B25A7, purple) border-box";
+                  e.currentTarget.style.color = "#9B25A7"; // Keep text color on hover after active
+                }}
+              >
+                <Save size={16} /> Save Changes
+              </button>
             </div>
           </div>
         </div>
@@ -413,112 +574,121 @@ const AvatarManagement = () => {
       </div>
 
       {/* Modal for New Avatar */}
-      {isModalOpen && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 z-50">
-          <div className="relative bg-white p-6 rounded-lg shadow-xl w-full max-w-3xl lg:max-w-4xl flex flex-col lg:flex-row">
-            {/* Close Button in Top-Right */}
-            <button
-              onClick={() => setIsModalOpen(false)}
-              className="absolute top-3 right-3 p-2 rounded-full bg-gray-200 hover:bg-gray-300 transition"
+  {isModalOpen && (
+  <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 z-50 overflow-y-auto">
+    <div className="relative bg-white p-6 rounded-lg shadow-xl w-full max-w-4xl flex flex-col lg:flex-row space-y-6 lg:space-y-0 lg:space-x-6 overflow-y-auto max-h-[90vh]">
+      {/* Close Button */}
+      <button
+        onClick={() => setIsModalOpen(false)}
+        className="absolute top-3 right-3 p-2 rounded-full bg-gray-200 hover:bg-gray-300 transition"
+        aria-label="Close modal"
+      >
+        <X size={20} />
+      </button>
+
+      {/* Left Section - Avatar Generation Inputs */}
+      <div className="w-full lg:w-1/2 p-4 space-y-4">
+        <h3 className="text-lg font-semibold text-gray-700">Generate New Avatar</h3>
+
+        {/* Dropdown Selection Fields */}
+        {[
+          { label: "Style", value: style, setValue: setStyle, options: ["Realistic", "Cartoon", "Anime", "Fantasy", "Surrealism", "Steampunk"] },
+          { label: "Gender", value: gender, setValue: setGender, options: ["Male", "Female"] },
+          { label: "Skin Tone", value: skin, setValue: setSkin, options: ["white", "brown", "lightbrown", "black"] }
+        ].map(({ label, value, setValue, options }) => (
+          <div key={label}>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+            <select
+              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#9B25A7] transition"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
             >
-              <X size={20} />
-            </button>
-
-            {/* Left Section - Avatar Generation Inputs */}
-            <div className="w-full lg:w-1/2 p-4">
-              <h3 className="text-lg font-semibold mb-4 text-black-700">
-                Generate New Avatar
-              </h3>
-              <div className="space-y-4">
-                <select
-                  className="border p-2 w-full rounded focus:ring-2 focus:ring-blue-400 transition"
-                  value={style}
-                  onChange={(e) => setStyle(e.target.value)}
-                >
-                  <option value="">Select Style</option>
-                  <option value="Realistic">Realistic</option>
-                  <option value="Cartoon">Cartoon</option>
-                  <option value="Anime">Anime</option>
-                  <option value="Fantasy">Fantasy</option>
-                  <option value="Surrealism">Surrealism</option>
-                  <option value="Steampunk">Steampunk</option>
-                </select>
-
-                <select
-                  className="border p-2 w-full rounded focus:ring-2 focus:ring-blue-400 transition"
-                  value={gender}
-                  onChange={(e) => setGender(e.target.value)}
-                >
-                  <option value="">Select Gender</option>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                </select>
-
-                <select
-                  className="border p-2 w-full rounded focus:ring-2 focus:ring-blue-400 transition"
-                  value={skin}
-                  onChange={(e) => setSkin(e.target.value)}
-                >
-                  <option value="">Skin</option>
-                  <option value="white">White</option>
-                  <option value="brown">Brown</option>
-                  <option value="lightbrown">Light Brown</option>
-                  <option value="black">Black</option>
-                </select>
-
-                <button
-                  className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-blue-300 disabled:cursor-not-allowed transition"
-                  onClick={handleGenerateAvatar}
-                  disabled={isGenerating}
-                >
-                  {isGenerating ? "Generating..." : "Generate Avatar"}
-                </button>
-              </div>
-            </div>
-
-            {/* Right Section - Avatar Preview */}
-            <div className="w-full lg:w-1/2 p-4 flex flex-col items-center justify-center">
-              <div className="relative w-full max-w-xs lg:max-w-sm bg-gray-100 rounded-lg flex items-center justify-center shadow-md aspect-square">
-                {generatedAvatar ? (
-                  <>
-                    <img
-                      src={generatedAvatar.imgSrc}
-                      alt="Generated Avatar"
-                      className="max-w-full max-h-full rounded-lg object-cover"
-                    />
-                    <button
-                      onClick={() => setGeneratedAvatar(null)}
-                      className="absolute top-2 right-2 p-1 bg-gray-200 rounded-full hover:bg-gray-300 transition"
-                    >
-                      <X size={16} />
-                    </button>
-                  </>
-                ) : (
-                  <p className="text-black-400">Generated Avatar Preview</p>
-                )}
-              </div>
-
-              {generatedAvatar && (
-                <div className="mt-4 w-full flex flex-col items-center">
-                  <input
-                    type="text"
-                    placeholder="Enter file name (optional)"
-                    className="border p-2 rounded w-full max-w-xs text-center"
-                    value={downloadFileName}
-                    onChange={(e) => setDownloadFileName(e.target.value)}
-                  />
-                  <button
-                    className="mt-3 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 flex items-center justify-center transition"
-                    onClick={handleDownloadAvatar}
-                  >
-                    <Download size={16} className="mr-2" /> Download Avatar
-                  </button>
-                </div>
-              )}
-            </div>
+              <option value="">Select {label}</option>
+              {options.map(option => <option key={option} value={option}>{option}</option>)}
+            </select>
           </div>
+        ))}
+
+        {/* Reference Image Upload */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Upload Reference Image (Optional)</label>
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/jpg"
+            onChange={handleReferenceImageUpload}
+            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#9B25A7] file:text-white hover:file:bg-opacity-80"
+          />
         </div>
-      )}
+
+        {/* Reference Image Preview */}
+        {referenceImage && (
+          <div className="w-full flex justify-center">
+            <img
+              src={referenceImage instanceof File ? URL.createObjectURL(referenceImage) : referenceImage}
+              alt="Reference"
+              className="w-full rounded-lg shadow-md object-cover"
+            />
+          </div>
+        )}
+
+        {/* Generate Avatar Button */}
+        <button
+          className="w-full px-4 py-2 bg-[#9B25A7] text-white rounded-lg hover:bg-opacity-80 disabled:bg-opacity-50 disabled:cursor-not-allowed transition"
+          onClick={handleGenerateAvatar}
+          disabled={isGenerating}
+        >
+          {isGenerating ? "Generating..." : "Generate Avatar"}
+        </button>
+      </div>
+
+      {/* Right Section - Avatar Preview and Actions */}
+      <div className="w-full lg:w-1/2 p-4 space-y-6 flex flex-col items-center">
+        {/* Avatar Preview */}
+        <div className="relative w-full max-w-xs bg-gray-100 rounded-lg flex items-center justify-center shadow-md aspect-auto">
+          {generatedAvatar ? (
+            <>
+              <img
+                src={generatedAvatar.imgSrc}
+                alt="Generated Avatar"
+                className="max-w-full max-h-full rounded-lg object-cover"
+              />
+              <button
+                onClick={() => setGeneratedAvatar(null)}
+                className="absolute top-2 right-2 p-1 bg-gray-200 rounded-full hover:bg-gray-300 transition"
+                aria-label="Remove avatar"
+              >
+                <X size={16} />
+              </button>
+            </>
+          ) : (
+            <p className="text-gray-400">Generated Avatar Preview</p>
+          )}
+        </div>
+
+        {/* Download Avatar Section */}
+        {generatedAvatar && (
+          <div className="w-full flex flex-col items-center space-y-4">
+            <input
+              type="text"
+              placeholder="Enter file name (optional)"
+              className="w-full p-2 border rounded-lg text-center focus:ring-2 focus:ring-[#9B25A7] transition"
+              value={downloadFileName}
+              onChange={(e) => setDownloadFileName(e.target.value)}
+            />
+            <button
+              className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center justify-center transition"
+              onClick={handleDownloadAvatar}
+            >
+              <Download size={16} className="mr-2" /> Download Avatar
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+)
+}
+
 
       <Alert
         message={notification}
