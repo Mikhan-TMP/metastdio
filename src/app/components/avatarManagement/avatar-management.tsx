@@ -270,7 +270,7 @@ const AvatarManagement = () => {
       setMyAvatars(fetchedAvatars);
     } catch (error) {
       console.error("Error fetching avatars:", error);
-      showNotification("Failed to load avatars", "error");
+      setMyAvatars([]); // Clear avatars on error to trigger the no avatars UI
     } finally {
       setIsLoading(false);
     }
