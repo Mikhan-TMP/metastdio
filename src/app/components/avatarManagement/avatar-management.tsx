@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Plus, Upload, Save, Download, X, RefreshCw } from "lucide-react";
+import { Plus, Upload, Save, Download, X, RefreshCw, ChevronDown } from "lucide-react";
 import axios from "axios";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -129,6 +129,9 @@ const AvatarManagement = () => {
   const [notification, setNotification] = useState("");
   const [notificationType, setNotificationType] = useState("info");
   const [downloadFileName, setDownloadFileName] = useState("");
+  const [referenceImage, setReferenceImage] = useState(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [avatarName, setAvatarName] = useState("");
 
   const addAvatarToList = (avatar) => {
     if (!myAvatars.some((a) => a.id === avatar.id)) {
@@ -137,8 +140,8 @@ const AvatarManagement = () => {
   };
 
   const showNotification = (
-    message: string,
-    type: "info" | "success" | "warning" | "error" = "info"
+    message,
+    type = "info"
   ) => {
     setNotification(message);
     setNotificationType(type);
@@ -153,9 +156,20 @@ const AvatarManagement = () => {
 
     const avatarPrompt = `Create a detailed avatar with the following characteristics:
       - Gender: ${gender}
-      - skin: ${skin}
+      - Skin: ${skin}
       - Style: ${style}
     `;
+
+    const formData = new FormData();
+    formData.append("prompt", avatarPrompt);
+    if (referenceImage) {
+      if (referenceImage instanceof File) {
+        formData.append("referenceImage", referenceImage); // Append the file directly
+      } else {
+        showNotification("Invalid reference image format.", "error");
+        return;
+      }
+    }
 
     setIsGenerating(true);
     setGeneratedAvatar(null);
@@ -164,11 +178,16 @@ const AvatarManagement = () => {
       // Show blue notification for generating
       showNotification("Generating your avatar...", "generating");
 
-      // Make API request with responseType blob to receive binary data
+      // Make API request with FormData
       const response = await axios.post(
         "http://192.168.1.71:8083/avatar_gen/generate_avatar",
-        { prompt: avatarPrompt },
-        { responseType: "blob" } // This is the key change - specify blob response type
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data", // Set the correct content type
+          },
+          responseType: "blob", // Specify blob response type
+        }
       );
 
       // Check if response is successful
@@ -197,10 +216,11 @@ const AvatarManagement = () => {
       // Detailed error logging and user-friendly message
       console.error("Error generating avatar:", error);
 
-      // Determine error message
-      const errorMessage = error.response
-        ? "Server error occurred"
-        : error.message || "Unknown error occurred";
+      // Extract server error message if available
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Unknown error occurred";
 
       // Show error notification
       showNotification(`Failed to generate avatar: ${errorMessage}`, "error");
@@ -239,212 +259,340 @@ const AvatarManagement = () => {
     }
   };
 
-  // Function to convert blob to base64 for download (optional alternative method)
-  const blobToBase64 = (blob) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
+  const handleReferenceImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setReferenceImage(file); // Store the file directly
+    }
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100 p-4">
-      {/* Top Navigation */}
-      <div className="bg-white shadow-sm p-4 flex flex-col sm:flex-row justify-between items-center">
-        <div className="flex space-x-4 mb-4 sm:mb-0">
-          <button
-            className="px-4 py-2 border rounded flex items-center gap-2 hover:bg-gray-50"
-            onClick={() => setIsModalOpen(true)}
-          >
-            <Plus size={16} /> New Avatar
-          </button>
-          <label className="px-4 py-2 border rounded flex items-center gap-2 hover:bg-gray-50 cursor-pointer">
-            <Upload size={16} /> Import
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/jpg"
-              className="hidden"
-              onChange={handleFileUpload}
-            />
-          </label>
-        </div>
-        <button className="px-4 py-2 bg-blue-500 text-white rounded flex items-center gap-2 hover:bg-blue-600">
-          <Save size={16} /> Save Changes
-        </button>
-      </div>
-
-      {/* Main Content */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-        {/* My Avatars */}
-        <div className="bg-white p-4 shadow rounded">
-          <h3 className="text-lg font-semibold mb-2 text-black">My Avatars</h3>
-          {myAvatars.map((avatar) => (
-            <div
-              key={avatar.id}
-              className="p-2 border rounded mb-2 text-black flex items-center cursor-pointer hover:bg-gray-100"
-              onClick={() => setSelectedAvatar(avatar)}
-            >
-              <img
-                src={avatar.imgSrc}
-                alt={avatar.name}
-                className="w-8 h-8 rounded-full mr-2"
-              />
-              {avatar.name}
+    <div className="flex min-h-screen bg-gray-50 p-4 mx-8 md:mx-0">
+      <div className="w-full max-w-8xl mx-auto border border-purple-300 rounded-lg overflow-hidden shadow-lg px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 md:grid-cols-12 h-full">
+          {/* Left Panel - Settings and Avatar Selection */}
+          <div className="md:col-span-7 border-b md:border-b-0 md:border-r border-purple-300 p-4 sm:p-6 flex flex-col h-full">
+            {/* Settings Section */}
+            <div className="mb-6 sm:mb-8">
+              <h3 className="text-purple-600 font-bold text-lg sm:text-xl mb-3 sm:mb-4">Settings</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="w-full">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Avatar Name</label>
+                  <input
+                    type="text"
+                    placeholder="Enter Avatar Name"
+                    value={avatarName}
+                    onChange={(e) => setAvatarName(e.target.value)}
+                    className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+                {/* Dropdown */}
+                <div className="w-full">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Avatar Style</label>
+                  <div className="relative">
+                    <button
+                      className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm text-gray-700 flex justify-between items-center focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      onClick={() => setDropdownOpen(!dropdownOpen)}
+                    >
+                      <span>{style || "Select an Option"}</span>
+                      <ChevronDown size={16} className={`transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
+                    </button>
+                    {dropdownOpen && (
+                      <div className="absolute w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-10">
+                        {["Realistic", "Cartoon", "Anime", "Fantasy", "Surrealism", "Steampunk"].map((option) => (
+                          <div
+                            key={option}
+                            className="p-2 sm:p-3 hover:bg-purple-100 text-sm cursor-pointer"
+                            onClick={() => {
+                              setStyle(option);
+                              setDropdownOpen(false);
+                            }}
+                          >
+                            {option}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
-          ))}
-        </div>
-
-        {/* Avatar Preview */}
-        <div className="bg-white p-4 shadow rounded flex flex-col justify-center items-center">
-          {selectedAvatar ? (
-            <>
-              <img
-                src={selectedAvatar.imgSrc}
-                alt={selectedAvatar.name}
-                className="w-40 h-40 rounded-full mb-2"
-              />
-              <p className="text-black font-medium">{selectedAvatar.name}</p>
-            </>
-          ) : (
-            <div className="text-black">Select an avatar to preview</div>
-          )}
-        </div>
-
-        {/* Settings */}
-        <div className="bg-white p-4 shadow rounded">
-          <h3 className="text-lg font-semibold mb-2 text-black">Settings</h3>
-          <input
-            type="text"
-            placeholder="Enter avatar name"
-            className="border p-2 w-full mb-2 rounded text-black"
-          />
-          <select className="border p-2 w-full mb-2 rounded text-black">
-            <option>Realistic</option>
-            <option>Cartoon</option>
-          </select>
-          <select className="border p-2 w-full rounded text-black">
-            <option>Natural</option>
-            <option>Robotic</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Pre-existing Avatars Grid */}
-      <div className="bg-white p-4 shadow rounded mt-4">
-        <h3 className="text-lg font-semibold mb-2 text-black">
-          Select an Avatar
-        </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {preExistingAvatars.map((avatar) => (
-            <div
-              key={avatar.id}
-              className="border p-2 rounded cursor-pointer hover:bg-gray-200 text-center"
-              onClick={() => addAvatarToList(avatar)}
-            >
-              <img
-                src={avatar.imgSrc}
-                alt={avatar.name}
-                className="w-full h-32 object-cover mx-auto mb-2"
-              />
-              <p className="text-black">{avatar.name}</p>
+            {/* Avatar Selection */}
+            <div className="flex-1 flex flex-col">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-4">
+                <h3 className="text-purple-600 font-bold text-lg sm:text-xl">My Avatars</h3>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    className="w-full sm:w-auto bg-purple-600 text-white text-sm py-2 px-4 rounded-md flex items-center gap-1 hover:bg-purple-700 transition-colors"
+                    onClick={() => setIsModalOpen(true)}
+                  >
+                    <Plus size={16} /> New Avatar
+                  </button>
+                  <label className="w-full sm:w-auto bg-white border border-purple-600 text-purple-600 text-sm py-2 px-4 rounded-md flex items-center gap-1 cursor-pointer hover:bg-purple-50 transition-colors">
+                    <Upload size={16} /> Import
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleFileUpload}
+                    />
+                  </label>
+                  <button className="w-full sm:w-auto bg-purple-600 text-white text-sm py-2 px-4 rounded-md flex items-center justify-center gap-2 hover:bg-purple-700 transition-colors">
+                    <Save size={16} /> Save Changes
+                  </button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto pb-4">
+                {[...preExistingAvatars, ...myAvatars].map((avatar) => (
+                  <div
+                    key={avatar.id}
+                    className={`border ${selectedAvatar?.id === avatar.id ? 'border-purple-500 bg-purple-50' : 'border-gray-300'} rounded-lg p-3 cursor-pointer transition-all hover:shadow-md`}
+                    onClick={() => setSelectedAvatar(avatar)}
+                  >
+                    <div className="aspect-square overflow-hidden rounded-lg mb-2">
+                      <img
+                        src={avatar.imgSrc}
+                        alt={avatar.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <p className="text-center text-sm font-medium truncate">{avatar.name}</p>
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
+          </div>
+          {/* Right Panel - Avatar Preview */}
+          <div className="md:col-span-5 p-4 sm:p-6 flex flex-col h-full">
+            <h3 className="text-purple-600 font-bold text-lg sm:text-xl mb-4 sm:mb-6">Avatar Preview</h3>
+            <div className="flex-1 flex items-center justify-center p-4 bg-gray-100 rounded-lg">
+              {selectedAvatar ? (
+                <div className="w-full max-w-xs">
+                  <div className="aspect-square bg-white rounded-lg overflow-hidden shadow-lg mb-4 border border-purple-200">
+                    <img
+                      src={selectedAvatar.imgSrc}
+                      alt={selectedAvatar.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="space-y-4">
+                    <p className="text-center font-medium text-gray-800 text-base sm:text-lg">{selectedAvatar.name}</p>
+                    <button className="w-full bg-white border border-purple-600 text-purple-600 text-sm py-2 px-4 rounded-md flex items-center justify-center gap-2 hover:bg-purple-50 transition-colors">
+                      <Download size={16} /> Download Avatar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center text-gray-500 p-8">
+                  <div className="w-32 h-32 sm:w-40 sm:h-40 mx-auto border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center mb-4">
+                    <Plus size={32} className="text-gray-300" />
+                  </div>
+                  <p className="text-base sm:text-lg">No avatar selected</p>
+                  <p className="text-sm mt-2">Choose an avatar from the list or create a new one</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
-
+      
       {/* Modal for New Avatar */}
       {isModalOpen && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 z-50">
-          <div className="relative bg-white p-6 rounded-lg shadow-xl w-full max-w-3xl lg:max-w-4xl flex flex-col lg:flex-row">
-            {/* Close Button in Top-Right */}
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 z-50 overflow-y-auto">
+          <div className="relative bg-white p-6 rounded-lg shadow-xl w-full max-w-5xl flex flex-col lg:flex-row space-y-6 lg:space-y-0 lg:space-x-6 overflow-y-auto max-h-[90vh]">
+            {/* Close Button */}
             <button
               onClick={() => setIsModalOpen(false)}
               className="absolute top-3 right-3 p-2 rounded-full bg-gray-200 hover:bg-gray-300 transition"
+              aria-label="Close modal"
             >
               <X size={20} />
             </button>
 
-            {/* Left Section - Avatar Generation Inputs */}
-            <div className="w-full lg:w-1/2 p-4">
-              <h3 className="text-lg font-semibold mb-4 text-black-700">
+            <div className="w-full lg:w-1/2 p-4 space-y-6">
+              <h3 className="text-2xl font-semibold text-gray-800 border-b pb-3">
                 Generate New Avatar
               </h3>
-              <div className="space-y-4">
+
+              {/* Style Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Style
+                </label>
                 <select
-                  className="border p-2 w-full rounded focus:ring-2 focus:ring-blue-400 transition"
+                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-purple-500 transition"
                   value={style}
                   onChange={(e) => setStyle(e.target.value)}
                 >
                   <option value="">Select Style</option>
-                  <option value="Realistic">Realistic</option>
-                  <option value="Disney">Disney</option>
-                  <option value="Inkpunk">Inkpunk</option>
-                  <option value="Anime">Anime</option>
+                  {["Realistic", "Cartoon", "Anime", "Fantasy", "Surrealism", "Steampunk"].map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
                 </select>
-
-                <select
-                  className="border p-2 w-full rounded focus:ring-2 focus:ring-blue-400 transition"
-                  value={gender}
-                  onChange={(e) => setGender(e.target.value)}
-                >
-                  <option value="">Select Gender</option>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Non-Binary">Non-Binary</option>
-                </select>
-
-                <select
-                  className="border p-2 w-full rounded focus:ring-2 focus:ring-blue-400 transition"
-                  value={skin}
-                  onChange={(e) => setSkin(e.target.value)}
-                >
-                  <option value="">Skin</option>
-                  <option value="white">White</option>
-                  <option value="brown">Brown</option>
-                  <option value="lightbrown">Light Brown</option>
-                  <option value="black">Black</option>
-                </select>
-
-                <button
-                  className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-blue-300 disabled:cursor-not-allowed transition"
-                  onClick={handleGenerateAvatar}
-                  disabled={isGenerating}
-                >
-                  {isGenerating ? "Generating..." : "Generate Avatar"}
-                </button>
               </div>
+
+              {/* Gender Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Gender
+                </label>
+                <div className="grid grid-cols-2 gap-4">
+                  {["Male", "Female"].map((option) => (
+                    <div 
+                      key={option}
+                      className={`border ${gender === option ? 'border-purple-500 bg-purple-50' : 'border-gray-300'} 
+                        rounded-lg p-3 cursor-pointer transition-all hover:border-purple-300 flex items-center justify-center`}
+                      onClick={() => setGender(option)}
+                    >
+                      <span className="font-medium">{option}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Skin Tone Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Skin Tone
+                </label>
+                <div className="grid grid-cols-4 gap-2">
+                  {["white", "brown", "lightbrown", "black"].map((option) => (
+                    <div 
+                      key={option}
+                      className={`border ${skin === option ? 'border-purple-500' : 'border-gray-300'} 
+                        rounded-lg p-2 cursor-pointer transition-all hover:border-purple-300`}
+                      onClick={() => setSkin(option)}
+                    >
+                      <div 
+                        className={`w-full h-8 rounded ${
+                          option === "white" ? "bg-gray-100" :
+                          option === "lightbrown" ? "bg-amber-200" :
+                          option === "brown" ? "bg-amber-700" :
+                          "bg-stone-900"
+                        }`}
+                      ></div>
+                      <p className="text-center text-xs mt-1 capitalize">{option}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Reference Image Upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Upload Reference Image (Optional)
+                </label>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg"
+                  onChange={handleReferenceImageUpload}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-600 file:text-white hover:file:bg-purple-700"
+                />
+              </div>
+
+              {/* Reference Image Preview */}
+              {referenceImage && (
+                <div className="w-full">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Reference Image Preview</p>
+                  <div className="w-full h-40 bg-gray-100 rounded-lg overflow-hidden border border-gray-300">
+                    <img
+                      src={
+                        referenceImage instanceof File
+                          ? URL.createObjectURL(referenceImage)
+                          : referenceImage
+                      }
+                      alt="Reference"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Generate Avatar Button */}
+              <button
+                className="w-full px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-purple-300 disabled:cursor-not-allowed transition font-medium"
+                onClick={handleGenerateAvatar}
+                disabled={isGenerating}
+              >
+                {isGenerating ? (
+                  <span className="flex items-center justify-center">
+                    <RefreshCw size={16} className="animate-spin mr-2" /> Generating...
+                  </span>
+                ) : (
+                  "Generate Avatar"
+                )}
+              </button>
             </div>
 
-            {/* Right Section - Avatar Preview */}
-            <div className="w-full lg:w-1/2 p-4 flex flex-col items-center justify-center">
-              <div className="w-64 h-64 lg:w-72 lg:h-72 bg-gray-100 rounded-lg flex items-center justify-center shadow-md">
-                {generatedAvatar ? (
-                  <img
-                    src={generatedAvatar.imgSrc}
-                    alt="Generated Avatar"
-                    className="max-w-full max-h-full rounded-lg object-cover"
-                  />
-                ) : (
-                  <p className="text-black-400">Generated Avatar Preview</p>
-                )}
+            {/* Right Section - Avatar Preview and Actions */}
+            <div className="w-full lg:w-1/2 p-4 space-y-6 flex flex-col">
+              <h3 className="text-2xl font-semibold text-gray-800 border-b pb-3">
+                Preview
+              </h3>
+
+              {/* Avatar Preview */}
+              <div className="flex-1 flex items-center justify-center">
+                <div className="relative w-full max-w-sm bg-gray-100 rounded-lg flex items-center justify-center shadow-md aspect-square overflow-hidden">
+                  {generatedAvatar ? (
+                    <>
+                      <img
+                        src={generatedAvatar.imgSrc}
+                        alt="Generated Avatar"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        onClick={() => setGeneratedAvatar(null)}
+                        className="absolute top-2 right-2 p-2 bg-white rounded-full hover:bg-gray-100 transition shadow-md"
+                        aria-label="Remove avatar"
+                      >
+                        <X size={16} />
+                      </button>
+                    </>
+                  ) : (
+                    <div className="text-center text-gray-400 p-8">
+                      <div className="w-24 h-24 mx-auto border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center mb-4">
+                        <Plus size={32} className="text-gray-300" />
+                      </div>
+                      <p>Generated Avatar Preview</p>
+                      <p className="text-sm mt-2">Fill in the details and click Generate</p>
+                    </div>
+                  )}
+                </div>
               </div>
 
+              {/* Download Avatar Section */}
               {generatedAvatar && (
-                <div className="mt-4 w-full flex flex-col items-center">
-                  <input
-                    type="text"
-                    placeholder="Enter file name (optional)"
-                    className="border p-2 rounded w-full max-w-xs text-center"
-                    value={downloadFileName}
-                    onChange={(e) => setDownloadFileName(e.target.value)}
-                  />
+                <div className="w-full space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      File Name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Enter file name (optional)"
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-purple-500 transition"
+                      value={downloadFileName}
+                      onChange={(e) => setDownloadFileName(e.target.value)}
+                    />
+                  </div>
                   <button
-                    className="mt-3 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 flex items-center justify-center transition"
+                    className="w-full px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center justify-center transition font-medium"
                     onClick={handleDownloadAvatar}
                   >
-                    <Download size={16} className="mr-2" /> Download Avatar
+                    <Download size={18} className="mr-2" /> Download Avatar
+                  </button>
+                  <button
+                    className="w-full px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center justify-center transition font-medium"
+                    onClick={() => {
+                      setMyAvatars((prev) => [...prev, generatedAvatar]);
+                      setSelectedAvatar(generatedAvatar);
+                      setIsModalOpen(false);
+                      showNotification("Avatar added to your collection!", "success");
+                    }}
+                  >
+                    <Plus size={18} className="mr-2" /> Add to My Avatars
                   </button>
                 </div>
               )}
