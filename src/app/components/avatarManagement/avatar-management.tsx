@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Plus,
   Upload,
@@ -104,6 +104,7 @@ const AvatarManagement = () => {
   const [referenceImage, setReferenceImage] = useState(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [avatarName, setAvatarName] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   const addAvatarToList = (avatar) => {
     if (!myAvatars.some((a) => a.id === avatar.id)) {
@@ -244,6 +245,56 @@ const AvatarManagement = () => {
     "Steampunk",
   ];
 
+  // Add fetchAvatars function
+  const fetchAvatars = async () => {
+    try {
+      const email = localStorage.getItem("userEmail") || "test@example.com";
+      const response = await axios.get(`http://192.168.1.141:3001/avatar/getAvatars`, {
+        params: { email }
+      });
+
+      console.log("API Response:", response.data); // Debug log
+
+      // Transform the API response to match our avatar structure
+      const fetchedAvatars = response.data.map((avatar, index) => {
+        // Debug log for each avatar
+        console.log(`Processing avatar ${index}:`, {
+          style: avatar.style,
+          imageDataLength: avatar.imgSrc?.length
+        });
+
+        return {
+          id: index, // Use index as id since _id might not be present
+          imgSrc: `data:image/png;base64,${avatar.imgSrc}`, // Use imgSrc from response
+          name: `Avatar ${index + 1}`, // Generate a name if none provided
+          style: avatar.style
+        };
+      });
+
+      console.log("Processed avatars:", fetchedAvatars.map(a => ({
+        id: a.id,
+        style: a.style,
+        imgSrcLength: a.imgSrc?.length
+      })));
+
+      setMyAvatars(fetchedAvatars);
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Error fetching avatars:", error);
+      if (error.response) {
+        console.error("Response data:", error.response.data);
+        console.error("Response status:", error.response.status);
+      }
+      showNotification("Failed to load avatars", "error");
+      setIsLoading(false);
+    }
+  };
+
+  // Add useEffect to fetch avatars on component mount
+  useEffect(() => {
+    fetchAvatars();
+  }, []);
+
   return (
     // Fixed height container that takes the full viewport height
     <div className="flex h-3/5 bg-gray-50 rounded-2xl shadow-lg px-4 sm:px-6 lg:px-8 mx-4 border border-[#9B25A7] overflow-hidden">
@@ -344,35 +395,50 @@ const AvatarManagement = () => {
               </div>
               {/* Scrollable grid container */}
               <div className="overflow-y-auto flex-1 pb-20 max-h-fit">
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {((preExistingAvatars || []).concat(myAvatars || [])).map((avatar) => (
-                    <div
-                      key={avatar.id}
-                      className={`border ${
-                        selectedAvatar?.id === avatar.id
-                          ? "border-[#9B25A7] bg-[#F4E3F8]"
-                          : "border-gray-300"
-                      } rounded-lg p-3 cursor-pointer transition-all hover:shadow-md`}
-                      onClick={() => setSelectedAvatar(avatar)}
-                    >
-                      {/* Centering and resizing the image */}
-                      <div className="flex justify-center items-center overflow-hidden rounded-lg mb-2">
-                        <div className="w-auto max-w-[80px] md:max-w-[96px] lg:max-w-[112px] aspect-[9/16]">
-                          <img
-                            src={avatar.imgSrc}
-                            alt={avatar.name}
-                            className="w-full h-full object-cover rounded-lg"
-                          />
+                {isLoading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <RefreshCw className="w-8 h-8 text-[#9B25A7] animate-spin" />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {myAvatars.map((avatar) => (
+                      <div
+                        key={avatar.id}
+                        className={`border ${
+                          selectedAvatar?.id === avatar.id
+                            ? "border-[#9B25A7] bg-[#F4E3F8]"
+                            : "border-gray-300"
+                        } rounded-lg p-3 cursor-pointer transition-all hover:shadow-md`}
+                        onClick={() => setSelectedAvatar(avatar)}
+                      >
+                        {/* Centering and resizing the image */}
+                        <div className="flex justify-center items-center overflow-hidden rounded-lg mb-2">
+                          <div className="w-auto max-w-[80px] md:max-w-[96px] lg:max-w-[112px] aspect-[9/16]">
+                            <img
+                              src={avatar.imgSrc}
+                              alt={avatar.name}
+                              className="w-full h-full object-cover rounded-lg"
+                              onError={(e) => {
+                                console.error("Image load error:", {
+                                  id: avatar.id,
+                                  style: avatar.style,
+                                  imgSrcStart: avatar.imgSrc?.substring(0, 50) + '...' // Log start of imgSrc
+                                });
+                                e.target.onerror = null;
+                                e.target.src = "/placeholder-avatar.png";
+                              }}
+                            />
+                          </div>
                         </div>
-                      </div>
 
-                      {/* Avatar Name */}
-                      <p className="text-center text-sm font-medium truncate">
-                        {avatar.name}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                        {/* Avatar Name */}
+                        <p className="text-center text-sm font-medium truncate">
+                          {avatar.name}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
