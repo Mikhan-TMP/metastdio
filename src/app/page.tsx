@@ -19,6 +19,23 @@ const floatAnimation = `
     }
   }
 `;
+const pulsateAnimation = `
+  @keyframes pulsateBg {
+    0% {
+      background-size: 35%;
+    }
+    50% {
+      background-size: 50%;
+    }
+    100% {
+      background-size: 35%;
+    }
+  }
+
+  .bg-pulsate {
+    animation: pulsateBg 8s ease-in-out infinite;
+  }
+`;
 
 export default function Login() {
   
@@ -174,9 +191,9 @@ export default function Login() {
     <div className="relative flex flex-row items-center justify-center min-h-screen w-full">
       {/* Add the style tag for the animation */}
       <style>{floatAnimation}</style>
-      
+      <style>{pulsateAnimation}</style>
       {/* LEFT PANEL (Positioned Absolutely) */}
-      <div className="absolute left-0 top-0 h-full w-full bg-[url('/bg.svg')] bg-contain bg-no-repeat bg-left-bottom z-10">
+      <div className="absolute left-0 top-0 h-full w-full bg-[url('/bg.svg')] bg-contain bg-no-repeat bg-left-bottom z-10 bg-pulsate">
       </div>
 
       {/* RIGHT PANEL (Slightly Overlapping) */}
