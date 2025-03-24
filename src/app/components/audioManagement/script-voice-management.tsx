@@ -313,7 +313,7 @@ const AudioScript = () => {
             />
             <label
               htmlFor="fileUpload"
-              className="inline-block px-4 py-2 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 cursor-pointer"
+              className="inline-block px-4 py-2 bg-[#9B25A7] text-white text-sm rounded hover:bg-[#871f90] cursor-pointer"
             >
               Upload File
             </label>
@@ -425,21 +425,21 @@ const AudioScript = () => {
               />
             </div>
 
-            {/* <div>
+            <div>
               <label
                 className="block text-sm font-medium text-gray-700 mb-2"
                 style={{ color: "black" }}
               >
-                Voice Type
+                Propmt Length
               </label>
               <Dropdown
                 options={PromptLengthOption}
                 selectedOption={promptLength}
                 setSelectedOption={setPromptLength}
               />
-            </div> */}
+            </div>
 
-            <div>
+            {/* <div>
               <label
                 className="block text-sm font-medium text-gray-700 mb-2"
                 style={{ color: "black" }}
@@ -456,7 +456,7 @@ const AudioScript = () => {
                 <option value="medium">Medium</option>
                 <option value="long">Long</option>
               </select>
-            </div>
+            </div> */}
 
             <textarea
               className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:outline-none"
@@ -466,12 +466,13 @@ const AudioScript = () => {
               style={{ color: "black" }}
             />
 
-            <button
-              onClick={handleGenerateScript}
-              className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm md:text-base"
-            >
-              Generate Script
-            </button>
+<button
+  onClick={handleGenerateScript}
+  className="w-full px-4 py-2 bg-[#9B25A7] text-white rounded hover:bg-[#871f90] text-sm md:text-base"
+>
+  Generate Script
+</button>
+
           </div>
 
           {/* Success Message Modal */}

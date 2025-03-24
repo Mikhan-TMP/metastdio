@@ -246,54 +246,45 @@ const AvatarManagement = () => {
   ];
 
   // Add fetchAvatars function
-  const fetchAvatars = async () => {
+  const fetchAvatars = async (selectedStyle = '') => {
     try {
+      setIsLoading(true);
       const email = localStorage.getItem("userEmail") || "test@example.com";
-      const response = await axios.get(`http://192.168.1.141:3001/avatar/getAvatars`, {
-        params: { email }
-      });
+      
+      // Only add style parameter if a specific style is selected (not "All")
+      const params = { 
+        email,
+        ...(selectedStyle && selectedStyle !== 'All' ? { style: selectedStyle.toLowerCase() } : {})
+      };
 
-      console.log("API Response:", response.data); // Debug log
+      const response = await axios.get(`http://192.168.1.141:3001/avatar/getAvatars`, { params });
+      console.log("API Response:", response.data);
 
-      // Transform the API response to match our avatar structure
-      const fetchedAvatars = response.data.map((avatar, index) => {
-        // Debug log for each avatar
-        console.log(`Processing avatar ${index}:`, {
-          style: avatar.style,
-          imageDataLength: avatar.imgSrc?.length
-        });
-
-        return {
-          id: index, // Use index as id since _id might not be present
-          imgSrc: `data:image/png;base64,${avatar.imgSrc}`, // Use imgSrc from response
-          name: `Avatar ${index + 1}`, // Generate a name if none provided
-          style: avatar.style
-        };
-      });
-
-      console.log("Processed avatars:", fetchedAvatars.map(a => ({
-        id: a.id,
-        style: a.style,
-        imgSrcLength: a.imgSrc?.length
-      })));
+      const fetchedAvatars = response.data.map((avatar, index) => ({
+        id: index,
+        imgSrc: `data:image/png;base64,${avatar.imgSrc}`,
+        name: avatar.name || `Avatar ${index + 1}`,
+        style: avatar.style
+      }));
 
       setMyAvatars(fetchedAvatars);
-      setIsLoading(false);
     } catch (error) {
       console.error("Error fetching avatars:", error);
-      if (error.response) {
-        console.error("Response data:", error.response.data);
-        console.error("Response status:", error.response.status);
-      }
       showNotification("Failed to load avatars", "error");
+    } finally {
       setIsLoading(false);
     }
   };
 
   // Add useEffect to fetch avatars on component mount
   useEffect(() => {
-    fetchAvatars();
-  }, []);
+    fetchAvatars(style);
+  }, [style]);
+
+  const handleStyleChange = (selectedStyle) => {
+    setStyle(selectedStyle);
+    setDropdownOpen(false);
+  };
 
   return (
     // Fixed height container that takes the full viewport height
@@ -342,6 +333,7 @@ const AvatarManagement = () => {
                     {dropdownOpen && (
                       <div className="absolute w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-10">
                         {[
+                          "All",
                           "Realistic",
                           "Cartoon",
                           "Anime",
@@ -352,10 +344,7 @@ const AvatarManagement = () => {
                           <div
                             key={option}
                             className="p-2 sm:p-3 hover:bg-[#E3C5F0] text-sm cursor-pointer"
-                            onClick={() => {
-                              setStyle(option);
-                              setDropdownOpen(false);
-                            }}
+                            onClick={() => handleStyleChange(option)}
                           >
                             {option}
                           </div>
@@ -399,7 +388,7 @@ const AvatarManagement = () => {
                   <div className="flex items-center justify-center h-full">
                     <RefreshCw className="w-8 h-8 text-[#9B25A7] animate-spin" />
                   </div>
-                ) : (
+                ) : myAvatars.length > 0 ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                     {myAvatars.map((avatar) => (
                       <div
@@ -438,6 +427,24 @@ const AvatarManagement = () => {
                       </div>
                     ))}
                   </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+                    <div className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center mb-4">
+                      <Plus size={32} className="text-gray-300" />
+                    </div>
+                    <p className="text-lg font-medium mb-2">No Avatars Available</p>
+                    <p className="text-sm text-center max-w-md">
+                      {style !== "" ? 
+                        `No avatars found in ${style} style category. Try selecting a different style or create a new avatar.` : 
+                        'No avatars exist in your collection. Try generating one or import from your device.'}
+                    </p>
+                    <button
+                      onClick={() => setIsModalOpen(true)}
+                      className="mt-4 px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] transition-colors flex items-center gap-2"
+                    >
+                      <Plus size={16} /> Create New Avatar
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -471,9 +478,15 @@ const AvatarManagement = () => {
                   <div className="w-32 h-32 sm:w-40 sm:h-40 mx-auto border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center mb-4">
                     <Plus size={32} className="text-gray-300" />
                   </div>
-                  <p className="text-base sm:text-lg">No avatar selected</p>
-                  <p className="text-sm mt-2">
-                    Choose an avatar from the list or create a new one
+                  <p className="text-base sm:text-lg">No Avatar Selected</p>
+                  <p className="text-sm mt-2 max-w-md mx-auto">
+                    {myAvatars.length === 0 ? (
+                      style ? 
+                        `No avatars available in ${style} style. Try selecting a different style or create a new avatar.` :
+                        'No avatars exist in your collection. Start by creating your first avatar!'
+                    ) : (
+                      'Choose an avatar from the list or create a new one'
+                    )}
                   </p>
                 </div>
               )}
