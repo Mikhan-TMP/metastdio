@@ -102,7 +102,7 @@ const AudioManagerUI = () => {
           <button className="p-2 bg-gray-100 rounded hover:bg-gray-200">
             <Save size={16} />
           </button>
-          <button className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+          <button className="p-2 bg-[#9B25A7] text-white rounded hover:bg-[#9B25A7]">
             Apply to Timeline
           </button>
         </div>
@@ -116,19 +116,19 @@ const AudioManagerUI = () => {
           <div className="bg-white border-b p-2 flex justify-between">
             <div className="flex">
               <button
-                className={`px-3 py-1 rounded-l flex items-center ${activeTab === 'dialogue' ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                className={`px-3 py-1 rounded-l flex items-center ${activeTab === 'dialogue' ? 'bg-[#9B25A7] text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
                 onClick={() => setActiveTab('dialogue')}
               >
                 <Mic size={16} className="mr-1" /> Dialogue
               </button>
               <button
-                className={`px-3 py-1 flex items-center ${activeTab === 'music' ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                className={`px-3 py-1 flex items-center ${activeTab === 'music' ? 'bg-[#9B25A7] text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
                 onClick={() => setActiveTab('music')}
               >
                 <Music size={16} className="mr-1" /> Music
               </button>
               <button
-                className={`px-3 py-1 rounded-r flex items-center ${activeTab === 'sfx' ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                className={`px-3 py-1 rounded-r flex items-center ${activeTab === 'sfx' ? 'bg-[#9B25A7] text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
                 onClick={() => setActiveTab('sfx')}
               >
                 <Volume2 size={16} className="mr-1" /> Sound FX
@@ -151,13 +151,13 @@ const AudioManagerUI = () => {
 
               <div className="flex">
                 <button
-                  className={`p-1 rounded-l border ${viewMode === 'list' ? 'bg-blue-500 text-white' : 'bg-white hover:bg-gray-50'}`}
+                  className={`p-1 rounded-l border ${viewMode === 'list' ? 'bg-[#9B25A7] text-white' : 'bg-white hover:bg-gray-50'}`}
                   onClick={() => setViewMode('list')}
                 >
                   <List size={18} />
                 </button>
                 <button
-                  className={`p-1 rounded-r border ${viewMode === 'grid' ? 'bg-blue-500 text-white' : 'bg-white hover:bg-gray-50'}`}
+                  className={`p-1 rounded-r border ${viewMode === 'grid' ? 'bg-[#9B25A7] text-white' : 'bg-white hover:bg-gray-50'}`}
                   onClick={() => setViewMode('grid')}
                 >
                   <Grid size={18} />
@@ -171,7 +171,7 @@ const AudioManagerUI = () => {
             {getCategories().map(category => (
               <button
                 key={category}
-                className={`px-3 py-1 text-sm rounded mr-2 mb-1 ${currentCategory === category ? 'bg-blue-500 text-white' : 'border hover:bg-gray-50'}`}
+                className={`px-3 py-1 text-sm rounded mr-2 mb-1 ${currentCategory === category ? 'bg-[#9B25A7] text-white' : 'border hover:bg-gray-50'}`}
                 onClick={() => setCurrentCategory(category)}
               >
                 {category === 'all' ? 'All Categories' : category}
@@ -331,7 +331,7 @@ const AudioManagerUI = () => {
           {/* Bottom Toolbar */}
           <div className="bg-white border-t p-2 flex justify-between">
             <div className="flex space-x-2">
-              <button className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center">
+              <button className="px-3 py-1 bg-[#9B25A7] text-white rounded hover:bg-[#9B25A7] flex items-center">
                 <Plus size={16} className="mr-1" /> Add New
               </button>
               <button className="px-3 py-1 border rounded hover:bg-gray-50 flex items-center">
@@ -433,7 +433,7 @@ const AudioManagerUI = () => {
                         <SkipBack size={16} />
                       </button>
                       <button 
-                        className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600"
+                        className="p-2 bg-[#9B25A7] text-white rounded-full hover:bg-[#9B25A7]"
                         onClick={togglePlay}
                       >
                         {isPlaying ? <Pause size={18} /> : <Play size={18} />}
@@ -655,7 +655,7 @@ const AudioManagerUI = () => {
           {/* Apply Button */}
           <div className="p-3 border-t">
             <button 
-              className="w-full bg-blue-500 text-white p-2 rounded font-medium hover:bg-blue-600 mb-2"
+              className="w-full bg-[#9B25A7] text-white p-2 rounded font-medium hover:bg-[#9B25A7] mb-2"
               disabled={!selectedAudio}
             >
               Apply to Timeline
