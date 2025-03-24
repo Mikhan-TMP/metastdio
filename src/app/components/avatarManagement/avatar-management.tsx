@@ -282,14 +282,14 @@ const AvatarManagement = () => {
 
   return (
     // Fixed height container that takes the full viewport height
-    <div className="flex h-3/5 bg-gray-50 rounded-2xl shadow-lg px-4 sm:px-6 lg:px-8 mx-4 border border-purple-300 overflow-hidden">
+    <div className="flex h-3/5 bg-gray-50 rounded-2xl shadow-lg px-4 sm:px-6 lg:px-8 mx-4 border border-[#9B25A7] overflow-hidden">
       <div className="w-full max-w-8xl mx-auto rounded-lg h-full">
         <div className="grid grid-cols-1 md:grid-cols-12 h-full">
           {/* Left Panel - Settings and Avatar Selection */}
-          <div className="md:col-span-7 border-b md:border-b-0 md:border-r border-purple-300 p-4 sm:p-6 flex flex-col h-full">
+          <div className="md:col-span-7 border-b md:border-b-0 md:border-r border-[#9B25A7] p-4 sm:p-6 flex flex-col h-full">
             {/* Settings Section - Fixed height */}
             <div className="mb-4 sm:mb-6">
-              <h3 className="text-purple-600 font-bold text-lg sm:text-xl mb-3 sm:mb-4">
+              <h3 className="text-[#9B25A7] font-bold text-lg sm:text-xl mb-3 sm:mb-4">
                 Settings
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -302,7 +302,7 @@ const AvatarManagement = () => {
   placeholder="Enter Avatar Name"
   value={avatarName}
   onChange={(e) => setAvatarName(e.target.value)}
-  className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:outline-none"
+  className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent focus:outline-none"
 />
 
                 </div>
@@ -313,7 +313,7 @@ const AvatarManagement = () => {
                   </label>
                   <div className="relative">
                     <button
-                      className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm text-gray-700 flex justify-between items-center focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm text-gray-700 flex justify-between items-center focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent"
                       onClick={() => setDropdownOpen(!dropdownOpen)}
                     >
                       <span>{style || "Select an Option"}</span>
@@ -336,7 +336,7 @@ const AvatarManagement = () => {
                         ].map((option) => (
                           <div
                             key={option}
-                            className="p-2 sm:p-3 hover:bg-purple-100 text-sm cursor-pointer"
+                            className="p-2 sm:p-3 hover:bg-[#E3C5F0] text-sm cursor-pointer"
                             onClick={() => {
                               setStyle(option);
                               setDropdownOpen(false);
@@ -354,17 +354,17 @@ const AvatarManagement = () => {
             {/* Avatar Selection - Scrollable area */}
             <div className="flex-1 flex flex-col min-h-fit">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
-                <h3 className="text-purple-600 font-bold text-lg sm:text-xl">
+                <h3 className="text-[#9B25A7] font-bold text-lg sm:text-xl">
                   My Avatars
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   <button
-                    className="w-full sm:w-auto bg-purple-600 text-white text-sm py-2 px-4 rounded-md flex items-center gap-1 hover:bg-purple-700 transition-colors"
+                    className="w-full sm:w-auto bg-[#9B25A7] text-white text-sm py-2 px-4 rounded-md flex items-center gap-1 hover:bg-[#7A1C86] transition-colors"
                     onClick={() => setIsModalOpen(true)}
                   >
                     <Plus size={16} /> New Avatar
                   </button>
-                  <label className="w-full sm:w-auto bg-white border border-purple-600 text-purple-600 text-sm py-2 px-4 rounded-md flex items-center gap-1 cursor-pointer hover:bg-purple-50 transition-colors">
+                  <label className="w-full sm:w-auto bg-white border border-[#9B25A7] text-[#9B25A7] text-sm py-2 px-4 rounded-md flex items-center gap-1 cursor-pointer hover:bg-[#F4E3F8] transition-colors">
                     <Upload size={16} /> Import
                     <input
                       type="file"
@@ -373,7 +373,7 @@ const AvatarManagement = () => {
                       onChange={handleFileUpload}
                     />
                   </label>
-                  <button className="w-full sm:w-auto bg-purple-600 text-white text-sm py-2 px-4 rounded-md flex items-center justify-center gap-2 hover:bg-purple-700 transition-colors">
+                  <button className="w-full sm:w-auto bg-[#9B25A7] text-white text-sm py-2 px-4 rounded-md flex items-center justify-center gap-2 hover:bg-[#7A1C86] transition-colors">
                     <Save size={16} /> Save Changes
                   </button>
                 </div>
@@ -386,7 +386,7 @@ const AvatarManagement = () => {
                       key={avatar.id}
                       className={`border ${
                         selectedAvatar?.id === avatar.id
-                          ? "border-purple-500 bg-purple-50"
+                          ? "border-[#9B25A7] bg-[#F4E3F8]"
                           : "border-gray-300"
                       } rounded-lg p-3 cursor-pointer transition-all hover:shadow-md`}
                       onClick={() => setSelectedAvatar(avatar)}
@@ -414,13 +414,13 @@ const AvatarManagement = () => {
           </div>
           {/* Right Panel - Avatar Preview */}
           <div className="md:col-span-5 p-4 sm:p-6 flex flex-col h-fit">
-            <h3 className="text-purple-600 font-bold text-lg sm:text-xl mb-4 sm:mb-6">
+            <h3 className="text-[#9B25A7] font-bold text-lg sm:text-xl mb-4 sm:mb-6">
               Avatar Preview
             </h3>
             <div className="flex-1 flex items-center justify-center p-8 bg-gray-100 rounded-lg overflow-auto">
               {selectedAvatar ? (
                 <div className="w-full max-w-xs">
-                  <div className="aspect-[9/16] bg-white rounded-lg overflow-hidden shadow-lg mb-4 border border-purple-200">
+                  <div className="aspect-[9/16] bg-white rounded-lg overflow-hidden shadow-lg mb-4 border border-[#9B25A7]">
                     <img
                       src={selectedAvatar.imgSrc}
                       alt={selectedAvatar.name}
@@ -431,7 +431,7 @@ const AvatarManagement = () => {
                     <p className="text-center font-medium text-gray-800 text-base sm:text-lg">
                       {selectedAvatar.name}
                     </p>
-                    <button className="w-full bg-white border border-purple-600 text-purple-600 text-sm py-2 px-4 rounded-md flex items-center justify-center gap-2 hover:bg-purple-50 transition-colors">
+                    <button className="w-full bg-white border border-[#9B25A7] text-[#9B25A7] text-sm py-2 px-4 rounded-md flex items-center justify-center gap-2 hover:bg-[#F4E3F8] transition-colors">
                       <Download size={16} /> Download Avatar
                     </button>
                   </div>
@@ -478,7 +478,7 @@ const AvatarManagement = () => {
       </label>
       <div className="relative">
         <button
-          className="w-full p-3 border border-gray-300 rounded-lg text-sm text-gray-700 flex justify-between items-center focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          className="w-full p-3 border border-gray-300 rounded-lg text-sm text-gray-700 flex justify-between items-center focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent"
           onClick={() => setDropdownOpen(!dropdownOpen)}
         >
           <span>{style || "Select Style"}</span>
@@ -492,7 +492,7 @@ const AvatarManagement = () => {
             {StylesOption.map((option) => (
               <div
                 key={option}
-                className="p-3 hover:bg-purple-100 text-sm cursor-pointer"
+                className="p-3 hover:bg-[#E3C5F0] text-sm cursor-pointer"
                 onClick={() => {
                   setStyle(option);
                   setDropdownOpen(false);
@@ -517,10 +517,10 @@ const AvatarManagement = () => {
                         key={option}
                         className={`border ${
                           gender === option
-                            ? "border-purple-500 bg-purple-50"
+                            ? "border-[#9B25A7] bg-[#F4E3F8]"
                             : "border-gray-300"
                         } 
-                          rounded-lg p-3 cursor-pointer transition-all hover:border-purple-300 flex items-center justify-center`}
+                          rounded-lg p-3 cursor-pointer transition-all hover:border-[#9B25A7] flex items-center justify-center`}
                         onClick={() => setGender(option)}
                       >
                         <span className="font-medium">{option}</span>
@@ -540,10 +540,10 @@ const AvatarManagement = () => {
                         key={option}
                         className={`border ${
                           skin === option
-                            ? "border-purple-500"
+                            ? "border-[#9B25A7]"
                             : "border-gray-300"
                         } 
-                          rounded-lg p-2 cursor-pointer transition-all hover:border-purple-300`}
+                          rounded-lg p-2 cursor-pointer transition-all hover:border-[#9B25A7]`}
                         onClick={() => setSkin(option)}
                       >
                         <div
@@ -574,7 +574,7 @@ const AvatarManagement = () => {
                     type="file"
                     accept="image/png,image/jpeg,image/jpg"
                     onChange={handleReferenceImageUpload}
-                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-600 file:text-white hover:file:bg-purple-700"
+                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#9B25A7] file:text-white hover:file:bg-[#7A1C86]"
                   />
                 </div>
 
@@ -600,7 +600,7 @@ const AvatarManagement = () => {
 
                 {/* Generate Avatar Button */}
                 <button
-                  className="w-full px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-purple-300 disabled:cursor-not-allowed transition font-medium"
+                  className="w-full px-4 py-3 bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] disabled:bg-[#E3C5F0] disabled:cursor-not-allowed transition font-medium"
                   onClick={handleGenerateAvatar}
                   disabled={isGenerating}
                 >
@@ -665,7 +665,7 @@ const AvatarManagement = () => {
                       <input
                         type="text"
                         placeholder="Enter file name (optional)"
-                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-purple-500 transition"
+                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#9B25A7] transition"
                         value={downloadFileName}
                         onChange={(e) => setDownloadFileName(e.target.value)}
                       />
@@ -677,7 +677,7 @@ const AvatarManagement = () => {
                       <Download size={18} className="mr-2" /> Download Avatar
                     </button>
                     <button
-                      className="w-full px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center justify-center transition font-medium"
+                      className="w-full px-4 py-3 bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] flex items-center justify-center transition font-medium"
                       onClick={() => {
                         setMyAvatars((prev) => [...prev, generatedAvatar]);
                         setSelectedAvatar(generatedAvatar);
