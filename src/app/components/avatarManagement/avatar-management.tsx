@@ -211,12 +211,18 @@ const AvatarManagement = () => {
         name: `${gender} ${style} Avatar`,
       };
 
+      // Save the generated avatar to the database
+      await axios.post("http://192.168.1.141:3001/avatar/generate", {
+        name: newAvatar.name,
+        imgSrc: imageUrl,
+      });
+
       // Update state
       setGeneratedAvatar(newAvatar);
       setMyAvatars((prev) => [...prev, newAvatar]);
 
       // Show success notification
-      showNotification("Avatar generated successfully!", "success");
+      showNotification("Avatar generated and saved successfully!", "success");
     } catch (error) {
       // Detailed error logging and user-friendly message
       console.error("Error generating avatar:", error);
@@ -455,7 +461,7 @@ const AvatarManagement = () => {
       {/* Modal for New Avatar - Fixed dimensions with internal scrolling */}
       {isModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 z-50">
-          <div className="relative bg-white p-6 rounded-lg shadow-xl w-full max-w-5xl flex flex-col lg:flex-row max-h-[90vh] overflow-hidden">
+          <div className="relative bg-white p-6 rounded-lg shadow-xl w-full max-w-5xl flex flex-col lg:flex-row max-h-[90vh] gap-4 overflow-hidden">
             {/* Close Button */}
             <button
               onClick={() => setIsModalOpen(false)}
@@ -584,7 +590,7 @@ const AvatarManagement = () => {
                     <p className="text-sm font-medium text-gray-700 mb-2">
                       Reference Image Preview
                     </p>
-                    <div className="w-full h-40 bg-gray-100 rounded-lg overflow-hidden border border-gray-300">
+                    <div className="relative w-full h-40 bg-gray-100 rounded-lg overflow-hidden border border-gray-300">
                       <img
                         src={
                           referenceImage instanceof File
@@ -594,6 +600,13 @@ const AvatarManagement = () => {
                         alt="Reference"
                         className="w-full h-full object-contain"
                       />
+                      <button
+                        onClick={() => setReferenceImage(null)}
+                        className="absolute top-2 right-2 p-2 bg-white rounded-full hover:bg-gray-100 transition shadow-md"
+                        aria-label="Remove reference image"
+                      >
+                        <X size={16} />
+                      </button>
                     </div>
                   </div>
                 )}
@@ -631,7 +644,7 @@ const AvatarManagement = () => {
                         <img
                           src={generatedAvatar.imgSrc}
                           alt="Generated Avatar"
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-contain"
                         />
                         <button
                           onClick={() => setGeneratedAvatar(null)}
@@ -678,14 +691,37 @@ const AvatarManagement = () => {
                     </button>
                     <button
                       className="w-full px-4 py-3 bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] flex items-center justify-center transition font-medium"
-                      onClick={() => {
-                        setMyAvatars((prev) => [...prev, generatedAvatar]);
-                        setSelectedAvatar(generatedAvatar);
-                        setIsModalOpen(false);
-                        showNotification(
-                          "Avatar added to your collection!",
-                          "success"
-                        );
+                      onClick={async () => {
+                        if (generatedAvatar) {
+                          try {
+                            // Convert the image to base64
+                            const response = await fetch(generatedAvatar.imgSrc);
+                            const blob = await response.blob();
+                            const reader = new FileReader();
+                    
+                            reader.onloadend = async () => {
+                              const base64Image = reader.result.split(",")[1]; // Extract base64 string
+                              const payload = {
+                                email: "test@example.com",
+                                image: base64Image,
+                              };
+                    
+                              // Send the payload to the API
+                              await axios.post("http://192.168.1.141:3001/avatar/generate", payload);
+                    
+                              // Update state and show success notification
+                              setMyAvatars((prev) => [...prev, generatedAvatar]);
+                              setSelectedAvatar(generatedAvatar);
+                              setIsModalOpen(false);
+                              showNotification("Avatar added to your collection!", "success");
+                            };
+                    
+                            reader.readAsDataURL(blob);
+                          } catch (error) {
+                            console.error("Error saving avatar to the database:", error);
+                            showNotification("Failed to save avatar to the database.", "error");
+                          }
+                        }
                       }}
                     >
                       <Plus size={18} className="mr-2" /> Add to My Avatars
