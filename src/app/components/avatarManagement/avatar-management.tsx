@@ -1,5 +1,13 @@
 import React, { useState } from "react";
-import { Plus, Upload, Save, Download, X, RefreshCw, ChevronDown } from "lucide-react";
+import {
+  Plus,
+  Upload,
+  Save,
+  Download,
+  X,
+  RefreshCw,
+  ChevronDown,
+} from "lucide-react";
 import axios from "axios";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -139,10 +147,7 @@ const AvatarManagement = () => {
     }
   };
 
-  const showNotification = (
-    message,
-    type = "info"
-  ) => {
+  const showNotification = (message, type = "info") => {
     setNotification(message);
     setNotificationType(type);
   };
@@ -266,6 +271,15 @@ const AvatarManagement = () => {
     }
   };
 
+  const StylesOption = [
+    "Realistic",
+    "Cartoon",
+    "Anime",
+    "Fantasy",
+    "Surrealism",
+    "Steampunk",
+  ];
+
   return (
     // Fixed height container that takes the full viewport height
     <div className="flex h-3/5 bg-gray-50 rounded-2xl shadow-lg px-4 sm:px-6 lg:px-8 mx-4 border border-purple-300 overflow-hidden">
@@ -275,32 +289,51 @@ const AvatarManagement = () => {
           <div className="md:col-span-7 border-b md:border-b-0 md:border-r border-purple-300 p-4 sm:p-6 flex flex-col h-full">
             {/* Settings Section - Fixed height */}
             <div className="mb-4 sm:mb-6">
-              <h3 className="text-purple-600 font-bold text-lg sm:text-xl mb-3 sm:mb-4">Settings</h3>
+              <h3 className="text-purple-600 font-bold text-lg sm:text-xl mb-3 sm:mb-4">
+                Settings
+              </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="w-full">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Avatar Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Avatar Name
+                  </label>
                   <input
-                    type="text"
-                    placeholder="Enter Avatar Name"
-                    value={avatarName}
-                    onChange={(e) => setAvatarName(e.target.value)}
-                    className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
+  type="text"
+  placeholder="Enter Avatar Name"
+  value={avatarName}
+  onChange={(e) => setAvatarName(e.target.value)}
+  className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:outline-none"
+/>
+
                 </div>
                 {/* Dropdown */}
                 <div className="w-full">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Avatar Style</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Avatar Style
+                  </label>
                   <div className="relative">
                     <button
                       className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm text-gray-700 flex justify-between items-center focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       onClick={() => setDropdownOpen(!dropdownOpen)}
                     >
                       <span>{style || "Select an Option"}</span>
-                      <ChevronDown size={16} className={`transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
+                      <ChevronDown
+                        size={16}
+                        className={`transition-transform ${
+                          dropdownOpen ? "rotate-180" : ""
+                        }`}
+                      />
                     </button>
                     {dropdownOpen && (
                       <div className="absolute w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-10">
-                        {["Realistic", "Cartoon", "Anime", "Fantasy", "Surrealism", "Steampunk"].map((option) => (
+                        {[
+                          "Realistic",
+                          "Cartoon",
+                          "Anime",
+                          "Fantasy",
+                          "Surrealism",
+                          "Steampunk",
+                        ].map((option) => (
                           <div
                             key={option}
                             className="p-2 sm:p-3 hover:bg-purple-100 text-sm cursor-pointer"
@@ -321,7 +354,9 @@ const AvatarManagement = () => {
             {/* Avatar Selection - Scrollable area */}
             <div className="flex-1 flex flex-col min-h-fit">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
-                <h3 className="text-purple-600 font-bold text-lg sm:text-xl">My Avatars</h3>
+                <h3 className="text-purple-600 font-bold text-lg sm:text-xl">
+                  My Avatars
+                </h3>
                 <div className="flex flex-wrap gap-2">
                   <button
                     className="w-full sm:w-auto bg-purple-600 text-white text-sm py-2 px-4 rounded-md flex items-center gap-1 hover:bg-purple-700 transition-colors"
@@ -345,36 +380,43 @@ const AvatarManagement = () => {
               </div>
               {/* Scrollable grid container */}
               <div className="overflow-y-auto flex-1 pb-20 max-h-fit">
-  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-    {[...preExistingAvatars, ...myAvatars].map((avatar) => (
-      <div
-        key={avatar.id}
-        className={`border ${selectedAvatar?.id === avatar.id ? 'border-purple-500 bg-purple-50' : 'border-gray-300'} rounded-lg p-3 cursor-pointer transition-all hover:shadow-md`}
-        onClick={() => setSelectedAvatar(avatar)}
-      >
-        {/* Centering and resizing the image */}
-        <div className="flex justify-center items-center overflow-hidden rounded-lg mb-2">
-          <div className="w-auto max-w-[80px] md:max-w-[96px] lg:max-w-[112px] aspect-[9/16]">
-            <img
-              src={avatar.imgSrc}
-              alt={avatar.name}
-              className="w-full h-full object-cover rounded-lg"
-            />
-          </div>
-        </div>
-        
-        {/* Avatar Name */}
-        <p className="text-center text-sm font-medium truncate">{avatar.name}</p>
-      </div>
-    ))}
-  </div>
-</div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {[...preExistingAvatars, ...myAvatars].map((avatar) => (
+                    <div
+                      key={avatar.id}
+                      className={`border ${
+                        selectedAvatar?.id === avatar.id
+                          ? "border-purple-500 bg-purple-50"
+                          : "border-gray-300"
+                      } rounded-lg p-3 cursor-pointer transition-all hover:shadow-md`}
+                      onClick={() => setSelectedAvatar(avatar)}
+                    >
+                      {/* Centering and resizing the image */}
+                      <div className="flex justify-center items-center overflow-hidden rounded-lg mb-2">
+                        <div className="w-auto max-w-[80px] md:max-w-[96px] lg:max-w-[112px] aspect-[9/16]">
+                          <img
+                            src={avatar.imgSrc}
+                            alt={avatar.name}
+                            className="w-full h-full object-cover rounded-lg"
+                          />
+                        </div>
+                      </div>
 
+                      {/* Avatar Name */}
+                      <p className="text-center text-sm font-medium truncate">
+                        {avatar.name}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
           {/* Right Panel - Avatar Preview */}
           <div className="md:col-span-5 p-4 sm:p-6 flex flex-col h-fit">
-            <h3 className="text-purple-600 font-bold text-lg sm:text-xl mb-4 sm:mb-6">Avatar Preview</h3>
+            <h3 className="text-purple-600 font-bold text-lg sm:text-xl mb-4 sm:mb-6">
+              Avatar Preview
+            </h3>
             <div className="flex-1 flex items-center justify-center p-8 bg-gray-100 rounded-lg overflow-auto">
               {selectedAvatar ? (
                 <div className="w-full max-w-xs">
@@ -386,7 +428,9 @@ const AvatarManagement = () => {
                     />
                   </div>
                   <div className="space-y-4">
-                    <p className="text-center font-medium text-gray-800 text-base sm:text-lg">{selectedAvatar.name}</p>
+                    <p className="text-center font-medium text-gray-800 text-base sm:text-lg">
+                      {selectedAvatar.name}
+                    </p>
                     <button className="w-full bg-white border border-purple-600 text-purple-600 text-sm py-2 px-4 rounded-md flex items-center justify-center gap-2 hover:bg-purple-50 transition-colors">
                       <Download size={16} /> Download Avatar
                     </button>
@@ -398,14 +442,16 @@ const AvatarManagement = () => {
                     <Plus size={32} className="text-gray-300" />
                   </div>
                   <p className="text-base sm:text-lg">No avatar selected</p>
-                  <p className="text-sm mt-2">Choose an avatar from the list or create a new one</p>
+                  <p className="text-sm mt-2">
+                    Choose an avatar from the list or create a new one
+                  </p>
                 </div>
               )}
             </div>
           </div>
         </div>
       </div>
-      
+
       {/* Modal for New Avatar - Fixed dimensions with internal scrolling */}
       {isModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 z-50">
@@ -426,23 +472,39 @@ const AvatarManagement = () => {
 
               <div className="space-y-6 mt-4">
                 {/* Style Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Style
-                  </label>
-                  <select
-                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-purple-500 transition"
-                    value={style}
-                    onChange={(e) => setStyle(e.target.value)}
-                  >
-                    <option value="">Select Style</option>
-                    {["Realistic", "Cartoon", "Anime", "Fantasy", "Surrealism", "Steampunk"].map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Style
+      </label>
+      <div className="relative">
+        <button
+          className="w-full p-3 border border-gray-300 rounded-lg text-sm text-gray-700 flex justify-between items-center focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          onClick={() => setDropdownOpen(!dropdownOpen)}
+        >
+          <span>{style || "Select Style"}</span>
+          <ChevronDown
+            size={16}
+            className={`transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
+          />
+        </button>
+        {dropdownOpen && (
+          <div className="absolute w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
+            {StylesOption.map((option) => (
+              <div
+                key={option}
+                className="p-3 hover:bg-purple-100 text-sm cursor-pointer"
+                onClick={() => {
+                  setStyle(option);
+                  setDropdownOpen(false);
+                }}
+              >
+                {option}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
 
                 {/* Gender Selection */}
                 <div>
@@ -451,9 +513,13 @@ const AvatarManagement = () => {
                   </label>
                   <div className="grid grid-cols-2 gap-4">
                     {["Male", "Female"].map((option) => (
-                      <div 
+                      <div
                         key={option}
-                        className={`border ${gender === option ? 'border-purple-500 bg-purple-50' : 'border-gray-300'} 
+                        className={`border ${
+                          gender === option
+                            ? "border-purple-500 bg-purple-50"
+                            : "border-gray-300"
+                        } 
                           rounded-lg p-3 cursor-pointer transition-all hover:border-purple-300 flex items-center justify-center`}
                         onClick={() => setGender(option)}
                       >
@@ -470,21 +536,30 @@ const AvatarManagement = () => {
                   </label>
                   <div className="grid grid-cols-4 gap-2">
                     {["white", "brown", "lightbrown", "black"].map((option) => (
-                      <div 
+                      <div
                         key={option}
-                        className={`border ${skin === option ? 'border-purple-500' : 'border-gray-300'} 
+                        className={`border ${
+                          skin === option
+                            ? "border-purple-500"
+                            : "border-gray-300"
+                        } 
                           rounded-lg p-2 cursor-pointer transition-all hover:border-purple-300`}
                         onClick={() => setSkin(option)}
                       >
-                        <div 
+                        <div
                           className={`w-full h-8 rounded ${
-                            option === "white" ? "bg-gray-100" :
-                            option === "lightbrown" ? "bg-amber-200" :
-                            option === "brown" ? "bg-amber-700" :
-                            "bg-stone-900"
+                            option === "white"
+                              ? "bg-gray-100"
+                              : option === "lightbrown"
+                              ? "bg-amber-200"
+                              : option === "brown"
+                              ? "bg-amber-700"
+                              : "bg-stone-900"
                           }`}
                         ></div>
-                        <p className="text-center text-xs mt-1 capitalize">{option}</p>
+                        <p className="text-center text-xs mt-1 capitalize">
+                          {option}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -506,7 +581,9 @@ const AvatarManagement = () => {
                 {/* Reference Image Preview */}
                 {referenceImage && (
                   <div className="w-full">
-                    <p className="text-sm font-medium text-gray-700 mb-2">Reference Image Preview</p>
+                    <p className="text-sm font-medium text-gray-700 mb-2">
+                      Reference Image Preview
+                    </p>
                     <div className="w-full h-40 bg-gray-100 rounded-lg overflow-hidden border border-gray-300">
                       <img
                         src={
@@ -529,7 +606,8 @@ const AvatarManagement = () => {
                 >
                   {isGenerating ? (
                     <span className="flex items-center justify-center">
-                      <RefreshCw size={16} className="animate-spin mr-2" /> Generating...
+                      <RefreshCw size={16} className="animate-spin mr-2" />{" "}
+                      Generating...
                     </span>
                   ) : (
                     "Generate Avatar"
@@ -569,7 +647,9 @@ const AvatarManagement = () => {
                           <Plus size={32} className="text-gray-300" />
                         </div>
                         <p>Generated Avatar Preview</p>
-                        <p className="text-sm mt-2">Fill in the details and click Generate</p>
+                        <p className="text-sm mt-2">
+                          Fill in the details and click Generate
+                        </p>
                       </div>
                     )}
                   </div>
@@ -602,7 +682,10 @@ const AvatarManagement = () => {
                         setMyAvatars((prev) => [...prev, generatedAvatar]);
                         setSelectedAvatar(generatedAvatar);
                         setIsModalOpen(false);
-                        showNotification("Avatar added to your collection!", "success");
+                        showNotification(
+                          "Avatar added to your collection!",
+                          "success"
+                        );
                       }}
                     >
                       <Plus size={18} className="mr-2" /> Add to My Avatars
