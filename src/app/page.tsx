@@ -156,11 +156,10 @@ export default function Login() {
     try {
       setErrorMessage(''); 
       if (isLogin) {
-        //should check first if verified. Modify that part after the signup verification was implemented.
         const { data } = await AuthAPI.post('/login', formData);
         localStorage.setItem('token', data.token);
-        localStorage.setItem('userEmail', formData.email);
-        localStorage.setItem('userName', formData.username);
+        localStorage.setItem('userEmail', data.user.email);
+        localStorage.setItem('userName', data.user.username);
         alert('Login successful!');
         router.push('/Dashboard');
       } else {
