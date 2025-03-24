@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from "react";
-import API from "../../utils/api";
+import {AuthAPI} from "../../utils/api";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AiOutlineEye, AiOutlineEyeInvisible, AiFillExclamationCircle } from "react-icons/ai";
 
-// Add this CSS before the component
 const floatAnimation = `
   @keyframes float {
     0% {
@@ -84,7 +83,7 @@ export default function Login() {
     const email = searchParams.get('email');
     console.log(token, email);
     try {
-      const response = await API.post('/verify-email', {
+      const response = await AuthAPI.post('/verify-email', {
         email: email,
         token: token
       });
@@ -109,7 +108,7 @@ export default function Login() {
     
     try {
       setErrorMessage(''); 
-      const { data } = await API.post('/reset-password', {
+      const { data } = await AuthAPI.post('/reset-password', {
         email: emailReset,
       });
       alert('Password reset link has been sent to your email!');
@@ -137,7 +136,7 @@ export default function Login() {
       }
 
       setErrorMessage('');
-      const { data } = await API.post('/reset-password/verify', {
+      const { data } = await AuthAPI.post('/reset-password/verify', {
         email,
         token,
         newPassword
@@ -158,7 +157,7 @@ export default function Login() {
       setErrorMessage(''); 
       if (isLogin) {
         //should check first if verified. Modify that part after the signup verification was implemented.
-        const { data } = await API.post('/login', formData);
+        const { data } = await AuthAPI.post('/login', formData);
         localStorage.setItem('token', data.token);
         localStorage.setItem('userEmail', formData.email);
         localStorage.setItem('userName', formData.username);
@@ -173,7 +172,7 @@ export default function Login() {
           setErrorMessage('Password must be at least 8 characters long and cannot contain spaces');
           return;
         }
-        const { data } = await API.post('/signup', formData);
+        const { data } = await AuthAPI.post('/signup', formData);
         if (data.status === 'success') {
           alert(data.message);
           setIsLogin(true);
