@@ -84,46 +84,10 @@ const Alert = ({ message, type, onClose }) => {
   );
 };
 
-const preExistingAvatars = [
-  {
-    id: 1,
-    name: "Avatar A",
-    imgSrc:
-      "https://easy-peasy.ai/cdn-cgi/image/quality=80,format=auto,width=700/https://media.easy-peasy.ai/8c9d0b8e-4ed4-4fee-9f77-e54b9d9a6f66/a440c3e4-0ea3-421e-a45b-bddaa582b40d.png",
-  },
-  {
-    id: 2,
-    name: "Avatar B",
-    imgSrc:
-      "https://neuroflash.com/wp-content/uploads/2022/12/feature-image-ai-avatar-maker.png",
-  },
-  {
-    id: 3,
-    name: "Avatar C",
-    imgSrc:
-      "https://www.aidemos.info/wp-content/uploads/2023/05/avatar_for_social_app_realistic_female_98944746-c433-464d-8e6c-e44ee6b6c03e.webp",
-  },
-  {
-    id: 4,
-    name: "Avatar D",
-    imgSrc:
-      "https://www.d-id.com/wp-content/uploads/2023/12/D-ID-portrait_character.png",
-  },
-  {
-    id: 5,
-    name: "Avatar Di ka iiwan",
-    imgSrc:
-      "https://i.pinimg.com/236x/e5/b5/0a/e5b50a3abb477a225732b4d21dcc2837.jpg",
-  },
-  {
-    id: 6,
-    name: "Golden Retriever Boy",
-    imgSrc:
-      "https://external-preview.redd.it/golden-retriever-bot-gusto-sa-doberman-top-v0-ZHR0Y3ZtZDVnNGhlMfIuxSYZQ1j2a4JnKafgiW1z3751TX5h-wY9yu3gVJq0.png?format=pjpg&auto=webp&s=5a2ab0321a13a8d3e8c727613211dc7a537249e1",
-  },
-];
 
 const AvatarManagement = () => {
+  const preExistingAvatars = []; // Initialize as empty array or with your pre-existing avatars
+
   const [myAvatars, setMyAvatars] = useState([]);
   const [selectedAvatar, setSelectedAvatar] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -208,21 +172,15 @@ const AvatarManagement = () => {
       const newAvatar = {
         id: Date.now(),
         imgSrc: imageUrl,
-        name: `${gender} ${style} Avatar`,
+        name: avatarName || `${gender} ${style} Avatar`,
+        blob: blob // Store the blob for later use
       };
-
-      // Save the generated avatar to the database
-      await axios.post("http://192.168.1.141:3001/avatar/generate", {
-        name: newAvatar.name,
-        imgSrc: imageUrl,
-      });
 
       // Update state
       setGeneratedAvatar(newAvatar);
-      setMyAvatars((prev) => [...prev, newAvatar]);
 
       // Show success notification
-      showNotification("Avatar generated and saved successfully!", "success");
+      showNotification("Avatar generated successfully!", "success");
     } catch (error) {
       // Detailed error logging and user-friendly message
       console.error("Error generating avatar:", error);
@@ -387,7 +345,7 @@ const AvatarManagement = () => {
               {/* Scrollable grid container */}
               <div className="overflow-y-auto flex-1 pb-20 max-h-fit">
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {[...preExistingAvatars, ...myAvatars].map((avatar) => (
+                  {((preExistingAvatars || []).concat(myAvatars || [])).map((avatar) => (
                     <div
                       key={avatar.id}
                       className={`border ${
@@ -689,43 +647,75 @@ const AvatarManagement = () => {
                     >
                       <Download size={18} className="mr-2" /> Download Avatar
                     </button>
+            
                     <button
-                      className="w-full px-4 py-3 bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] flex items-center justify-center transition font-medium"
-                      onClick={async () => {
-                        if (generatedAvatar) {
-                          try {
-                            // Convert the image to base64
-                            const response = await fetch(generatedAvatar.imgSrc);
-                            const blob = await response.blob();
-                            const reader = new FileReader();
-                    
-                            reader.onloadend = async () => {
-                              const base64Image = reader.result.split(",")[1]; // Extract base64 string
-                              const payload = {
-                                email: "test@example.com",
-                                image: base64Image,
-                              };
-                    
-                              // Send the payload to the API
-                              await axios.post("http://192.168.1.141:3001/avatar/generate", payload);
-                    
-                              // Update state and show success notification
-                              setMyAvatars((prev) => [...prev, generatedAvatar]);
-                              setSelectedAvatar(generatedAvatar);
-                              setIsModalOpen(false);
-                              showNotification("Avatar added to your collection!", "success");
-                            };
-                    
-                            reader.readAsDataURL(blob);
-                          } catch (error) {
-                            console.error("Error saving avatar to the database:", error);
-                            showNotification("Failed to save avatar to the database.", "error");
-                          }
-                        }
-                      }}
-                    >
-                      <Plus size={18} className="mr-2" /> Add to My Avatars
-                    </button>
+  className="w-full px-4 py-3 bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] flex items-center justify-center transition font-medium"
+  onClick={async () => {
+    if (generatedAvatar?.blob) {
+      try {
+        showNotification("Processing avatar...", "generating");
+        
+        // Create a proper promise-based wrapper for FileReader
+        const readFileAsDataURL = (blob) => {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(blob);
+          });
+        };
+        
+        // Get base64 string
+        const base64String = await readFileAsDataURL(generatedAvatar.blob);
+        
+        // Extract the base64 data part (remove the metadata prefix)
+        const base64Image = base64String.split(',')[1];
+        
+        if (!base64Image) {
+          throw new Error("Failed to process image data");
+        }
+        
+        // Create the payload with the field name "image" as required by the API
+        const payload = {
+          email: localStorage.getItem("userEmail") || "test@example.com", 
+          image: base64Image, // Changed from imgSrc to image to match API expectation
+          style: style.toLowerCase(),
+          name: avatarName || `${gender} ${style} Avatar`
+        };
+        
+        console.log("Sending payload with image data length:", base64Image.length);
+        
+        // Send the payload to the API
+        const response = await axios.post("http://192.168.1.141:3001/avatar/generate", payload);
+        const data = response.data;
+        
+        console.log("Avatar saved to the database:", data);
+        
+        if (data) {
+          // Update local state with the saved avatar
+          const savedAvatar = {
+            id: data._id || Date.now(),
+            imgSrc: generatedAvatar.imgSrc, // Use the existing blob URL for immediate display
+            name: payload.name,
+            style: payload.style
+          };
+          
+          setMyAvatars(prev => [...prev, savedAvatar]);
+          setSelectedAvatar(savedAvatar);
+          setIsModalOpen(false);
+          showNotification("Avatar added to your collection!", "success");
+        }
+      } catch (error) {
+        console.error("Error saving avatar:", error);
+        showNotification(`Failed to save avatar: ${error.message}`, "error");
+      }
+    } else {
+      showNotification("No avatar to save!", "error");
+    }
+  }}
+>
+  <Plus size={18} className="mr-2" /> Add to My Avatars
+</button>
                   </div>
                 )}
               </div>
