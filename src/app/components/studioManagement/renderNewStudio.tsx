@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Upload, RefreshCw } from "lucide-react";
+import { Upload, RefreshCw, ChevronDown } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
 // Alert component
@@ -79,10 +79,12 @@ const RenderNewStudio = () => {
   const [generatedImageUrl, setGeneratedImageUrl] = useState("");
   const [notification, setNotification] = useState("");
   const [notificationType, setNotificationType] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false); // Define dropdownOpen state
+  const [style, setStyle] = useState(""); // Define style state
 
   // Cleanup previous object URLs
   useEffect(() => {
-    if (referenceImage) {
+    if (typeof window !== "undefined" && referenceImage) {
       const objectUrl = URL.createObjectURL(referenceImage);
       setPreviewUrl(objectUrl);
 
@@ -140,6 +142,10 @@ const RenderNewStudio = () => {
         return imageUrl;
       });
 
+      if (typeof window !== "undefined") {
+        localStorage.setItem("lastGeneratedImage", imageUrl); // Example usage of localStorage
+      }
+
       setNotification("Studio generated successfully!", "success");
       setNotificationType("success");
     } catch (err) {
@@ -163,22 +169,157 @@ const RenderNewStudio = () => {
     }
   };
 
+  const handleSaveToLibrary = async () => {
+    if (!promptText.trim() || !style.trim()) {
+      setError("Both name and type are required.");
+      return;
+    }
+  
+    if (!generatedImageUrl) {
+      setError("No generated image to save.");
+      return;
+    }
+  
+    setError("");
+    setIsLoading(true);
+  
+    try {
+      // Convert the image to base64
+      const responseBlob = await fetch(generatedImageUrl);
+      const blob = await responseBlob.blob();
+      const reader = new FileReader();
+  
+      reader.onloadend = async () => {
+        const base64Image = reader.result.split(",")[1]; // Extract base64 string
+  
+        const response = await fetch("http://192.168.1.141:3001/studio/addStudio", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: promptText,
+            email: "forehead614@gmail.com",
+            image: base64Image,
+            type: style,
+          }),
+        });
+  
+        if (!response.ok) {
+          console.error("API Error:", response.status, response.statusText);
+          throw new Error(`API error: ${response.status}`);
+        }
+  
+        const result = await response.json();
+        console.log("Studio saved successfully:", result);
+        setNotification("Studio saved successfully!", "success");
+        setNotificationType("success");
+      };
+  
+      reader.readAsDataURL(blob); // Read the blob as a base64 string
+    } catch (err) {
+      console.error("Save Error:", err);
+      setError(`Failed to save: ${err.message}`);
+      setNotification(`Failed to save: ${err.message}`, "error");
+      setNotificationType("error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const TypesOption = ["News", "Podcast", "Educational", "Meeting"];
+
   return (
-    <div className="flex flex-col md:flex-row gap-6 p-6">
+    <div className="flex flex-row flex-wrap justify-between items-center content-center gap-y-5 w-full h-[897px]">
+
+<div className="flex flex-row justify-between items-start p-6 gap-12 w-full h-[437px] bg-white shadow-md rounded-2xl">
+  {/* Left Column - Image Preview */}
+  {generatedImageUrl && (
+    <div className="w-1/2 flex justify-center">
+      <div className="border rounded-lg p-3 w-[300px] h-[200px] overflow-hidden flex justify-center items-center">
+        <img
+          src={generatedImageUrl}
+          alt="Generated studio"
+          className="w-full h-full object-contain rounded"
+        />
+      </div>
+    </div>
+  )}
+
+  {/* Right Column - Inputs and Buttons */}
+  <div className="w-1/2 flex flex-col justify-center gap-4">
+    <h3 className="font-medium">Generated Studio</h3>
+    <input
+      type="text"
+      placeholder="Enter name"
+      className="w-full px-4 py-2 border rounded-lg"
+    />
+     <div className="relative mb-4">
+          <button
+            className="w-full p-3 border border-gray-300 rounded-lg text-sm text-gray-700 flex justify-between items-center focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent"
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+          >
+            <span>{style || "Select Style"}</span>
+            <ChevronDown
+              size={16}
+              className={`transition-transform ${
+                dropdownOpen ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+          {dropdownOpen && (
+            <div className="absolute w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
+              {TypesOption.map((option) => (
+                <div
+                  key={option}
+                  className="p-3 hover:bg-[#E3C5F0] text-sm cursor-pointer"
+                  onClick={() => {
+                    setStyle(option);
+                    setDropdownOpen(false);
+                  }}
+                >
+                  {option}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+    <button
+      className="w-full px-4 py-2 bg-[#9b25a7] text-white rounded hover:bg-[#7a1c86]"
+      onClick={handleSaveToLibrary}
+    >
+      Save to the Library
+    </button>
+    <button
+      className="w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+      onClick={handleDownload}
+    >
+      Download Image
+    </button>
+  </div>
+</div>
+
+
       {/* Reference Image Upload */}
-      <div className="bg-white p-6 rounded-lg shadow-sm w-full md:w-1/2">
+      <div className="flex flex-col items-center p-6 gap-5 w-[687px] h-[439px] bg-white shadow-md rounded-2xl">
         <h2 className="font-medium mb-4">Reference Image Upload</h2>
         <div
           className={`border-2 border-dashed ${
-            referenceImage ? "border-blue-400" : "border-gray-300"
+            referenceImage ? "border-[#9B25A7]" : "border-gray-300"
           } rounded-lg p-8 text-center`}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
         >
           {previewUrl ? (
             <div className="mb-4">
-              <img src={previewUrl} alt="Preview" className="max-h-48 mx-auto" />
-              <p className="text-sm text-gray-500 mt-2">{referenceImage.name}</p>
+              <img
+                src={previewUrl}
+                alt="Preview"
+                className="max-h-48 mx-auto"
+              />
+              <p className="text-sm text-gray-500 mt-2">
+                {referenceImage.name}
+              </p>
               <button
                 className="text-red-500 text-sm mt-2"
                 onClick={() => setReferenceImage(null)}
@@ -189,9 +330,11 @@ const RenderNewStudio = () => {
           ) : (
             <>
               <Upload className="mx-auto mb-4 text-gray-400" size={48} />
-              <p className="text-gray-500 mb-2">Drag & drop your reference image here</p>
+              <p className="text-gray-500 mb-2">
+                Drag & drop your reference image here
+              </p>
               <p className="text-gray-400 text-sm mb-4">or</p>
-              <label className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 cursor-pointer">
+              <label className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]">
                 Browse Files
                 <input
                   type="file"
@@ -203,45 +346,34 @@ const RenderNewStudio = () => {
             </>
           )}
         </div>
-        <p className="text-sm text-gray-500 mt-2">Reference image is optional</p>
+        <p className="text-sm text-gray-500 mt-2">
+          Reference image is optional
+        </p>
       </div>
 
       {/* AI Generation Prompt */}
-      <div className="bg-white p-6 rounded-lg shadow-sm w-full md:w-1/2">
+      <div className="flex flex-col items-start p-6 gap-2 w-[967px] h-[437px] bg-white shadow-md rounded-2xl">
         <h2 className="font-medium mb-4">AI Generation Prompt</h2>
         <textarea
-          className="w-full h-40 border rounded-lg p-3 mb-4"
+          className="w-full h-32 md:h-40 border rounded-lg p-3 mb-4 border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent focus:outline-none"
           placeholder="Enter your studio generation prompt..."
           value={promptText}
           onChange={(e) => setPromptText(e.target.value)}
         />
+     
         {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
 
         <button
-          className={`w-full px-4 py-2 bg-blue-500 text-white rounded ${
-            isLoading ? "opacity-75 cursor-not-allowed" : "hover:bg-blue-600"
+          className={`w-full px-4 py-2 bg-[#9B25A7] text-white text-sm py-2 px-4 rounded-md flex items-center gap-1 transition-colors ${
+            isLoading
+              ? "opacity-75 cursor-not-allowed"
+              : "hover:bg-[#7A1C86] align-middle justify-center"
           }`}
           onClick={handleSubmit}
           disabled={isLoading}
         >
           {isLoading ? "Generating..." : "Generate Studio"}
         </button>
-
-        {/* Generated Image Preview */}
-        {generatedImageUrl && (
-          <div className="mt-6">
-            <h3 className="font-medium mb-2">Generated Studio</h3>
-            <div className="border rounded-lg p-3 mb-2">
-              <img src={generatedImageUrl} alt="Generated studio" className="w-full rounded" />
-            </div>
-            <button
-              className="w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-              onClick={handleDownload}
-            >
-              Download Image
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Alert Component */}

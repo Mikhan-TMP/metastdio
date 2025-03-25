@@ -107,6 +107,7 @@ const AvatarManagement = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState("");
+  const email = localStorage.getItem("userEmail")
 
   const addAvatarToList = (avatar) => {
     if (!myAvatars.some((a) => a.id === avatar.id)) {
@@ -328,8 +329,7 @@ const AvatarManagement = () => {
 
       // Use PATCH method for updating the avatar name
       const response = await axios.patch(
-        `http://192.168.1.141:3001/avatar/updateAvatar`,
-        { id: avatarId, name: newName } // Send the data in the request body
+        `http://192.168.1.141:3001/avatar/updateAvatar?id=${avatarId}&email=${email}&name=${newName}`
       );
 
       if (response.data.status === "success") {
@@ -378,10 +378,11 @@ const AvatarManagement = () => {
       }
 
       // Use PATCH method for deleting the avatar
-      const response = await axios.patch(
-        `http://192.168.1.141:3001/avatar/delete`,
-        { id: avatarId } // Send the ID in the request body
+      const email = localStorage.getItem("userEmail");
+      const response = await axios.delete(
+        `http://192.168.1.141:3001/avatar/delete?id=${avatarId}&email=${email}`,
       );
+      
 
       if (response.data.status === "success") {
         setMyAvatars((prev) => prev.filter((av) => av.id !== avatarId));
