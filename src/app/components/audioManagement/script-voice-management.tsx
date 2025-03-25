@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from "react";
 import axios from "axios";
-import { FileText, Check, Copy, Volume2, RefreshCw } from "lucide-react";
+import { FileText, Check, Copy, Volume2, RefreshCw, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ResponsiveTabs from "./ResponsiveTabs";
 import AudioManagerUI from "./audio-manager-ui"; // Import the AudioManagerUI component
@@ -15,7 +15,7 @@ const AudioScript = () => {
   const [scriptType, setScriptType] = useState("");
   const [voiceType, setVoiceType] = useState("");
   const [numberOfScenes, setNumberOfScenes] = useState("");
-  const [promptLength, setPromptLength] = useState("medium"); // New state for prompt length
+  const [promptLength, setPromptLength] = useState("Select Propmt Length"); // New state for prompt length
   const [isDragActive, setIsDragActive] = useState(false);
   const [file, setFile] = useState(null); // New state for file
   const [fileError, setFileError] = useState("");
@@ -27,6 +27,8 @@ const AudioScript = () => {
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false); // Define isGeneratingAudio state
   const [isGeneratingScript, setIsGeneratingScript] = useState(false); // Define isGeneratingScript state
   const [abortController, setAbortController] = useState(null); // Define abortController state
+  const [dropdownOpen, setDropdownOpen] = useState(false); // Define dropdownOpen state
+  const [style, setStyle] = useState(""); // Define style state
 
   // Show modal after 2 seconds if there's a generated script
   useEffect(() => {
@@ -267,7 +269,7 @@ const AudioScript = () => {
         {/* Left Column - Script Upload */}
         <div className="bg-white p-4 md:p-6 rounded-lg shadow-sm">
           <textarea
-            className="w-full h-32 md:h-40 border rounded-lg p-3 mb-4"
+            className="w-full h-32 md:h-40 border rounded-lg p-3 mb-4 border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:outline-none"
             placeholder="Enter your script Topic..."
             value={scriptTopic}
             onChange={(e) => setScriptTopic(e.target.value)}
@@ -311,7 +313,7 @@ const AudioScript = () => {
             />
             <label
               htmlFor="fileUpload"
-              className="inline-block px-4 py-2 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 cursor-pointer"
+              className="inline-block px-4 py-2 bg-[#9B25A7] text-white text-sm rounded hover:bg-[#871f90] cursor-pointer"
             >
               Upload File
             </label>
@@ -359,7 +361,7 @@ const AudioScript = () => {
               </label>
               <input
                 type="text"
-                className="w-full border rounded-lg p-2 md:p-3 text-sm"
+                className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:outline-none"
                 placeholder="Enter the script title"
                 value={scriptTitle}
                 onChange={(e) => setScriptTitle(e.target.value)}
@@ -377,7 +379,7 @@ const AudioScript = () => {
                 </label>
                 <input
                   type="number"
-                  className="w-full border rounded-lg p-2 md:p-3 text-sm"
+                 className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:outline-none"
                   placeholder="Enter number"
                   value={numberOfPeople}
                   onChange={(e) => setNumberOfPeople(e.target.value)}
@@ -394,7 +396,7 @@ const AudioScript = () => {
                 </label>
                 <input
                   type="number"
-                  className="w-full border rounded-lg p-2 md:p-3 text-sm"
+                  className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:outline-none"
                   placeholder="Enter scenes"
                   value={numberOfScenes}
                   onChange={(e) => setNumberOfScenes(e.target.value)}
@@ -403,48 +405,11 @@ const AudioScript = () => {
               </div>
             </div>
 
-            <div>
-              <label
-                className="block text-sm font-medium text-gray-700 mb-2"
-                style={{ color: "black" }}
-              >
-                Script Type
-              </label>
-              <select
-                className="w-full border rounded-lg p-2 md:p-3 bg-white text-gray-700 text-sm"
-                value={scriptType}
-                onChange={(e) => setScriptType(e.target.value)}
-                style={{ color: "black" }}
-              >
-                <option value="" disabled>
-                  Choose a script type...
-                </option>
-                <option value="Informative Type – Knowledge Sharing">
-                  Informative Type – Knowledge Sharing
-                </option>
-                <option value="Storytelling Type – Emotional Narrative">
-                  Storytelling Type – Emotional Narrative
-                </option>
-                <option value="Q&A Type – Questions & Answers">
-                  Q&A Type – Questions & Answers
-                </option>
-                <option value="Review Type – Product Review">
-                  Review Type – Product Review
-                </option>
-                <option value="Challenge Type – Experiment & Challenge">
-                  Challenge Type – Experiment & Challenge
-                </option>
-                <option value="Comedy Type – Humorous Content">
-                  Comedy Type – Humorous Content
-                </option>
-                <option value="ASMR Type – Sensory Content">
-                  ASMR Type – Sensory Content
-                </option>
-                <option value="Motivational Type – Inspirational Message">
-                  Motivational Type – Inspirational Message
-                </option>
-              </select>
-            </div>
+            <Dropdown
+              options={ScriptTypeOption}
+              selectedOption={scriptType}
+              setSelectedOption={setScriptType}
+            />
 
             <div>
               <label
@@ -453,39 +418,28 @@ const AudioScript = () => {
               >
                 Voice Type
               </label>
-              <select
-                className="w-full border rounded-lg p-2 md:p-3 bg-white text-gray-700 text-sm"
-                value={voiceType}
-                onChange={(e) => setVoiceType(e.target.value)}
-                style={{ color: "black" }}
-              >
-                <option value="" disabled>
-                  Choose a Voice type...
-                </option>
-                <option value="Energetic & Enthusiastic">
-                  Energetic & Enthusiastic
-                </option>
-                <option value="Calm & Soothing">Calm & Soothing</option>
-                <option value="Dramatic & Intense">Dramatic & Intense</option>
-                <option value="Conversational & Friendly">
-                  Conversational & Friendly
-                </option>
-                <option value="Serious & Authoritative">
-                  Serious & Authoritative
-                </option>
-                <option value="Whispery & ASMR">Whispery & ASMR</option>
-                <option value="Inspirational & Motivational">
-                  Inspirational & Motivational
-                </option>
-                <option value="Humorous & Playful">Humorous & Playful</option>
-                <option value="Fast-paced & Urgent">Fast-paced & Urgent</option>
-                <option value="Narrative & Storytelling">
-                  Narrative & Storytelling
-                </option>
-              </select>
+              <Dropdown
+                options={VoiceTypeOption}
+                selectedOption={voiceType}
+                setSelectedOption={setVoiceType}
+              />
             </div>
 
             <div>
+              <label
+                className="block text-sm font-medium text-gray-700 mb-2"
+                style={{ color: "black" }}
+              >
+                Propmt Length
+              </label>
+              <Dropdown
+                options={PromptLengthOption}
+                selectedOption={promptLength}
+                setSelectedOption={setPromptLength}
+              />
+            </div>
+
+            {/* <div>
               <label
                 className="block text-sm font-medium text-gray-700 mb-2"
                 style={{ color: "black" }}
@@ -502,22 +456,23 @@ const AudioScript = () => {
                 <option value="medium">Medium</option>
                 <option value="long">Long</option>
               </select>
-            </div>
+            </div> */}
 
             <textarea
-              className="w-full h-32 md:h-40 border rounded-lg p-3"
+              className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:outline-none"
               placeholder="Enter your script generation prompt..."
               value={scriptPrompt}
               onChange={(e) => setScriptPrompt(e.target.value)}
               style={{ color: "black" }}
             />
 
-            <button
-              onClick={handleGenerateScript}
-              className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm md:text-base"
-            >
-              Generate Script
-            </button>
+<button
+  onClick={handleGenerateScript}
+  className="w-full px-4 py-2 bg-[#9B25A7] text-white rounded hover:bg-[#871f90] text-sm md:text-base"
+>
+  Generate Script
+</button>
+
           </div>
 
           {/* Success Message Modal */}
@@ -602,6 +557,69 @@ const AudioScript = () => {
           </>
         )}
       </button>
+    );
+  };
+
+
+  const ScriptTypeOption = [
+    "Informative Type – Knowledge Sharing",
+    "Storytelling Type – Emotional Narrative",
+    "Q&A Type – Questions & Answers",
+    "Review Type – Product Review",
+    "Challenge Type – Experiment & Challenge",
+    "Comedy Type – Humorous Content",
+    "ASMR Type – Sensory Content",
+    "Motivational Type – Inspirational Message",
+  ];
+
+  
+  const VoiceTypeOption = [
+    "Energetic & Enthusiastic",
+    "Calm & Soothing",
+    "Dramatic & Intense",
+    "Conversational & Friendly",
+    "Serious & Authoritative",
+    "Whispery & ASMR",
+    "Inspirational & Motivational",
+    "Humorous & Playful",
+    "Fast-paced & Urgent",
+    "Narrative & Storytelling",
+  ];
+  
+  const PromptLengthOption = ["Short", "Medium", "Long"]; 
+
+  const Dropdown = ({ options, selectedOption, setSelectedOption }) => {
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+  
+    return (
+      <div className="relative">
+        <button
+          className="w-full p-3 border border-gray-300 rounded-lg text-sm text-gray-700 flex justify-between items-center focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          onClick={() => setDropdownOpen(!dropdownOpen)}
+        >
+          <span>{selectedOption || "Select Option"}</span>
+          <ChevronDown
+            size={16}
+            className={`transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
+          />
+        </button>
+        {dropdownOpen && (
+          <div className="absolute w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
+            {options.map((option) => (
+              <div
+                key={option}
+                className="p-3 hover:bg-purple-100 text-sm cursor-pointer"
+                onClick={() => {
+                  setSelectedOption(option);
+                  setDropdownOpen(false);
+                }}
+              >
+                {option}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     );
   };
 
