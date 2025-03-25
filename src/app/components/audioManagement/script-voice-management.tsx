@@ -15,7 +15,7 @@ const AudioScript = () => {
   const [scriptType, setScriptType] = useState("");
   const [voiceType, setVoiceType] = useState("");
   const [numberOfScenes, setNumberOfScenes] = useState("");
-  const [promptLength, setPromptLength] = useState("medium"); // New state for prompt length
+  const [promptLength, setPromptLength] = useState("Select Propmt Length"); // New state for prompt length
   const [isDragActive, setIsDragActive] = useState(false);
   const [file, setFile] = useState(null); // New state for file
   const [fileError, setFileError] = useState("");
