@@ -24,13 +24,12 @@ const Alert = ({ message, type, onClose }) => {
           className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 z-50"
         >
           <div
-            className={`relative max-w-sm w-full p-5 rounded-lg shadow-lg flex items-center gap-3 border ${
-              type === "success"
+            className={`relative max-w-sm w-full p-5 rounded-lg shadow-lg flex items-center gap-3 border ${type === "success"
                 ? "bg-green-100 text-green-800 border-green-300"
                 : type === "generating"
-                ? "bg-blue-100 text-blue-800 border-blue-300"
-                : "bg-red-100 text-red-800 border-red-300"
-            }`}
+                  ? "bg-blue-100 text-blue-800 border-blue-300"
+                  : "bg-red-100 text-red-800 border-red-300"
+              }`}
           >
             {/* Icon */}
             {type === "success" ? (
@@ -245,23 +244,24 @@ const AvatarManagement = () => {
     "Steampunk",
   ];
 
-  // Add fetchAvatars function
-  const fetchAvatars = async (selectedStyle = '') => {
+  // Update fetchAvatars function
+  const fetchAvatars = async (selectedStyle = '', searchName = '') => {
     try {
       setIsLoading(true);
       const email = localStorage.getItem("userEmail") || "test@example.com";
-      
-      // Only add style parameter if a specific style is selected (not "All")
-      const params = { 
+
+      // Build params object with all filters
+      const params = {
         email,
-        ...(selectedStyle && selectedStyle !== 'All' ? { style: selectedStyle.toLowerCase() } : {})
+        ...(selectedStyle && selectedStyle !== 'All' ? { style: selectedStyle.toLowerCase() } : {}),
+        ...(searchName ? { name: searchName } : {})
       };
 
       const response = await axios.get(`http://192.168.1.141:3001/avatar/getAvatars`, { params });
       console.log("API Response:", response.data);
 
       const fetchedAvatars = response.data.map((avatar, index) => ({
-        id: index,
+        id: avatar.id || index,
         imgSrc: `data:image/png;base64,${avatar.imgSrc}`,
         name: avatar.name || `Avatar ${index + 1}`,
         style: avatar.style
@@ -270,20 +270,26 @@ const AvatarManagement = () => {
       setMyAvatars(fetchedAvatars);
     } catch (error) {
       console.error("Error fetching avatars:", error);
-      setMyAvatars([]); // Clear avatars on error to trigger the no avatars UI
+      setMyAvatars([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Add useEffect to fetch avatars on component mount
+  // Update useEffect to include avatarName in dependencies
   useEffect(() => {
-    fetchAvatars(style);
-  }, [style]);
+    fetchAvatars(style, avatarName);
+  }, [style, avatarName]);
 
   const handleStyleChange = (selectedStyle) => {
     setStyle(selectedStyle);
     setDropdownOpen(false);
+  };
+
+  // Update handleAvatarNameChange
+  const handleAvatarNameChange = (e) => {
+    const newName = e.target.value;
+    setAvatarName(newName);
   };
 
   return (
@@ -304,12 +310,12 @@ const AvatarManagement = () => {
                     Avatar Name
                   </label>
                   <input
-  type="text"
-  placeholder="Enter Avatar Name"
-  value={avatarName}
-  onChange={(e) => setAvatarName(e.target.value)}
-  className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent focus:outline-none"
-/>
+                    type="text"
+                    placeholder="Enter Avatar Name"
+                    value={avatarName}
+                    onChange={handleAvatarNameChange}
+                    className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent focus:outline-none"
+                  />
 
                 </div>
                 {/* Dropdown */}
@@ -325,9 +331,8 @@ const AvatarManagement = () => {
                       <span>{style || "Select an Option"}</span>
                       <ChevronDown
                         size={16}
-                        className={`transition-transform ${
-                          dropdownOpen ? "rotate-180" : ""
-                        }`}
+                        className={`transition-transform ${dropdownOpen ? "rotate-180" : ""
+                          }`}
                       />
                     </button>
                     {dropdownOpen && (
@@ -377,9 +382,7 @@ const AvatarManagement = () => {
                       onChange={handleFileUpload}
                     />
                   </label>
-                  <button className="w-full sm:w-auto bg-[#9B25A7] text-white text-sm py-2 px-4 rounded-md flex items-center justify-center gap-2 hover:bg-[#7A1C86] transition-colors">
-                    <Save size={16} /> Save Changes
-                  </button>
+                  
                 </div>
               </div>
               {/* Scrollable grid container */}
@@ -393,11 +396,10 @@ const AvatarManagement = () => {
                     {myAvatars.map((avatar) => (
                       <div
                         key={avatar.id}
-                        className={`border ${
-                          selectedAvatar?.id === avatar.id
+                        className={`border ${selectedAvatar?.id === avatar.id
                             ? "border-[#9B25A7] bg-[#F4E3F8]"
                             : "border-gray-300"
-                        } rounded-lg p-3 cursor-pointer transition-all hover:shadow-md`}
+                          } rounded-lg p-3 cursor-pointer transition-all hover:shadow-md`}
                         onClick={() => setSelectedAvatar(avatar)}
                       >
                         {/* Centering and resizing the image */}
@@ -434,8 +436,8 @@ const AvatarManagement = () => {
                     </div>
                     <p className="text-lg font-medium mb-2">No Avatars Available</p>
                     <p className="text-sm text-center max-w-md">
-                      {style !== "" ? 
-                        `No avatars found in ${style} style category. Try selecting a different style or create a new avatar.` : 
+                      {style !== "" ?
+                        `No avatars found in ${style} style category. Try selecting a different style or create a new avatar.` :
                         'No avatars exist in your collection. Try generating one or import from your device.'}
                     </p>
                     <button
@@ -468,7 +470,10 @@ const AvatarManagement = () => {
                     <p className="text-center font-medium text-gray-800 text-base sm:text-lg">
                       {selectedAvatar.name}
                     </p>
-                    <button className="w-full bg-white border border-[#9B25A7] text-[#9B25A7] text-sm py-2 px-4 rounded-md flex items-center justify-center gap-2 hover:bg-[#F4E3F8] transition-colors">
+                    <button className="w-full bg-[#9B25A7] border border-[#9B25A7] text-white text-sm py-2 px-4 rounded-md flex items-center justify-center gap-2 hover:bg-[#7A1C86] transition-colors cursor-pointer">
+                    <Save size={16} /> Save Changes
+                  </button>
+                    <button className="w-full bg-white border border-[#9B25A7] text-[#9B25A7] text-sm py-2 px-4 rounded-md flex items-center justify-center gap-2 hover:bg-[#F4E3F8] transition-colors cursor-pointer">
                       <Download size={16} /> Download Avatar
                     </button>
                   </div>
@@ -481,7 +486,7 @@ const AvatarManagement = () => {
                   <p className="text-base sm:text-lg">No Avatar Selected</p>
                   <p className="text-sm mt-2 max-w-md mx-auto">
                     {myAvatars.length === 0 ? (
-                      style ? 
+                      style ?
                         `No avatars available in ${style} style. Try selecting a different style or create a new avatar.` :
                         'No avatars exist in your collection. Start by creating your first avatar!'
                     ) : (
@@ -515,39 +520,39 @@ const AvatarManagement = () => {
 
               <div className="space-y-6 mt-4">
                 {/* Style Selection */}
-                  <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Style
-      </label>
-      <div className="relative">
-        <button
-          className="w-full p-3 border border-gray-300 rounded-lg text-sm text-gray-700 flex justify-between items-center focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent"
-          onClick={() => setDropdownOpen(!dropdownOpen)}
-        >
-          <span>{style || "Select Style"}</span>
-          <ChevronDown
-            size={16}
-            className={`transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
-          />
-        </button>
-        {dropdownOpen && (
-          <div className="absolute w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
-            {StylesOption.map((option) => (
-              <div
-                key={option}
-                className="p-3 hover:bg-[#E3C5F0] text-sm cursor-pointer"
-                onClick={() => {
-                  setStyle(option);
-                  setDropdownOpen(false);
-                }}
-              >
-                {option}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Style
+                  </label>
+                  <div className="relative">
+                    <button
+                      className="w-full p-3 border border-gray-300 rounded-lg text-sm text-gray-700 flex justify-between items-center focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent"
+                      onClick={() => setDropdownOpen(!dropdownOpen)}
+                    >
+                      <span>{style || "Select Style"}</span>
+                      <ChevronDown
+                        size={16}
+                        className={`transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
+                      />
+                    </button>
+                    {dropdownOpen && (
+                      <div className="absolute w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
+                        {StylesOption.map((option) => (
+                          <div
+                            key={option}
+                            className="p-3 hover:bg-[#E3C5F0] text-sm cursor-pointer"
+                            onClick={() => {
+                              setStyle(option);
+                              setDropdownOpen(false);
+                            }}
+                          >
+                            {option}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
 
                 {/* Gender Selection */}
                 <div>
@@ -558,11 +563,10 @@ const AvatarManagement = () => {
                     {["Male", "Female"].map((option) => (
                       <div
                         key={option}
-                        className={`border ${
-                          gender === option
+                        className={`border ${gender === option
                             ? "border-[#9B25A7] bg-[#F4E3F8]"
                             : "border-gray-300"
-                        } 
+                          } 
                           rounded-lg p-3 cursor-pointer transition-all hover:border-[#9B25A7] flex items-center justify-center`}
                         onClick={() => setGender(option)}
                       >
@@ -581,24 +585,22 @@ const AvatarManagement = () => {
                     {["white", "brown", "lightbrown", "black"].map((option) => (
                       <div
                         key={option}
-                        className={`border ${
-                          skin === option
+                        className={`border ${skin === option
                             ? "border-[#9B25A7]"
                             : "border-gray-300"
-                        } 
+                          } 
                           rounded-lg p-2 cursor-pointer transition-all hover:border-[#9B25A7]`}
                         onClick={() => setSkin(option)}
                       >
                         <div
-                          className={`w-full h-8 rounded ${
-                            option === "white"
+                          className={`w-full h-8 rounded ${option === "white"
                               ? "bg-gray-100"
                               : option === "lightbrown"
-                              ? "bg-amber-200"
-                              : option === "brown"
-                              ? "bg-amber-700"
-                              : "bg-stone-900"
-                          }`}
+                                ? "bg-amber-200"
+                                : option === "brown"
+                                  ? "bg-amber-700"
+                                  : "bg-stone-900"
+                            }`}
                         ></div>
                         <p className="text-center text-xs mt-1 capitalize">
                           {option}
@@ -726,75 +728,75 @@ const AvatarManagement = () => {
                     >
                       <Download size={18} className="mr-2" /> Download Avatar
                     </button>
-            
+
                     <button
-  className="w-full px-4 py-3 bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] flex items-center justify-center transition font-medium"
-  onClick={async () => {
-    if (generatedAvatar?.blob) {
-      try {
-        showNotification("Processing avatar...", "generating");
-        
-        // Create a proper promise-based wrapper for FileReader
-        const readFileAsDataURL = (blob) => {
-          return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = () => reject(reader.error);
-            reader.readAsDataURL(blob);
-          });
-        };
-        
-        // Get base64 string
-        const base64String = await readFileAsDataURL(generatedAvatar.blob);
-        
-        // Extract the base64 data part (remove the metadata prefix)
-        const base64Image = base64String.split(',')[1];
-        
-        if (!base64Image) {
-          throw new Error("Failed to process image data");
-        }
-        
-        // Create the payload with the field name "image" as required by the API
-        const payload = {
-          email: localStorage.getItem("userEmail") || "test@example.com", 
-          image: base64Image, // Changed from imgSrc to image to match API expectation
-          style: style.toLowerCase(),
-          name: avatarName || `${gender} ${style} Avatar`
-        };
-        
-        console.log("Sending payload with image data length:", base64Image.length);
-        
-        // Send the payload to the API
-        const response = await axios.post("http://192.168.1.141:3001/avatar/generate", payload);
-        const data = response.data;
-        
-        console.log("Avatar saved to the database:", data);
-        
-        if (data) {
-          // Update local state with the saved avatar
-          const savedAvatar = {
-            id: data._id || Date.now(),
-            imgSrc: generatedAvatar.imgSrc, // Use the existing blob URL for immediate display
-            name: payload.name,
-            style: payload.style
-          };
-          
-          setMyAvatars(prev => [...prev, savedAvatar]);
-          setSelectedAvatar(savedAvatar);
-          setIsModalOpen(false);
-          showNotification("Avatar added to your collection!", "success");
-        }
-      } catch (error) {
-        console.error("Error saving avatar:", error);
-        showNotification(`Failed to save avatar: ${error.message}`, "error");
-      }
-    } else {
-      showNotification("No avatar to save!", "error");
-    }
-  }}
->
-  <Plus size={18} className="mr-2" /> Add to My Avatars
-</button>
+                      className="w-full px-4 py-3 bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] flex items-center justify-center transition font-medium"
+                      onClick={async () => {
+                        if (generatedAvatar?.blob) {
+                          try {
+                            showNotification("Processing avatar...", "generating");
+
+                            // Create a proper promise-based wrapper for FileReader
+                            const readFileAsDataURL = (blob) => {
+                              return new Promise((resolve, reject) => {
+                                const reader = new FileReader();
+                                reader.onload = () => resolve(reader.result);
+                                reader.onerror = () => reject(reader.error);
+                                reader.readAsDataURL(blob);
+                              });
+                            };
+
+                            // Get base64 string
+                            const base64String = await readFileAsDataURL(generatedAvatar.blob);
+
+                            // Extract the base64 data part (remove the metadata prefix)
+                            const base64Image = base64String.split(',')[1];
+
+                            if (!base64Image) {
+                              throw new Error("Failed to process image data");
+                            }
+
+                            // Create the payload with the field name "image" as required by the API
+                            const payload = {
+                              email: localStorage.getItem("userEmail") || "test@example.com",
+                              image: base64Image, // Changed from imgSrc to image to match API expectation
+                              style: style.toLowerCase(),
+                              name: avatarName || `${gender} ${style} Avatar`
+                            };
+
+                            console.log("Sending payload with image data length:", base64Image.length);
+
+                            // Send the payload to the API
+                            const response = await axios.post("http://192.168.1.141:3001/avatar/generate", payload);
+                            const data = response.data;
+
+                            console.log("Avatar saved to the database:", data);
+
+                            if (data) {
+                              // Update local state with the saved avatar
+                              const savedAvatar = {
+                                id: data._id || Date.now(),
+                                imgSrc: generatedAvatar.imgSrc, // Use the existing blob URL for immediate display
+                                name: payload.name,
+                                style: payload.style
+                              };
+
+                              setMyAvatars(prev => [...prev, savedAvatar]);
+                              setSelectedAvatar(savedAvatar);
+                              setIsModalOpen(false);
+                              showNotification("Avatar added to your collection!", "success");
+                            }
+                          } catch (error) {
+                            console.error("Error saving avatar:", error);
+                            showNotification(`Failed to save avatar: ${error.message}`, "error");
+                          }
+                        } else {
+                          showNotification("No avatar to save!", "error");
+                        }
+                      }}
+                    >
+                      <Plus size={18} className="mr-2" /> Add to My Avatars
+                    </button>
                   </div>
                 )}
               </div>
