@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from "react";
 import axios from "axios";
-import { FileText, Check, Copy, Volume2, RefreshCw, ChevronDown } from "lucide-react";
+import { FileText, Check, Copy, Volume2, RefreshCw, ChevronDown, Download } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ResponsiveTabs from "./ResponsiveTabs";
 import AudioManagerUI from "./audio-manager-ui"; // Import the AudioManagerUI component
@@ -29,6 +29,7 @@ const AudioScript = () => {
   const [abortController, setAbortController] = useState(null); // Define abortController state
   const [dropdownOpen, setDropdownOpen] = useState(false); // Define dropdownOpen state
   const [style, setStyle] = useState(""); // Define style state
+  const [downloadUrl, setDownloadUrl] = useState(""); // New state for download URL
 
   // Show modal after 2 seconds if there's a generated script
   useEffect(() => {
@@ -150,6 +151,8 @@ const AudioScript = () => {
     try {
       setIsGeneratingAudio(true);
       setAudioUrl(""); // Clear previous audio URL
+      setDownloadUrl(""); // Clear previous download URL
+
       const response = await axios.post(
         "http://192.168.1.71:8083/script_gen/generate-audio",
         {
@@ -157,19 +160,45 @@ const AudioScript = () => {
           voiceType: voiceType,
         },
         {
-          responseType: "blob", // Set response type to blob to handle audio file
+          responseType: "blob", // Set response type to blob to handle zip file
         }
       );
 
-      const audioBlob = new Blob([response.data], { type: "audio/wav" });
-      const audioUrl = URL.createObjectURL(audioBlob);
-      setAudioUrl(audioUrl);
+      // Create a download URL for the zip file
+      const downloadBlob = new Blob([response.data], { type: "application/zip" });
+      const downloadUrl = URL.createObjectURL(downloadBlob);
+      setDownloadUrl(downloadUrl);
+
+      // Try to extract and play the WAV file from the zip
+      const zipFile = new File([response.data], "audio_output.zip", { type: "application/zip" });
+      const jszip = await import('jszip');
+      const zip = await jszip.loadAsync(zipFile);
+      
+      // Find the WAV file in the zip
+      const wavFile = Object.values(zip.files).find(file => file.name.endsWith('.wav'));
+      if (wavFile) {
+        const wavBlob = await wavFile.async('blob');
+        const audioUrl = URL.createObjectURL(wavBlob);
+        setAudioUrl(audioUrl);
+      }
+
       setSuccessMessage("Audio generated successfully!");
     } catch (error) {
       console.error("Error generating audio:", error);
       setErrorMessage("Failed to generate audio. Please try again.");
     } finally {
       setIsGeneratingAudio(false);
+    }
+  };
+
+  const handleDownloadAudio = () => {
+    if (downloadUrl) {
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = "audio_output.zip";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   };
 
@@ -682,6 +711,15 @@ const AudioScript = () => {
               <Volume2 size={16} />
               {isGeneratingAudio ? "Generating..." : "Generate Audio"}
             </button>
+            {downloadUrl && (
+              <button
+                onClick={handleDownloadAudio}
+                className="w-full sm:w-auto px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center justify-center gap-2"
+              >
+                <Download size={16} />
+                Download Zip
+              </button>
+            )}
           </div>
           <button
             onClick={() => setShowModal(false)}
