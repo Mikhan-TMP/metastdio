@@ -1,6 +1,13 @@
 import React, { useState, useCallback, useEffect } from "react";
 import axios from "axios";
-import { FileText, Check, Copy, Volume2, RefreshCw, ChevronDown, Download } from "lucide-react";
+import {
+  FileText,
+  Check,
+  Copy,
+  Volume2,
+  RefreshCw,
+  ChevronDown,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ResponsiveTabs from "./ResponsiveTabs";
 import AudioManagerUI from "./audio-manager-ui"; // Import the AudioManagerUI component
@@ -29,7 +36,7 @@ const AudioScript = () => {
   const [abortController, setAbortController] = useState(null); // Define abortController state
   const [dropdownOpen, setDropdownOpen] = useState(false); // Define dropdownOpen state
   const [style, setStyle] = useState(""); // Define style state
-  const [downloadUrl, setDownloadUrl] = useState(""); // New state for download URL
+  const [zipUrl, setZipUrl] = useState(""); // Define zipUrl state
 
   // Show modal after 2 seconds if there's a generated script
   useEffect(() => {
@@ -151,8 +158,8 @@ const AudioScript = () => {
     try {
       setIsGeneratingAudio(true);
       setAudioUrl(""); // Clear previous audio URL
-      setDownloadUrl(""); // Clear previous download URL
-
+      setZipUrl(""); // Clear previous zip URL
+  
       const response = await axios.post(
         "http://192.168.1.71:8083/script_gen/generate-audio",
         {
@@ -160,45 +167,110 @@ const AudioScript = () => {
           voiceType: voiceType,
         },
         {
-          responseType: "blob", // Set response type to blob to handle zip file
+          responseType: "arraybuffer",
+          headers: {
+            'Accept': 'multipart/mixed'
+          }
         }
       );
-
-      // Create a download URL for the zip file
-      const downloadBlob = new Blob([response.data], { type: "application/zip" });
-      const downloadUrl = URL.createObjectURL(downloadBlob);
-      setDownloadUrl(downloadUrl);
-
-      // Try to extract and play the WAV file from the zip
-      const zipFile = new File([response.data], "audio_output.zip", { type: "application/zip" });
-      const jszip = await import('jszip');
-      const zip = await jszip.loadAsync(zipFile);
-      
-      // Find the WAV file in the zip
-      const wavFile = Object.values(zip.files).find(file => file.name.endsWith('.wav'));
-      if (wavFile) {
-        const wavBlob = await wavFile.async('blob');
-        const audioUrl = URL.createObjectURL(wavBlob);
+  
+      // Get the content type and boundary
+      const contentType = response.headers['content-type'];
+      const boundary = contentType.split('boundary=')[1];
+  
+      // Convert ArrayBuffer to Uint8Array
+      const uint8Array = new Uint8Array(response.data);
+  
+      // Find the start and end of each part
+      const findPartBoundaries = (array, boundaryStr) => {
+        const parts = [];
+        const boundaryBytes = new TextEncoder().encode(`--${boundaryStr}`);
+        
+        let start = 0;
+        while (start < array.length) {
+          // Find the next boundary
+          const boundaryIndex = array.findIndex((val, idx) => 
+            idx >= start && 
+            array.slice(idx, idx + boundaryBytes.length).every((b, i) => b === boundaryBytes[i])
+          );
+  
+          if (boundaryIndex === -1) break;
+  
+          // Find the next boundary or the end of the array
+          const nextBoundaryIndex = array.findIndex((val, idx) => 
+            idx > boundaryIndex && 
+            array.slice(idx, idx + boundaryBytes.length).every((b, i) => b === boundaryBytes[i])
+          );
+  
+          parts.push({
+            start: boundaryIndex,
+            end: nextBoundaryIndex !== -1 ? nextBoundaryIndex : array.length
+          });
+  
+          start = boundaryIndex + boundaryBytes.length;
+        }
+  
+        return parts;
+      };
+  
+      // Get part boundaries
+      const parts = findPartBoundaries(uint8Array, boundary);
+  
+      // Extract files
+      let audioBlob = null;
+      let zipBlob = null;
+  
+      parts.forEach(part => {
+        // Extract the part content
+        const partContent = uint8Array.slice(part.start, part.end);
+        const partText = new TextDecoder().decode(partContent);
+  
+        if (partText.includes('filename="generated_script.wav"')) {
+          // Find the start of binary data
+          const headerEnd = partContent.findIndex((byte, i) => 
+            partContent[i] === 13 && partContent[i+1] === 10 && 
+            partContent[i+2] === 13 && partContent[i+3] === 10
+          );
+  
+          if (headerEnd !== -1) {
+            const audioData = partContent.slice(headerEnd + 4);
+            audioBlob = new Blob([audioData], { type: 'audio/wav' });
+          }
+        }
+  
+        if (partText.includes('filename="audio_temp.zip"')) {
+          // Find the start of binary data
+          const headerEnd = partContent.findIndex((byte, i) => 
+            partContent[i] === 13 && partContent[i+1] === 10 && 
+            partContent[i+2] === 13 && partContent[i+3] === 10
+          );
+  
+          if (headerEnd !== -1) {
+            const zipData = partContent.slice(headerEnd + 4);
+            zipBlob = new Blob([zipData], { type: 'application/zip' });
+          }
+        }
+      });
+  
+      // Create object URLs
+      if (audioBlob) {
+        const audioUrl = URL.createObjectURL(audioBlob);
         setAudioUrl(audioUrl);
+        console.log("Audio Blob Size:", audioBlob.size); // Log blob size for debugging
       }
-
-      setSuccessMessage("Audio generated successfully!");
+  
+      if (zipBlob) {
+        const zipUrl = URL.createObjectURL(zipBlob);
+        setZipUrl(zipUrl);
+        console.log("Zip Blob Size:", zipBlob.size); // Log blob size for debugging
+      }
+  
+      setSuccessMessage("Audio and zip files generated successfully!");
     } catch (error) {
-      console.error("Error generating audio:", error);
-      setErrorMessage("Failed to generate audio. Please try again.");
+      console.error("Error generating audio and zip files:", error);
+      setErrorMessage("Failed to generate audio and zip files. Please try again.");
     } finally {
       setIsGeneratingAudio(false);
-    }
-  };
-
-  const handleDownloadAudio = () => {
-    if (downloadUrl) {
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = "audio_output.zip";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
     }
   };
 
@@ -218,7 +290,7 @@ const AudioScript = () => {
               className={`relative max-w-sm w-full p-5 rounded-lg shadow-lg flex items-center gap-3 border ${
                 type === "success"
                   ? "bg-green-100 text-green-800 border-green-300"
-                : type === "generating"
+                  : type === "generating"
                   ? "bg-blue-100 text-blue-800 border-blue-300"
                   : "bg-red-100 text-red-800 border-red-300"
               }`}
@@ -408,7 +480,7 @@ const AudioScript = () => {
                 </label>
                 <input
                   type="number"
-                 className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:outline-none"
+                  className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:outline-none"
                   placeholder="Enter number"
                   value={numberOfPeople}
                   onChange={(e) => setNumberOfPeople(e.target.value)}
@@ -495,13 +567,12 @@ const AudioScript = () => {
               style={{ color: "black" }}
             />
 
-<button
-  onClick={handleGenerateScript}
-  className="w-full px-4 py-2 bg-[#9B25A7] text-white rounded hover:bg-[#871f90] text-sm md:text-base"
->
-  Generate Script
-</button>
-
+            <button
+              onClick={handleGenerateScript}
+              className="w-full px-4 py-2 bg-[#9B25A7] text-white rounded hover:bg-[#871f90] text-sm md:text-base"
+            >
+              Generate Script
+            </button>
           </div>
 
           {/* Success Message Modal */}
@@ -589,7 +660,6 @@ const AudioScript = () => {
     );
   };
 
-
   const ScriptTypeOption = [
     "Informative Type – Knowledge Sharing",
     "Storytelling Type – Emotional Narrative",
@@ -601,7 +671,6 @@ const AudioScript = () => {
     "Motivational Type – Inspirational Message",
   ];
 
-  
   const VoiceTypeOption = [
     "Energetic & Enthusiastic",
     "Calm & Soothing",
@@ -614,12 +683,12 @@ const AudioScript = () => {
     "Fast-paced & Urgent",
     "Narrative & Storytelling",
   ];
-  
-  const PromptLengthOption = ["Short", "Medium", "Long"]; 
+
+  const PromptLengthOption = ["Short", "Medium", "Long"];
 
   const Dropdown = ({ options, selectedOption, setSelectedOption }) => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
-  
+
     return (
       <div className="relative">
         <button
@@ -629,7 +698,9 @@ const AudioScript = () => {
           <span>{selectedOption || "Select Option"}</span>
           <ChevronDown
             size={16}
-            className={`transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
+            className={`transition-transform ${
+              dropdownOpen ? "rotate-180" : ""
+            }`}
           />
         </button>
         {dropdownOpen && (
@@ -668,79 +739,92 @@ const AudioScript = () => {
       {/* Main Content */}
       <div className="flex-1 p-6">
         {currentView === "script" && renderNewScript()}
-        {currentView === "manager" && <AudioManagerUI />} 
-        {currentView === "voice" && <VoiceGenerator />} 
+        {currentView === "manager" && <AudioManagerUI />}
+        {currentView === "voice" && <VoiceGenerator />}
       </div>
       {showModal && (
-  <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-2 sm:p-4 z-50">
-    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-auto overflow-hidden">
-      {/* Modal Header */}
-      <div className="p-4 sm:p-6 border-b">
-        <h3 className="text-lg sm:text-xl font-bold text-gray-900">
-          Generated Script:
-        </h3>
-      </div>
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-2 sm:p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-auto overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-6 border-b">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900">
+                Generated Script:
+              </h3>
+            </div>
 
-      {/* Modal Content */}
-      <div className="p-4 sm:p-6">
-        <div className="space-y-3 h-[40vh] sm:h-[50vh] overflow-y-auto p-3 border rounded-lg bg-gray-50">
-          {formatGeneratedScript(generatedScript)}
-        </div>
+            {/* Modal Content */}
+            <div className="p-4 sm:p-6">
+              <div className="space-y-3 h-[40vh] sm:h-[50vh] overflow-y-auto p-3 border rounded-lg bg-gray-50">
+                {formatGeneratedScript(generatedScript)}
+              </div>
 
-        {/* Audio Player */}
-        {audioUrl && (
-          <div className="mt-4 px-2">
-            <audio controls className="w-full">
-              <source src={audioUrl} type="audio/wav" />
-              Your browser does not support the audio element.
-            </audio>
+              {/* Audio Player */}
+              {audioUrl && (
+                <div className="mt-4 px-2">
+                  <audio controls className="w-full">
+                    <source src={audioUrl} type="audio/wav" />
+                    Your browser does not support the audio element.
+                  </audio>
+                </div>
+              )}
+
+              {/* Download Buttons */}
+              <div className="mt-4 flex flex-col sm:flex-row gap-4">
+                {audioUrl && (
+                  <a
+                    href={audioUrl}
+                    download="generated_script.wav"
+                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                  >
+                    Download Audio
+                  </a>
+                )}
+                {zipUrl && (
+                  <a
+                    href={zipUrl}
+                    download="audio_temp.zip"
+                    className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                  >
+                    Download Zip
+                  </a>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 sm:p-6 border-t bg-gray-50">
+              <div className="flex flex-col sm:flex-row justify-between gap-4">
+                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                  <CopyButton textToCopy={generatedScript} />
+                  <button
+                    onClick={handleGenerateAudio}
+                    disabled={isGeneratingAudio}
+                    className="w-full sm:w-auto px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <Volume2 size={16} />
+                    {isGeneratingAudio ? "Generating..." : "Generate Audio"}
+                  </button>
+                </div>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="w-full sm:w-auto px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
-        )}
-      </div>
-
-      {/* Modal Footer */}
-      <div className="p-4 sm:p-6 border-t bg-gray-50">
-        <div className="flex flex-col sm:flex-row justify-between gap-4">
-          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-            <CopyButton textToCopy={generatedScript} />
-            <button
-              onClick={handleGenerateAudio}
-              disabled={isGeneratingAudio}
-              className="w-full sm:w-auto px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              <Volume2 size={16} />
-              {isGeneratingAudio ? "Generating..." : "Generate Audio"}
-            </button>
-            {downloadUrl && (
-              <button
-                onClick={handleDownloadAudio}
-                className="w-full sm:w-auto px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center justify-center gap-2"
-              >
-                <Download size={16} />
-                Download Zip
-              </button>
-            )}
-          </div>
-          <button
-            onClick={() => setShowModal(false)}
-            className="w-full sm:w-auto px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-          >
-            Close
-          </button>
         </div>
-      </div>
-    </div>
-  </div>
-)}
+      )}
 
       {/* Loading Notice */}
       {isGeneratingScript && (
-  <Alert
-    message="Generating script, please wait..."
-    type="generating"
-    onClose={handleCancelGeneration}
-  />
-)}
+        <Alert
+          message="Generating script, please wait..."
+          type="generating"
+          onClose={handleCancelGeneration}
+        />
+      )}
     </div>
   );
 };
