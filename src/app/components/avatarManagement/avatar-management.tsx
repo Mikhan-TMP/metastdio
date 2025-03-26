@@ -107,7 +107,7 @@ const AvatarManagement = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState("");
-  const email = localStorage.getItem("userEmail")
+  const email = localStorage.getItem("userEmail");
 
   const addAvatarToList = (avatar) => {
     if (!myAvatars.some((a) => a.id === avatar.id)) {
@@ -380,9 +380,8 @@ const AvatarManagement = () => {
       // Use PATCH method for deleting the avatar
       const email = localStorage.getItem("userEmail");
       const response = await axios.delete(
-        `http://192.168.1.141:3001/avatar/delete?id=${avatarId}&email=${email}`,
+        `http://192.168.1.141:3001/avatar/delete?id=${avatarId}&email=${email}`
       );
-      
 
       if (response.data.status === "success") {
         setMyAvatars((prev) => prev.filter((av) => av.id !== avatarId));
@@ -399,11 +398,11 @@ const AvatarManagement = () => {
 
   return (
     // Fixed height container that takes the full viewport height
-    <div className="flex h-3/5 bg-gray-50 rounded-2xl shadow-lg px-4 sm:px-6 lg:px-8 mx-4 border border-[#9B25A7] overflow-hidden">
+    <div className="flex h-3/5 bg-gray-50 rounded-2xl shadow-lg px-4 sm:px-6 lg:px-8 mx-4 overflow-hidden">
       <div className="w-full max-w-8xl mx-auto rounded-lg h-full">
         <div className="grid grid-cols-1 md:grid-cols-12 h-full">
           {/* Left Panel - Settings and Avatar Selection */}
-          <div className="md:col-span-7 border-b md:border-b-0 md:border-r border-[#9B25A7] p-4 sm:p-6 flex flex-col h-full">
+          <div className="md:col-span-7  md:border-b-0 md:border-r border-gray-200 p-4 sm:p-6 flex flex-col h-full">
             {/* Settings Section - Fixed height */}
             <div className="mb-4 sm:mb-6">
               <h3 className="text-[#9B25A7] font-bold text-lg sm:text-xl mb-3 sm:mb-4">
@@ -489,52 +488,49 @@ const AvatarManagement = () => {
                   </label>
                 </div>
               </div>
-              {/* Scrollable grid container */}
-              <div className="overflow-y-auto flex-1 pb-20 max-h-fit">
+              {/* Scrollable grid container with fixed max-height */}
+              <div className="max-h-[600px] overflow-y-auto p-4">
                 {isLoading ? (
                   <div className="flex items-center justify-center h-full">
                     <RefreshCw className="w-8 h-8 text-[#9B25A7] animate-spin" />
                   </div>
                 ) : myAvatars.length > 0 ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {myAvatars.map((avatar) => (
-                      <div
-                        key={avatar.id}
-                        className={`border ${
-                          selectedAvatar?.id === avatar.id
-                            ? "border-[#9B25A7] bg-[#F4E3F8]"
-                            : "border-gray-300"
-                        } rounded-lg p-3 cursor-pointer transition-all hover:shadow-md`}
-                        onClick={() => setSelectedAvatar(avatar)}
-                      >
-                        {/* Centering and resizing the image */}
-                        <div className="flex justify-center items-center overflow-hidden rounded-lg mb-2">
-                          <div className="w-auto max-w-[80px] md:max-w-[96px] lg:max-w-[112px] aspect-[9/16]">
-                          <img
-  src={avatar.imgSrc}
-  alt={avatar.name}
-  className="w-full h-full object-contain rounded-lg"
-  onError={(e) => {
-    console.error("Image load error:", {
-      id: avatar.id,
-      style: avatar.style,
-      imgSrcStart: avatar.imgSrc?.substring(0, 50) + "...",
-    });
-    e.target.onerror = null;
-    e.target.src = "/placeholder-avatar.png";
-  }}
-/>
-
-                          </div>
-                        </div>
-
-                        {/* Avatar Name */}
-                        <p className="text-center text-sm font-medium truncate">
-                          {avatar.name}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
+                  <div className="h-[calc(100vh - 400px)] overflow-y-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
+  {myAvatars.map((avatar) => (
+    <div
+      key={avatar.id}
+      className={`border ${
+        selectedAvatar?.id === avatar.id
+          ? "border-[#9B25A7] bg-[#F4E3F8]"
+          : "border-gray-300"
+      } rounded-lg p-3 cursor-pointer transition-all hover:shadow-md`}
+      onClick={() => setSelectedAvatar(avatar)}
+    >
+      {/* Existing avatar card content remains the same */}
+      <div className="flex justify-center items-center overflow-hidden rounded-lg mb-2">
+        <div className="w-auto max-w-[80px] md:max-w-[96px] lg:max-w-[112px] aspect-[9/16]">
+          <img
+            src={avatar.imgSrc}
+            alt={avatar.name}
+            className="w-full h-full object-contain rounded-lg"
+            onError={(e) => {
+              console.error("Image load error:", {
+                id: avatar.id,
+                style: avatar.style,
+                imgSrcStart: avatar.imgSrc?.substring(0, 50) + "...",
+              });
+              e.target.onerror = null;
+              e.target.src = "/placeholder-avatar.png";
+            }}
+          />
+        </div>
+      </div>
+      <p className="text-center text-sm font-medium truncate">
+        {avatar.name}
+      </p>
+    </div>
+  ))}
+</div>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-64 text-gray-500">
                     <div className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center mb-4">
@@ -566,73 +562,82 @@ const AvatarManagement = () => {
             </h3>
             <div className="flex-1 flex items-center justify-center bg-white rounded-lg overflow-auto">
               {selectedAvatar ? (
-        <div className="flex flex-col items-center bg-white rounded-lg overflow-auto p-4 w-[550px]">
-        <div className="relative mb-4 flex justify-center w-[200px] h-[355px]">
-          <img 
-            src={selectedAvatar.imgSrc} 
-            alt={selectedAvatar.name} 
-            className="rounded-lg w-full h-full object-contain"
-          />
-        </div>
-      
-        <div className="space-y-2 mb-4 w-full">
-          <label className="block text-sm font-medium text-gray-700">Name</label>
-          <div className="flex items-center border rounded-lg p-2 w-full">
-            {isEditing ? (
-              <input
-                type="text"
-                value={editedName}
-                onChange={(e) => setEditedName(e.target.value)}
-                className="flex-grow outline-none px-2"
-                autoFocus
-              />
-            ) : (
-              <span className="flex-grow">{selectedAvatar.name}</span>
-            )}
-            {!isEditing && (
-              <Pencil
-                size={20}
-                className="text-gray-500 cursor-pointer"
-                onClick={handleNameEdit}
-              />
-            )}
-          </div>
-        </div>
-      
-        <div className="grid grid-cols-2 gap-2 mb-4 w-full">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">ID</label>
-            <div className="bg-gray-100 rounded-lg p-2 w-full">{selectedAvatar.id}</div>
-          </div>
-      
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Style</label>
-            <div className="bg-gray-100 rounded-lg p-2 w-full">{selectedAvatar.style || "N/A"}</div>
-          </div>
-        </div>
-      
-        <div className="space-y-2 w-full">
-          <button
-            className="w-full bg-[#9B25A7] text-white py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-[#7A1C86] transition"
-            onClick={handleNameSave}
-          >
-            <Save size={16} /> Save Changes
-          </button>
-          <button
-            className="w-full bg-white border border-[#9B25A7] text-[#9B25A7] py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-[#F4E3F8] transition"
-            onClick={handleDownloadAvatar}
-          >
-            <Download size={16} /> Download Avatar
-          </button>
-          <button
-            className="w-full bg-red-500 text-white py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-red-600 transition"
-            onClick={handleDeleteAvatar}
-          >
-            <Trash2 size={16} /> Delete
-          </button>
-        </div>
-      </div>
-      
+                <div className="flex flex-col items-center bg-white rounded-lg overflow-auto p-4 w-[550px]">
+                  <div className="relative mb-4 flex justify-center w-[200px] h-[355px]">
+                    <img
+                      src={selectedAvatar.imgSrc}
+                      alt={selectedAvatar.name}
+                      className="rounded-lg w-full h-full object-contain"
+                    />
+                  </div>
+
+                  <div className="space-y-2 mb-4 w-full">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Name
+                    </label>
+                    <div className="flex items-center border rounded-lg p-2 w-full">
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editedName}
+                          onChange={(e) => setEditedName(e.target.value)}
+                          className="flex-grow outline-none px-2"
+                          autoFocus
+                        />
+                      ) : (
+                        <span className="flex-grow">{selectedAvatar.name}</span>
+                      )}
+                      {!isEditing && (
+                        <Pencil
+                          size={20}
+                          className="text-gray-500 cursor-pointer"
+                          onClick={handleNameEdit}
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 mb-4 w-full">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        ID
+                      </label>
+                      <div className="bg-gray-100 rounded-lg p-2 w-full">
+                        {selectedAvatar.id}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Style
+                      </label>
+                      <div className="bg-gray-100 rounded-lg p-2 w-full">
+                        {selectedAvatar.style || "N/A"}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 w-full">
+                    <button
+                      className="w-full bg-[#9B25A7] text-white py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-[#7A1C86] transition"
+                      onClick={handleNameSave}
+                    >
+                      <Save size={16} /> Save Changes
+                    </button>
+                    <button
+                      className="w-full bg-white border border-[#9B25A7] text-[#9B25A7] py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-[#F4E3F8] transition"
+                      onClick={handleDownloadAvatar}
+                    >
+                      <Download size={16} /> Download Avatar
+                    </button>
+                    <button
+                      className="w-full bg-red-500 text-white py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-red-600 transition"
+                      onClick={handleDeleteAvatar}
+                    >
+                      <Trash2 size={16} /> Delete
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <div className="text-center text-gray-500 p-8">
                   <div className="w-32 h-32 sm:w-40 sm:h-40 mx-auto border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center mb-4">
@@ -874,7 +879,7 @@ const AvatarManagement = () => {
                       </label>
                       <input
                         type="text"
-                        placeholder="Enter file name (optional)"
+                        placeholder="Enter Avatar Name"
                         className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#9B25A7] transition"
                         value={downloadFileName}
                         onChange={(e) => setDownloadFileName(e.target.value)}
@@ -890,6 +895,14 @@ const AvatarManagement = () => {
                     <button
                       className="w-full px-4 py-3 bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] flex items-center justify-center transition font-medium"
                       onClick={async () => {
+                        if (!downloadFileName.trim()) {
+                          showNotification(
+                            "Please provide a file name for the avatar.",
+                            "error"
+                          );
+                          return;
+                        }
+
                         if (generatedAvatar?.blob) {
                           try {
                             showNotification(
@@ -926,7 +939,7 @@ const AvatarManagement = () => {
                                 "test@example.com",
                               image: base64Image, // Changed from imgSrc to image to match API expectation
                               style: style.toLowerCase(),
-                              name: avatarName || `${gender} ${style} Avatar`,
+                              name: downloadFileName, // Use the provided file name
                             };
 
                             console.log(
