@@ -30,18 +30,71 @@ const AudioManagerUI = () => {
   const email = localStorage.getItem("userEmail");
   const audioRef = React.useRef(new Audio());
 
+  // Enhanced playAudio function with robust error handling
   const playAudio = (audio) => {
-    if (audioRef.current.src !== audio.path) {
+    console.log('Attempting to play audio:', {
+      name: audio.name,
+      path: audio.path,
+      type: typeof audio.path,
+    });
+  
+    if (!audio.path) {
+      console.error('No valid audio path provided');
+      alert('Unable to play audio: Invalid file path');
+      return;
+    }
+  
+    audioRef.current.pause();
+    audioRef.current.src = '';
+  
+    try {
+      // Set the audio source
       audioRef.current.src = audio.path;
+  
+      audioRef.current.onerror = (e) => {
+        console.error('Audio Error Event:', {
+          error: e,
+          src: audioRef.current.src,
+          networkState: audioRef.current.networkState,
+          readyState: audioRef.current.readyState,
+        });
+        alert(`Failed to load audio: ${audio.name}. Please check the file path.`);
+      };
+  
+      const playPromise = audioRef.current.play();
+  
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            console.log('Audio playback started successfully');
+            setIsPlaying(true);
+            setSelectedAudio(audio);
+          })
+          .catch((error) => {
+            console.error('Playback Error:', {
+              name: error.name,
+              message: error.message,
+              code: error.code,
+            });
+  
+            if (error.name === 'NotSupportedError') {
+              alert('Audio format not supported. Please check the file type.');
+            } else if (error.name === 'NotAllowedError') {
+              alert('Audio playback was prevented. Check browser autoplay settings.');
+            } else {
+              alert(`Unable to play audio: ${error.message}`);
+            }
+  
+            setIsPlaying(false);
+          });
+      }
+    } catch (error) {
+      console.error('Audio Playback Setup Error:', {
+        name: error.name,
+        message: error.message,
+      });
+      alert(`Error setting up audio playback: ${error.message}`);
     }
-    if (isPlaying && selectedAudio?.id === audio.id) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-    } else {
-      audioRef.current.play();
-      setIsPlaying(true);
-    }
-    setSelectedAudio(audio);
   };
 
   const toggleFavorite = (audioId) => {
@@ -155,11 +208,11 @@ const AudioManagerUI = () => {
       setLoading((prev) => ({ ...prev, folders: false }));
     }
   };
-  // Fetch Audios for Selected Folder with corrected response handling
+  // Updated fetchAudios function to handle API audio sources
   const fetchAudios = async (folderId) => {
     setLoading((prev) => ({ ...prev, audios: true }));
     setError((prev) => ({ ...prev, audios: null }));
-
+  
     try {
       const response = await axios.get(`http://192.168.1.141:3001/audio/getScript`, {
         params: { 
@@ -167,33 +220,44 @@ const AudioManagerUI = () => {
           titleId: folderId
         }
       });
-
+  
       console.log('Full Audios API Response:', response.data);
-
+  
       // Check for successful status and valid audios array
       if (response.data && response.data.status === 'success' && Array.isArray(response.data.audios)) {
-        const formattedAudios = response.data.audios.map(audio => ({
-          id: audio.id || Math.random().toString(36).substr(2, 9),
-          name: audio.name || 'Unnamed Audio',
-          category: audio.category || 'Uncategorized',
-          speaker: audio.speaker || 'Unknown Speaker',
-          type: audio.type ? audio.type.toLowerCase() : 'dialogue',
-          duration: '0:30', // Default duration
-          path: audio.audioSrc || '',
-          volume: audio.volume,
-          fadeIn: audio.fadeIn,
-          fadeOut: audio.fadeOut,
-          voiceEnhance: audio.voiceEnhance,
-          noiseReduction: audio.noiseReduction
-        }));
-
+        const formattedAudios = response.data.audios.map(audio => {
+          const audioPath = (() => {
+            if (audio.audioSrc.startsWith('data:audio/')) {
+              return audio.audioSrc; // Already a valid data URI
+            }
+  
+            // Convert Base64-encoded audio to a data URI
+            return `data:audio/wav;base64,${audio.audioSrc}`;
+          })();
+  
+          return {
+            id: audio.id || Math.random().toString(36).substr(2, 9),
+            name: audio.name || 'Unnamed Audio',
+            category: audio.category || 'Uncategorized',
+            speaker: audio.speaker || 'Unknown Speaker',
+            type: audio.type ? audio.type.toLowerCase() : 'dialogue',
+            duration: '0:30', // Default duration
+            path: audioPath,
+            volume: audio.volume,
+            fadeIn: audio.fadeIn,
+            fadeOut: audio.fadeOut,
+            voiceEnhance: audio.voiceEnhance,
+            noiseReduction: audio.noiseReduction
+          };
+        });
+  
         setAudios(formattedAudios);
       } else {
         throw new Error('Invalid audios response format');
       }
     } catch (error) {
       console.error('Audios Fetch Error:', error);
-
+  
       let errorMessage = 'Failed to load audios';
       if (error.response) {
         errorMessage = `Server Error (${error.response.status}): ${error.response.data?.message || 'Unknown error'}`;
@@ -202,7 +266,7 @@ const AudioManagerUI = () => {
       } else {
         errorMessage = `Request Error: ${error.message}`;
       }
-
+  
       setError((prev) => ({
         ...prev,
         audios: errorMessage
@@ -211,7 +275,7 @@ const AudioManagerUI = () => {
       setLoading((prev) => ({ ...prev, audios: false }));
     }
   };
-
+  
   // Initial Folders Fetch
   useEffect(() => {
     fetchFolders();
