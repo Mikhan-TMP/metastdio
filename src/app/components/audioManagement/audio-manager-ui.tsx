@@ -320,8 +320,49 @@ const AudioManagerUI = () => {
   };
 
   const togglePlay = () => {
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
+    }
     setIsPlaying(!isPlaying);
   };
+
+  const handleSkip = (direction) => {
+    const currentIndex = audios.findIndex((audio) => audio.id === selectedAudio?.id);
+    if (currentIndex !== -1) {
+      const newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+      if (newIndex >= 0 && newIndex < audios.length) {
+        playAudio(audios[newIndex]);
+      }
+    }
+  };
+
+  const handleVolumeChange = (e) => {
+    const volume = e.target.value / 100;
+    audioRef.current.volume = volume;
+  };
+
+  const handleProgressChange = (e) => {
+    const progress = e.target.value;
+    audioRef.current.currentTime = (progress / 100) * audioRef.current.duration;
+    setCurrentProgress(progress);
+  };
+
+  useEffect(() => {
+    const updateProgress = () => {
+      const progress = (audioRef.current.currentTime / audioRef.current.duration) * 100;
+      setCurrentProgress(progress || 0);
+    };
+
+    audioRef.current.addEventListener('timeupdate', updateProgress);
+    audioRef.current.addEventListener('ended', () => setIsPlaying(false));
+
+    return () => {
+      audioRef.current.removeEventListener('timeupdate', updateProgress);
+      audioRef.current.removeEventListener('ended', () => setIsPlaying(false));
+    };
+  }, []);
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">
@@ -485,8 +526,8 @@ const AudioManagerUI = () => {
                     {/* Player Controls */}
                     <div className="mb-3">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs">00:00</span>
-                        <span className="text-xs">{selectedAudio.duration}</span>
+                        <span className="text-xs">{new Date(audioRef.current.currentTime * 1000).toISOString().substr(14, 5)}</span>
+                        <span className="text-xs">{new Date(audioRef.current.duration * 1000).toISOString().substr(14, 5)}</span>
                       </div>
                       <input 
                         type="range" 
@@ -494,10 +535,10 @@ const AudioManagerUI = () => {
                         min="0" 
                         max="100" 
                         value={currentProgress} 
-                        onChange={(e) => setCurrentProgress(parseInt(e.target.value))}
+                        onChange={handleProgressChange}
                       />
                       <div className="flex justify-center space-x-3">
-                        <button className="p-1.5 border rounded-full hover:bg-gray-100">
+                        <button className="p-1.5 border rounded-full hover:bg-gray-100" onClick={() => handleSkip('prev')}>
                           <SkipBack size={16} />
                         </button>
                         <button 
@@ -506,7 +547,7 @@ const AudioManagerUI = () => {
                         >
                           {isPlaying ? <Pause size={18} /> : <Play size={18} />}
                         </button>
-                        <button className="p-1.5 border rounded-full hover:bg-gray-100">
+                        <button className="p-1.5 border rounded-full hover:bg-gray-100" onClick={() => handleSkip('next')}>
                           <SkipForward size={16} />
                         </button>
                       </div>
@@ -517,7 +558,14 @@ const AudioManagerUI = () => {
                       <button className="p-1.5 border rounded hover:bg-gray-100">
                         <Volume2 size={14} />
                       </button>
-                      <input type="range" className="flex-1" min="0" max="100" defaultValue="80" />
+                      <input
+                        type="range"
+                        className="flex-1"
+                        min="0"
+                        max="100"
+                        defaultValue="80"
+                        onChange={handleVolumeChange}
+                      />
                       <button className="p-1.5 border rounded hover:bg-gray-100">
                         <Headphones size={14} />
                       </button>
