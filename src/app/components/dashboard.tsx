@@ -59,8 +59,8 @@ const navigationItems = [
   },
   {
     id: "user",
-    label: (localStorage.getItem('userEmail')?.replace('@gmail.com', '') || "Login/Signup").replace(/\b\w/g, l => l.toUpperCase()),
-    icon: localStorage.getItem('userEmail') ? Users : LogIn,
+    label: (localStorage.getItem('userName')),
+    icon: localStorage.getItem('userName') ? Users : LogIn,
   },
 ];
 
