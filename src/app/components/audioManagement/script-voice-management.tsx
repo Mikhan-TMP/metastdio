@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import ResponsiveTabs from "./ResponsiveTabs";
 import AudioManagerUI from "./audio-manager-ui"; // Import the AudioManagerUI component
 import VoiceGenerator from "./voice-generator"; // Import the VoiceGenerator component
+import JSZip from "jszip"; // Import JSZip for extracting zip files
 
 const AudioScript = () => {
   const [currentView, setCurrentView] = useState("script");
@@ -37,6 +38,7 @@ const AudioScript = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false); // Define dropdownOpen state
   const [style, setStyle] = useState(""); // Define style state
   const [zipUrl, setZipUrl] = useState(""); // Define zipUrl state
+  const [isModalMinimized, setIsModalMinimized] = useState(false); // New state for modal minimization
 
   // Show modal after 2 seconds if there's a generated script
   useEffect(() => {
@@ -271,6 +273,94 @@ const AudioScript = () => {
       setErrorMessage("Failed to generate audio and zip files. Please try again.");
     } finally {
       setIsGeneratingAudio(false);
+    }
+  };
+
+  const handleSendAudioToAPI = async () => {
+    if (!zipUrl) {
+      alert("No zip file available to process.");
+      return;
+    }
+  
+    try {
+      // Fetch the zip file
+      const response = await fetch(zipUrl);
+      const zipBlob = await response.blob();
+  
+      // Extract files from the zip
+      const zip = await JSZip.loadAsync(zipBlob);
+      const audioFiles = [];
+  
+      for (const fileName of Object.keys(zip.files)) {
+        const file = zip.files[fileName];
+        if (!file.dir) {
+          const fileContent = await file.async("base64");
+          audioFiles.push({
+            name: fileName,
+            audioSrc: fileContent,
+            category: "Introduction", 
+            speaker: "Person 1", 
+            type: "Dialog", 
+            volume: "90", 
+            fadeIn: "1", 
+            fadeOut: "1", 
+            voiceEnhance: "false", 
+            noiseReduction: "false", 
+          });
+        }
+      }
+  
+      // Prepare payload
+      const payload = {
+        email: "forehead614@gmail.com",
+        title: "NBA STARS",
+        audio: audioFiles,
+      };
+  
+      console.log("Payload before sending:", JSON.stringify(payload, null, 2)); // Detailed payload logging
+  
+      // Send to API
+      try {
+        const apiResponse = await axios.post(
+          "http://192.168.1.141:3001/audio/addAudio",
+          payload,
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+            timeout: 10000 // 10-second timeout
+          }
+        );
+  
+        console.log("Full API Response:", apiResponse);
+  
+        if (apiResponse.status === 200 || apiResponse.status === 201) {
+          alert("Audio files successfully sent to the API.");
+        } else {
+          alert(`API responded with status: ${apiResponse.status}`);
+        }
+      } catch (apiError) {
+        console.error("API Error Details:", {
+          message: apiError.message,
+          response: apiError.response?.data,
+          status: apiError.response?.status,
+          headers: apiError.response?.headers
+        });
+  
+        if (apiError.response) {
+          // The request was made and the server responded with a status code
+          alert(`Error sending to API: ${apiError.response.status} - ${JSON.stringify(apiError.response.data)}`);
+        } else if (apiError.request) {
+          // The request was made but no response was received
+          alert("No response received from the API. Check network connection.");
+        } else {
+          // Something happened in setting up the request
+          alert(`Error setting up API request: ${apiError.message}`);
+        }
+      }
+    } catch (error) {
+      console.error("Zip Processing Error:", error);
+      alert(`Error processing zip file: ${error.message}`);
     }
   };
 
@@ -743,13 +833,23 @@ const AudioScript = () => {
         {currentView === "voice" && <VoiceGenerator />}
       </div>
       {showModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-2 sm:p-4 z-50">
+        <div
+          className={`fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-2 sm:p-4 z-50 ${
+            isModalMinimized ? "hidden" : ""
+          }`}
+        >
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-auto overflow-hidden">
             {/* Modal Header */}
-            <div className="p-4 sm:p-6 border-b">
+            <div className="p-4 sm:p-6 border-b flex justify-between items-center">
               <h3 className="text-lg sm:text-xl font-bold text-gray-900">
                 Generated Script:
               </h3>
+              <button
+                onClick={() => setIsModalMinimized(true)} // Minimize the modal
+                className="text-gray-500 hover:text-gray-700"
+              >
+                Minimize
+              </button>
             </div>
 
             {/* Modal Content */}
@@ -780,13 +880,21 @@ const AudioScript = () => {
                   </a>
                 )}
                 {zipUrl && (
-                  <a
-                    href={zipUrl}
-                    download="audio_temp.zip"
-                    className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-                  >
-                    Download Zip
-                  </a>
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <a
+                      href={zipUrl}
+                      download="audio_temp.zip"
+                      className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                    >
+                      Download Zip
+                    </a>
+                    <button
+                      onClick={handleSendAudioToAPI}
+                      className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
+                    >
+                      Send to API
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -805,16 +913,26 @@ const AudioScript = () => {
                     {isGeneratingAudio ? "Generating..." : "Generate Audio"}
                   </button>
                 </div>
-                <button
+                {/* <button
                   onClick={() => setShowModal(false)}
                   className="w-full sm:w-auto px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
                 >
                   Close
-                </button>
+                </button> */}
               </div>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Reopen Button */}
+      {isModalMinimized && (
+        <button
+          onClick={() => setIsModalMinimized(false)} // Reopen the modal
+          className="fixed bottom-4 right-4 px-4 py-2 bg-blue-500 text-white rounded-lg shadow-lg hover:bg-blue-600 z-50"
+        >
+          Reopen Modal
+        </button>
       )}
 
       {/* Loading Notice */}
