@@ -28,7 +28,38 @@ import {
   RefreshCw,
 } from "lucide-react";
 
+const fetchAvatars = async (selectedStyle = "", searchName = "") => {
+  try {
+    const email = localStorage.getItem("userEmail") || "test@example.com";
 
+    // Build params object with all filters
+    const params = {
+      email,
+      ...(selectedStyle && selectedStyle !== "All"
+        ? { style: selectedStyle.toLowerCase() }
+        : {}),
+      ...(searchName ? { name: searchName } : {}),
+    };
+
+    const response = await axios.get(
+      `http://192.168.1.141:3001/avatar/getAvatars`,
+      { params }
+    );
+    console.log("API Response:", response.data);
+
+    const fetchedAvatars = response.data.map((avatar, index) => ({
+      id: avatar.id || index,
+      imgSrc: `data:image/png;base64,${avatar.imgSrc}`,
+      name: avatar.name || `Avatar ${index + 1}`,
+      style: avatar.style,
+    }));
+
+    return fetchedAvatars;
+  } catch (error) {
+    console.error("Error fetching avatars:", error);
+    return [];
+  }
+};
 
 const AvatarGestureEmotionUI = () => {
   const [avatars, setAvatars] = useState([]);
@@ -224,66 +255,18 @@ const AvatarGestureEmotionUI = () => {
     setSelectedEmotion(emotion);
   };
 
-  const fetchAvatars = async (selectedStyle = "", searchName = "") => {
-    try {
-      const email = localStorage.getItem("userEmail") || "test@example.com";
-  
-      // Build params object with all filters
-      const params = {
-        email,
-        ...(selectedStyle && selectedStyle !== "All"
-          ? { style: selectedStyle.toLowerCase() }
-          : {}),
-        ...(searchName ? { name: searchName } : {}),
-      };
-  
-      const response = await axios.get(
-        `http://192.168.1.141:3001/avatar/getAvatars`,
-        { params }
-      );
-      console.log("API Response:", response.data);
-  
-      const fetchedAvatars = response.data.map((avatar, index) => ({
-        id: avatar.id || index,
-        // Option 1: Store image URL directly if available
-        imgSrc: avatar.imageUrl ? avatar.imageUrl : 
-                // Option 2: If base64 is the only option, store it more compactly
-                `data:image/png;base64,${avatar.imgSrc.split(',')[1] || avatar.imgSrc}`,
-        name: avatar.name || `Avatar ${index + 1}`,
-        style: avatar.style,
-      }));
-  
-      return fetchedAvatars;
-    } catch (error) {
-      console.error("Error fetching avatars:", error);
-      return [];
-    }
-  };
-  
   const generateEmotion = async () => {
     if (!selectedAvatar) {
       console.error("No avatar selected");
       return;
     }
-  
+
     try {
-      // Convert base64 image to a Blob
-      const base64Image = selectedAvatar.imgSrc.split("base64,")[1];
-      const byteCharacters = atob(base64Image);
-      const byteNumbers = new Array(byteCharacters.length).fill(0).map((_, i) => byteCharacters.charCodeAt(i));
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: "image/png" });
-  
-      // Create FormData and append the file and views
-      const formData = new FormData();
-      formData.append("file", blob, `${selectedAvatar.name || "avatar"}.png`);
-      formData.append("views", JSON.stringify(["front", "side", "close-up", "full-body"])); // Add views as JSON string
-  
-      // Send the file and views to the API
-      const response = await axios.post("http://192.168.1.71:8083/emotions_gen", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      const response = await axios.post("http://192.168.1.71:8083/emotions_gen", {
+        image: selectedAvatar.imgSrc, // Send the active avatar's image
+        views: ["front", "side", "close-up", "full-body"], // Request all views
       });
-  
+
       console.log("Emotion generation response:", response.data);
       alert("Emotion generation request sent successfully!");
     } catch (error) {
@@ -291,7 +274,7 @@ const AvatarGestureEmotionUI = () => {
       alert("Failed to generate emotion. Please try again.");
     }
   };
-  
+
   const filteredGestures =
     currentCategory === "all"
       ? gestures
