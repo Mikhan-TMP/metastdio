@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import axios from "axios";
 import {
   FileText,
@@ -460,7 +460,7 @@ const AudioScript = () => {
         {/* Left Column - Script Upload */}
         <div className="bg-white p-4 md:p-6 rounded-lg shadow-sm">
           <textarea
-            className="w-full h-32 md:h-40 border rounded-lg p-3 mb-4 border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:outline-none"
+            className="w-full h-32 md:h-40 border rounded-lg p-3 mb-4 border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent focus:outline-none"
             placeholder="Enter your script Topic..."
             value={scriptTopic}
             onChange={(e) => setScriptTopic(e.target.value)}
@@ -552,7 +552,7 @@ const AudioScript = () => {
               </label>
               <input
                 type="text"
-                className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:outline-none"
+                className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent focus:outline-none"
                 placeholder="Enter the script title"
                 value={scriptTitle}
                 onChange={(e) => setScriptTitle(e.target.value)}
@@ -570,7 +570,7 @@ const AudioScript = () => {
                 </label>
                 <input
                   type="number"
-                  className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:outline-none"
+                  className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent focus:outline-none"
                   placeholder="Enter number"
                   value={numberOfPeople}
                   onChange={(e) => setNumberOfPeople(e.target.value)}
@@ -587,7 +587,7 @@ const AudioScript = () => {
                 </label>
                 <input
                   type="number"
-                  className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:outline-none"
+                  className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent focus:outline-none"
                   placeholder="Enter scenes"
                   value={numberOfScenes}
                   onChange={(e) => setNumberOfScenes(e.target.value)}
@@ -650,7 +650,7 @@ const AudioScript = () => {
             </div> */}
 
             <textarea
-              className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:outline-none"
+              className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent focus:outline-none"
               placeholder="Enter your script generation prompt..."
               value={scriptPrompt}
               onChange={(e) => setScriptPrompt(e.target.value)}
@@ -778,21 +778,36 @@ const AudioScript = () => {
 
   const Dropdown = ({ options, selectedOption, setSelectedOption }) => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
-
+    const dropdownRef = useRef(null);
+  
+    // Close dropdown when clicking outside
+    useEffect(() => {
+      const handleClickOutside = (event) => {
+        if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+          setDropdownOpen(false); // Close dropdown
+        }
+      };
+  
+      document.addEventListener("mousedown", handleClickOutside);
+  
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }, []);
+  
     return (
-      <div className="relative">
+      <div className="relative" ref={dropdownRef}>
         <button
-          className="w-full p-3 border border-gray-300 rounded-lg text-sm text-gray-700 flex justify-between items-center focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          className="w-full p-3 border border-gray-300 rounded-lg text-sm text-gray-700 flex justify-between items-center focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent"
           onClick={() => setDropdownOpen(!dropdownOpen)}
         >
           <span>{selectedOption || "Select Option"}</span>
           <ChevronDown
             size={16}
-            className={`transition-transform ${
-              dropdownOpen ? "rotate-180" : ""
-            }`}
+            className={`transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
           />
         </button>
+  
         {dropdownOpen && (
           <div className="absolute w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
             {options.map((option) => (
@@ -801,7 +816,7 @@ const AudioScript = () => {
                 className="p-3 hover:bg-purple-100 text-sm cursor-pointer"
                 onClick={() => {
                   setSelectedOption(option);
-                  setDropdownOpen(false);
+                  setDropdownOpen(false); // Close dropdown on selection
                 }}
               >
                 {option}
@@ -890,7 +905,7 @@ const AudioScript = () => {
                     </a>
                     <button
                       onClick={handleSendAudioToAPI}
-                      className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
+                      className="px-4 py-2 bg-[#9B25A7] text-white rounded hover:bg-purple-600"
                     >
                       Send to API
                     </button>

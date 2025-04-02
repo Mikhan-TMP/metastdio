@@ -481,7 +481,7 @@ const VoiceGenerator = () => {
               </label>
               <input 
                 type="range" 
-                className="w-full accent-blue-500" 
+                className="w-full accent-[#9B25A7]" 
                 min="0.5" 
                 max="2" 
                 step="0.1" 
@@ -501,7 +501,7 @@ const VoiceGenerator = () => {
               </label>
               <input 
                 type="range" 
-                className="w-full accent-blue-500" 
+                className="w-full accent-[#9B25A7]" 
                 min="-10" 
                 max="10" 
                 step="1" 
@@ -520,7 +520,7 @@ const VoiceGenerator = () => {
             className={`w-full px-4 py-2 sm:py-3 text-white rounded-lg transition-colors flex items-center justify-center text-sm sm:text-base ${
               isGenerating 
                 ? 'bg-blue-400 cursor-not-allowed' 
-                : 'bg-blue-600 hover:bg-blue-700'
+                : 'bg-[#9B25A7] hover:bg-[#871f90] cursor-pointer'
             }`}
             onClick={handleGenerateVoice}
             disabled={isGenerating}
@@ -541,7 +541,7 @@ const VoiceGenerator = () => {
                       onClick={() => playSavedGeneration(gen)}
                     >
                       <div className="flex items-center">
-                        <Play size={12} className="mr-1 text-blue-500" />
+                        <Play size={12} className="mr-1 text-[#9B25A7]" />
                         <span className="text-xs truncate max-w-[100px] sm:max-w-[200px] text-black">{gen.name}</span>
                       </div>
                       <div className="text-xs text-black">{gen.duration}</div>
@@ -586,7 +586,7 @@ const VoiceGenerator = () => {
                       onClick={() => playSavedGeneration(gen)}
                     >
                       <div className="flex items-center">
-                        <Play size={14} className="mr-2 text-blue-500" />
+                        <Play size={14} className="mr-2 text-[#9B25A7]" />
                         <span className="text-sm truncate max-w-[150px] text-black">{gen.name}</span>
                       </div>
                       <div className="text-xs text-black">{gen.duration}</div>
@@ -605,7 +605,7 @@ const VoiceGenerator = () => {
             <button 
               className={`flex-1 px-2 sm:px-3 py-1 sm:py-2 rounded text-xs sm:text-sm flex items-center justify-center ${
                 audioUrl 
-                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                  ? 'bg-blue-600 text-white hover:bg-[#9B25A7]' 
                   : 'bg-gray-200 text-gray-500 cursor-not-allowed'
               }`}
               onClick={handleDownload}
@@ -618,7 +618,7 @@ const VoiceGenerator = () => {
             <button 
               className={`flex-1 px-2 sm:px-3 py-1 sm:py-2 rounded text-xs sm:text-sm flex items-center justify-center ${
                 audioUrl 
-                  ? 'border border-blue-600 text-blue-600 hover:bg-blue-50' 
+                  ? 'border border-[#9B25A7] text-[#9B25A7] hover:bg-blue-50' 
                   : 'border border-gray-300 text-gray-400 cursor-not-allowed'
               }`}
               onClick={handleSaveToLibrary}

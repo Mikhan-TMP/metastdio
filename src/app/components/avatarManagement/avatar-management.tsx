@@ -307,6 +307,79 @@ const AvatarManagement = () => {
       setIsEditing(true);
     }
   };
+
+  const handleSaveAvatar = async () => {
+    if (!downloadFileName.trim()) {
+      showNotification("Please provide a file name for the avatar.", "error");
+      return;
+    }
+
+    if (generatedAvatar?.blob) {
+      try {
+        showNotification("Processing avatar...", "generating");
+
+        // Create a function to read the file as Base64
+        const readFileAsDataURL = (blob) => {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(blob);
+          });
+        };
+
+        // Get Base64 string
+        const base64String = await readFileAsDataURL(generatedAvatar.blob);
+        const base64Image = base64String.split(",")[1];
+
+        if (!base64Image) {
+          throw new Error("Failed to process image data");
+        }
+
+        // Create payload
+        const payload = {
+          email: localStorage.getItem("userEmail") || "test@example.com",
+          image: base64Image,
+          style: style.toLowerCase(),
+          name: downloadFileName,
+        };
+
+        console.log(
+          "Sending payload with image data length:",
+          base64Image.length
+        );
+
+        // Send data to API
+        const response = await axios.post(
+          "http://192.168.1.141:3001/avatar/generate",
+          payload
+        );
+
+        const data = response.data;
+        console.log("Avatar saved to the database:", data);
+
+        if (data) {
+          const savedAvatar = {
+            id: data._id || Date.now(),
+            imgSrc: generatedAvatar.imgSrc,
+            name: payload.name,
+            style: payload.style,
+          };
+
+          setMyAvatars((prev) => [...prev, savedAvatar]);
+          setSelectedAvatar(savedAvatar);
+          setIsModalOpen(false);
+          showNotification("Avatar added to your collection!", "success");
+        }
+      } catch (error) {
+        console.error("Error saving avatar:", error);
+        showNotification(`Failed to save avatar: ${error.message}`, "error");
+      }
+    } else {
+      showNotification("No avatar to save!", "error");
+    }
+  };
+
   const handleNameSave = async () => {
     if (!selectedAvatar) {
       showNotification("No avatar selected to update.", "error");
@@ -496,41 +569,42 @@ const AvatarManagement = () => {
                   </div>
                 ) : myAvatars.length > 0 ? (
                   <div className="h-[calc(100vh - 400px)] overflow-y-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
-  {myAvatars.map((avatar) => (
-    <div
-      key={avatar.id}
-      className={`border ${
-        selectedAvatar?.id === avatar.id
-          ? "border-[#9B25A7] bg-[#F4E3F8]"
-          : "border-gray-300"
-      } rounded-lg p-3 cursor-pointer transition-all hover:shadow-md`}
-      onClick={() => setSelectedAvatar(avatar)}
-    >
-      {/* Existing avatar card content remains the same */}
-      <div className="flex justify-center items-center overflow-hidden rounded-lg mb-2">
-        <div className="w-auto max-w-[80px] md:max-w-[96px] lg:max-w-[112px] aspect-[9/16]">
-          <img
-            src={avatar.imgSrc}
-            alt={avatar.name}
-            className="w-full h-full object-contain rounded-lg"
-            onError={(e) => {
-              console.error("Image load error:", {
-                id: avatar.id,
-                style: avatar.style,
-                imgSrcStart: avatar.imgSrc?.substring(0, 50) + "...",
-              });
-              e.target.onerror = null;
-              e.target.src = "/placeholder-avatar.png";
-            }}
-          />
-        </div>
-      </div>
-      <p className="text-center text-sm font-medium truncate">
-        {avatar.name}
-      </p>
-    </div>
-  ))}
-</div>
+                    {myAvatars.map((avatar) => (
+                      <div
+                        key={avatar.id}
+                        className={`border ${
+                          selectedAvatar?.id === avatar.id
+                            ? "border-[#9B25A7] bg-[#F4E3F8]"
+                            : "border-gray-300"
+                        } rounded-lg p-3 cursor-pointer transition-all hover:shadow-md`}
+                        onClick={() => setSelectedAvatar(avatar)}
+                      >
+                        {/* Existing avatar card content remains the same */}
+                        <div className="flex justify-center items-center overflow-hidden rounded-lg mb-2">
+                          <div className="w-auto max-w-[80px] md:max-w-[96px] lg:max-w-[112px] aspect-[9/16]">
+                            <img
+                              src={avatar.imgSrc}
+                              alt={avatar.name}
+                              className="w-full h-full object-contain rounded-lg"
+                              onError={(e) => {
+                                console.error("Image load error:", {
+                                  id: avatar.id,
+                                  style: avatar.style,
+                                  imgSrcStart:
+                                    avatar.imgSrc?.substring(0, 50) + "...",
+                                });
+                                e.target.onerror = null;
+                                e.target.src = "/placeholder-avatar.png";
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <p className="text-center text-sm font-medium truncate">
+                          {avatar.name}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-64 text-gray-500">
                     <div className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center mb-4">
@@ -880,112 +954,24 @@ const AvatarManagement = () => {
                       <input
                         type="text"
                         placeholder="Enter Avatar Name"
-                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#9B25A7] transition"
+                        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-[#9B25A7] focus:outline-none focus:ring-0 transition"
                         value={downloadFileName}
                         onChange={(e) => setDownloadFileName(e.target.value)}
                       />
                     </div>
+
                     <button
-                      className="w-full px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center justify-center transition font-medium"
-                      onClick={handleDownloadAvatar}
+                      className="w-full px-4 py-3 border-2 border-[#9B25A7] text-[#9B25A7] bg-transparent rounded-lg flex items-center justify-center transition font-medium hover:bg-[#F4E3F8] hover:text-[#9B25A7]"
+                      onClick={handleSaveAvatar}
                     >
-                      <Download size={18} className="mr-2" /> Download Avatar
+                      <Plus size={18} className="mr-2" /> Add to My Avatars
                     </button>
 
                     <button
                       className="w-full px-4 py-3 bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] flex items-center justify-center transition font-medium"
-                      onClick={async () => {
-                        if (!downloadFileName.trim()) {
-                          showNotification(
-                            "Please provide a file name for the avatar.",
-                            "error"
-                          );
-                          return;
-                        }
-
-                        if (generatedAvatar?.blob) {
-                          try {
-                            showNotification(
-                              "Processing avatar...",
-                              "generating"
-                            );
-
-                            // Create a proper promise-based wrapper for FileReader
-                            const readFileAsDataURL = (blob) => {
-                              return new Promise((resolve, reject) => {
-                                const reader = new FileReader();
-                                reader.onload = () => resolve(reader.result);
-                                reader.onerror = () => reject(reader.error);
-                                reader.readAsDataURL(blob);
-                              });
-                            };
-
-                            // Get base64 string
-                            const base64String = await readFileAsDataURL(
-                              generatedAvatar.blob
-                            );
-
-                            // Extract the base64 data part (remove the metadata prefix)
-                            const base64Image = base64String.split(",")[1];
-
-                            if (!base64Image) {
-                              throw new Error("Failed to process image data");
-                            }
-
-                            // Create the payload with the field name "image" as required by the API
-                            const payload = {
-                              email:
-                                localStorage.getItem("userEmail") ||
-                                "test@example.com",
-                              image: base64Image, // Changed from imgSrc to image to match API expectation
-                              style: style.toLowerCase(),
-                              name: downloadFileName, // Use the provided file name
-                            };
-
-                            console.log(
-                              "Sending payload with image data length:",
-                              base64Image.length
-                            );
-
-                            // Send the payload to the API
-                            const response = await axios.post(
-                              "http://192.168.1.141:3001/avatar/generate",
-                              payload
-                            );
-                            const data = response.data;
-
-                            console.log("Avatar saved to the database:", data);
-
-                            if (data) {
-                              // Update local state with the saved avatar
-                              const savedAvatar = {
-                                id: data._id || Date.now(),
-                                imgSrc: generatedAvatar.imgSrc, // Use the existing blob URL for immediate display
-                                name: payload.name,
-                                style: payload.style,
-                              };
-
-                              setMyAvatars((prev) => [...prev, savedAvatar]);
-                              setSelectedAvatar(savedAvatar);
-                              setIsModalOpen(false);
-                              showNotification(
-                                "Avatar added to your collection!",
-                                "success"
-                              );
-                            }
-                          } catch (error) {
-                            console.error("Error saving avatar:", error);
-                            showNotification(
-                              `Failed to save avatar: ${error.message}`,
-                              "error"
-                            );
-                          }
-                        } else {
-                          showNotification("No avatar to save!", "error");
-                        }
-                      }}
+                      onClick={handleDownloadAvatar}
                     >
-                      <Plus size={18} className="mr-2" /> Add to My Avatars
+                      <Download size={18} className="mr-2" /> Download Avatar
                     </button>
                   </div>
                 )}
