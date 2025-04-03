@@ -723,11 +723,11 @@ const AudioManagerUI = () => {
       {/* Top Navigation */}
       <div className="flex justify-between items-center p-3 bg-white border-b shadow-sm">
         <div className="flex space-x-3">
-          <button className="p-2 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors flex items-center">
+          <button className="p-2 bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] disabled:bg-[#E3C5F0] flex items-center">
             <Save size={16} className="mr-2" />
             <span className="text-sm font-medium">Save</span>
           </button>
-          <button className="p-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors flex items-center">
+          <button className="p-2 bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] disabled:bg-[#E3C5F0] flex items-center">
             <span className="text-sm font-medium">Apply to Timeline</span>
           </button>
         </div>
@@ -742,7 +742,7 @@ const AudioManagerUI = () => {
               <h2 className="text-lg font-semibold text-gray-800">
                 {selectedFolder ? (
                   <button
-                    className="text-purple-600 hover:text-purple-800 transition-colors flex items-center"
+                    className="text-[#9B25A7] hover:text-[#7A1C86] transition-colors flex items-center"
                     onClick={() => {
                       setSelectedFolder(null);
                       setAudios([]);
@@ -768,14 +768,14 @@ const AudioManagerUI = () => {
             {/* Content Display */}
             {loading.folders ? (
               <div className="flex items-center justify-center p-6">
-                <div className="w-8 h-8 border-t-2 border-purple-600 rounded-full animate-spin"></div>
+                <RefreshCw className="w-8 h-8 text-[#9B25A7] animate-spin" />
                 <span className="ml-2 text-gray-600">Loading folders...</span>
               </div>
             ) : error.folders ? (
               <p className="text-red-500 p-4">{error.folders}</p>
             ) : selectedFolder ? (
               <div className="flex items-center mb-4">
-                <Folder size={18} className="text-purple-600 mr-2" />
+                <Folder size={18} className="text-[#9B25A7] mr-2" />
                 <p className="text-gray-600">
                   Viewing audios in: <span className="font-medium">{selectedFolder.name}</span>
                 </p>
@@ -787,7 +787,7 @@ const AudioManagerUI = () => {
                     key={folder.id}
                     className={`flex items-center p-4 rounded-lg border border-gray-200 ${
                       viewMode === "grid" ? "flex-col text-center" : "flex-row"
-                    } hover:bg-gray-50 hover:border-purple-200 transition-all duration-200`}
+                    } hover:bg-gray-50 hover:border-[#9B25A7] transition-all duration-200`}
                   >
                     <button
                       className={`flex items-center ${viewMode === "grid" ? "flex-col" : "flex-row"} flex-1`}
@@ -795,7 +795,7 @@ const AudioManagerUI = () => {
                     >
                       <Folder
                         size={viewMode === "grid" ? 48 : 24}
-                        className={`${viewMode === "grid" ? "mb-3 text-purple-600" : "mr-3 text-purple-600"}`}
+                        className={`${viewMode === "grid" ? "mb-3 text-[#9B25A7]" : "mr-3 text-[#9B25A7]"}`}
                       />
                       <span className="text-sm font-medium text-gray-800">{folder.name}</span>
                     </button>
@@ -807,8 +807,8 @@ const AudioManagerUI = () => {
                     </button>
                   </div>
                 ))}
-                <button className="flex items-center justify-center p-4 rounded-lg border border-dashed border-gray-300 hover:border-purple-400 hover:bg-purple-50 transition-all">
-                  <Plus size={18} className="mr-2 text-purple-600" />
+                <button className="flex items-center justify-center p-4 rounded-lg border border-dashed border-gray-300 hover:border-[#9B25A7] hover:bg-[#E3C5F0] transition-all">
+                  <Plus size={18} className="mr-2 text-[#9B25A7]" />
                   <span className="text-sm font-medium text-gray-800">New Folder</span>
                 </button>
               </div>
@@ -819,7 +819,7 @@ const AudioManagerUI = () => {
           <div className="flex-1 overflow-auto">
             {loading.audios ? (
               <div className="flex items-center justify-center p-6">
-                <RefreshCw className="w-8 h-8 text-purple-600 animate-spin" />
+                <RefreshCw className="w-8 h-8 text-[#9B25A7] animate-spin" />
                 <span className="ml-2 text-gray-600">Loading audio files...</span>
               </div>
             ) : error.audios ? (
@@ -841,7 +841,7 @@ const AudioManagerUI = () => {
                       <tr
                         key={index}
                         className={`border-b text-sm hover:bg-gray-50 transition-colors ${
-                          selectedAudio?.id === audio.id ? "bg-purple-50" : ""
+                          selectedAudio?.id === audio.id ? "bg-[#E3C5F0]" : ""
                         }`}
                       >
                         <td 
@@ -870,7 +870,7 @@ const AudioManagerUI = () => {
                             audio.type === "dialogue" 
                               ? "bg-green-100 text-green-800" 
                               : audio.type === "music" 
-                                ? "bg-purple-100 text-purple-800" 
+                                ? "bg-[#E3C5F0] text-[#9B25A7]" 
                                 : "bg-blue-100 text-blue-800"
                           }`}>
                             {audio.type === "dialogue" ? "Dialogue" : audio.type === "music" ? "Music" : "SFX"}
@@ -915,7 +915,7 @@ const AudioManagerUI = () => {
             </button>
             <h2 className="text-lg font-semibold flex-1 ml-2 text-gray-800">Audio Manager</h2>
             <button
-              className="flex items-center p-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center p-2 bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] transition-colors disabled:bg-[#E3C5F0] disabled:cursor-not-allowed"
               onClick={saveAudioProperties}
               disabled={!selectedAudio}
             >
@@ -935,7 +935,7 @@ const AudioManagerUI = () => {
                       {selectedAudio.type === "dialogue" ? (
                         <Mic size={14} className="mr-1 text-green-500" />
                       ) : selectedAudio.type === "music" ? (
-                        <Music size={14} className="mr-1 text-purple-500" />
+                        <Music size={14} className="mr-1 text-[#9B25A7]" />
                       ) : (
                         <Volume2 size={14} className="mr-1 text-blue-500" />
                       )}
@@ -964,7 +964,7 @@ const AudioManagerUI = () => {
                               ? selectedAudio.type === "dialogue"
                                 ? "bg-green-500"
                                 : selectedAudio.type === "music"
-                                ? "bg-purple-500"
+                                ? "bg-[#9B25A7]"
                                 : "bg-blue-500"
                               : "bg-gray-300"
                           }`}
@@ -1004,7 +1004,7 @@ const AudioManagerUI = () => {
                     </div>
                     <input
                       type="range"
-                      className="w-full mb-3 accent-purple-600"
+                      className="w-full accent-[#9B25A7]"
                       min="0"
                       max="100"
                       value={currentProgress}
@@ -1018,7 +1018,7 @@ const AudioManagerUI = () => {
                         <SkipBack size={16} />
                       </button>
                       <button
-                        className="p-3 bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors shadow-sm"
+                        className="p-3 bg-[#9B25A7] text-white rounded-full hover:bg-[#7A1C86] transition-colors shadow-sm"
                         onClick={togglePlay}
                       >
                         {isPlaying ? <Pause size={18} /> : <Play size={18} />}
@@ -1039,7 +1039,7 @@ const AudioManagerUI = () => {
                     </button>
                     <input
                       type="range"
-                      className="flex-1 accent-purple-600"
+                      className="flex-1 accent-[#9B25A7]"
                       min="0"
                       max="100"
                       defaultValue="80"
@@ -1062,7 +1062,7 @@ const AudioManagerUI = () => {
                       </label>
                       <input
                         type="text"
-                        className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
+                        className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-[#9B25A7] outline-none transition-all"
                         value={audioProperties.name}
                         onChange={(e) =>
                           handlePropertyChange("name", e.target.value)
@@ -1076,7 +1076,7 @@ const AudioManagerUI = () => {
                       </label>
                       <input
                         type="text"
-                        className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
+                        className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-[#9B25A7] outline-none transition-all"
                         value={audioProperties.category}
                         onChange={(e) =>
                           handlePropertyChange("category", e.target.value)
@@ -1090,7 +1090,7 @@ const AudioManagerUI = () => {
                       </label>
                       <input
                         type="text"
-                        className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
+                        className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-[#9B25A7] outline-none transition-all"
                         value={audioProperties.speaker}
                         onChange={(e) =>
                           handlePropertyChange("speaker", e.target.value)
@@ -1103,7 +1103,7 @@ const AudioManagerUI = () => {
                         Type
                       </label>
                       <select
-                        className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
+                        className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-[#9B25A7] outline-none transition-all"
                         value={audioProperties.type}
                         onChange={(e) =>
                           handlePropertyChange("type", e.target.value)
@@ -1123,7 +1123,7 @@ const AudioManagerUI = () => {
                         <div className="flex items-center">
                           <input
                             type="range"
-                            className="w-full accent-purple-600"
+                            className="w-full accent-[#9B25A7]"
                             min="0"
                             max="100"
                             value={audioProperties.volume}
@@ -1146,7 +1146,7 @@ const AudioManagerUI = () => {
                         </label>
                         <input
                           type="number"
-                          className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
+                          className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-[#9B25A7] outline-none transition-all"
                           value={audioProperties.fadeIn}
                           onChange={(e) =>
                             handlePropertyChange(
@@ -1168,7 +1168,7 @@ const AudioManagerUI = () => {
                         </label>
                         <input
                           type="number"
-                          className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
+                          className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-[#9B25A7] outline-none transition-all"
                           value={audioProperties.fadeOut}
                           onChange={(e) =>
                             handlePropertyChange(
@@ -1188,7 +1188,7 @@ const AudioManagerUI = () => {
                             <input
                               type="checkbox"
                               id="voiceEnhance"
-                              className="h-4 w-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                              className="h-4 w-4 text-[#9B25A7] rounded border-gray-300 focus:ring-[#9B25A7]"
                               checked={audioProperties.voiceEnhance}
                               onChange={(e) =>
                                 handlePropertyChange(
@@ -1209,7 +1209,7 @@ const AudioManagerUI = () => {
                       <input
                         type="checkbox"
                         id="noiseReduction"
-                        className="h-4 w-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                        className="h-4 w-4 text-[#9B25A7] rounded border-gray-300 focus:ring-[#9B25A7]"
                         checked={audioProperties.noiseReduction}
                         onChange={(e) =>
                           handlePropertyChange(
@@ -1237,7 +1237,7 @@ const AudioManagerUI = () => {
                       <div className="flex items-center">
                         <input
                           type="range"
-                          className="w-full accent-purple-600"
+                          className="w-full accent-[#9B25A7]"
                           min="0"
                           max="100"
                           defaultValue="80"
@@ -1253,7 +1253,7 @@ const AudioManagerUI = () => {
                         <label className="block text-xs text-gray-500 mb-1 font-medium">
                           Fade In
                         </label>
-                        <select className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all">
+                        <select className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-[#9B25A7] outline-none transition-all">
                           <option>None</option>
                           <option>0.5s</option>
                           <option>1s</option>
@@ -1265,7 +1265,7 @@ const AudioManagerUI = () => {
                         <label className="block text-xs text-gray-500 mb-1 font-medium">
                           Fade Out
                         </label>
-                        <select className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all">
+                        <select className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-[#9B25A7] outline-none transition-all">
                           <option>None</option>
                           <option>0.5s</option>
                           <option>1s</option>
@@ -1280,7 +1280,7 @@ const AudioManagerUI = () => {
                           <input
                             type="checkbox"
                             id="loopAudio"
-                            className="h-4 w-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                            className="h-4 w-4 text-[#9B25A7] rounded border-gray-300 focus:ring-[#9B25A7]"
                           />
                           <label htmlFor="loopAudio" className="ml-2 text-sm text-gray-700">
                             Loop Audio
@@ -1291,7 +1291,7 @@ const AudioManagerUI = () => {
                           <label className="block text-xs text-gray-500 mb-1 font-medium">
                             EQ Preset
                           </label>
-                          <select className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all">
+                          <select className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-[#9B25A7] outline-none transition-all">
                             <option>Default</option>
                             <option>Background Music</option>
                             <option>Voice Boost</option>
@@ -1311,7 +1311,7 @@ const AudioManagerUI = () => {
                           <div className="flex items-center">
                             <input
                               type="range"
-                              className="w-full accent-purple-600"
+                              className="w-full accent-[#9B25A7]"
                               min="0"
                               max="100"
                               defaultValue="30"
@@ -1326,7 +1326,7 @@ const AudioManagerUI = () => {
                           <label className="block text-xs text-gray-500 mb-1 font-medium">
                             Voice Enhancement
                           </label>
-                          <select className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all">
+                          <select className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-[#9B25A7] outline-none transition-all">
                             <option>None</option>
                             <option>Clarity</option>
                             <option>Warmth</option>
@@ -1342,7 +1342,7 @@ const AudioManagerUI = () => {
                       </label>
                       <input
                         type="text"
-                        className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
+                        className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-[#9B25A7] outline-none transition-all"
                         placeholder="Start: 00:00:00.000"
                       />
                     </div>
@@ -1365,7 +1365,7 @@ const AudioManagerUI = () => {
           {/* Bottom Action Buttons */}
           <div className="p-4 border-t bg-gray-50">
             <button
-              className="w-full bg-purple-600 text-white p-3 rounded-md font-medium hover:bg-purple-700 transition-colors mb-3 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              className="w-full bg-[#9B25A7] text-white p-3 rounded-md font-medium hover:bg-[#7A1C86] transition-colors mb-3 disabled:bg-[#E3C5F0] flex items-center justify-center"
               disabled={!selectedAudio}
             >
               <span>Apply to Timeline</span>

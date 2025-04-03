@@ -84,7 +84,9 @@ const Alert = ({ message, type, onClose }) => {
             )}
 
             {/* Message */}
-            <p className="font-semibold text-xs sm:text-sm md:text-base">{message}</p>
+            <p className="font-semibold text-xs sm:text-sm md:text-base">
+              {message}
+            </p>
 
             {/* Close Button */}
             <motion.button
@@ -303,6 +305,142 @@ const AvatarGestureEmotionUI = () => {
     setSelectedEmotion(emotion);
   };
 
+  const handleEmotionClick = async (emotion) => {
+    if (!selectedAvatar) {
+      console.error("No avatar selected");
+      return;
+    }
+
+    // Show loading alert
+    setAlert({
+      message: `Applying ${emotion.name} emotion to the avatar...`,
+      type: "generating",
+    });
+
+    try {
+      // Convert base64 image to a Blob
+      const base64Image = selectedAvatar.imgSrc.split("base64,")[1];
+      const byteCharacters = atob(base64Image);
+      const byteNumbers = new Array(byteCharacters.length)
+        .fill(0)
+        .map((_, i) => byteCharacters.charCodeAt(i));
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: "image/png" });
+
+      // Create FormData and append the file, emotion, and views
+      const formData = new FormData();
+      formData.append("file", blob, `${selectedAvatar.name || "avatar"}.png`);
+      formData.append("emotion", emotion.name);
+      formData.append(
+        "views",
+        JSON.stringify(["front", "side", "close-up", "back-view"])
+      );
+
+      // Send the file, emotion, and views to the API
+      const response = await axios.post(
+        "http://192.168.1.71:8083/emotions_gen/emotions", // Correct endpoint
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+
+      console.log("Emotion application response:", response.data);
+
+      // Update state with the generated images
+      const { views } = response.data;
+      if (views) {
+        setGeneratedImages({
+          front: views.front || null,
+          backView: views["back-view"] || null,
+          side: views.side || null,
+          closeUp: views["close-up"] || null,
+        });
+
+        setAlert({
+          message: `${emotion.name} emotion applied successfully!`,
+          type: "success",
+        });
+      } else {
+        throw new Error("No views generated");
+      }
+    } catch (error) {
+      console.error("Error applying emotion:", error);
+      setAlert({
+        message: `Failed to apply ${emotion.name} emotion. Please try again.`,
+        type: "error",
+      });
+    }
+  };
+
+  const handleGestureClick = async (gesture) => {
+    if (!selectedAvatar) {
+      console.error("No avatar selected");
+      return;
+    }
+
+    // Show loading alert
+    setAlert({
+      message: `Applying ${gesture.name} gesture to the avatar...`,
+      type: "generating",
+    });
+
+    try {
+      // Convert base64 image to a Blob
+      const base64Image = selectedAvatar.imgSrc.split("base64,")[1];
+      const byteCharacters = atob(base64Image);
+      const byteNumbers = new Array(byteCharacters.length)
+        .fill(0)
+        .map((_, i) => byteCharacters.charCodeAt(i));
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: "image/png" });
+
+      // Create FormData and append the file, gesture, and views
+      const formData = new FormData();
+      formData.append("file", blob, `${selectedAvatar.name || "avatar"}.png`);
+      formData.append("gesture", gesture.name);
+      formData.append(
+        "views",
+        JSON.stringify(["front", "side", "close-up", "back-view"])
+      );
+
+      // Send the file, gesture, and views to the API
+      const response = await axios.post(
+        "http://192.168.1.71:8083/emotions_gen/gesture", // Corrected endpoint
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+
+      console.log("Gesture application response:", response.data);
+
+      // Update state with the generated images
+      const { views } = response.data;
+      if (views) {
+        setGeneratedImages({
+          front: views.front || null,
+          backView: views["back-view"] || null,
+          side: views.side || null,
+          closeUp: views["close-up"] || null,
+        });
+
+        setAlert({
+          message: `${gesture.name} gesture applied successfully!`,
+          type: "success",
+        });
+      } else {
+        throw new Error("No views generated");
+      }
+    } catch (error) {
+      console.error("Error applying gesture:", error);
+      setAlert({
+        message: `Failed to apply ${gesture.name} gesture. Please try again.`,
+        type: "error",
+      });
+    }
+  };
+
   const fetchAvatars = async (selectedStyle = "", searchName = "") => {
     try {
       const email = localStorage.getItem("userEmail") || "test@example.com";
@@ -328,7 +466,9 @@ const AvatarGestureEmotionUI = () => {
         imgSrc: avatar.imageUrl
           ? avatar.imageUrl
           : // Option 2: If base64 is the only option, store it more compactly
-            `data:image/png;base64,${avatar.imgSrc.split(",")[1] || avatar.imgSrc}`,
+            `data:image/png;base64,${
+              avatar.imgSrc.split(",")[1] || avatar.imgSrc
+            }`,
         name: avatar.name || `Avatar ${index + 1}`,
         style: avatar.style,
       }));
@@ -340,7 +480,7 @@ const AvatarGestureEmotionUI = () => {
     }
   };
 
-  const generateEmotion = async () => {
+  const generateAvatarView = async () => {
     if (!selectedAvatar) {
       console.error("No avatar selected");
       return;
@@ -350,7 +490,10 @@ const AvatarGestureEmotionUI = () => {
     setIsModalOpen(false);
 
     // Show loading alert
-    setAlert({ message: "The avatar view is being generated...", type: "generating" });
+    setAlert({
+      message: "The avatar view is being generated...",
+      type: "generating",
+    });
 
     try {
       // Convert base64 image to a Blob
@@ -390,10 +533,16 @@ const AvatarGestureEmotionUI = () => {
         closeUp: views["close-up"] || null,
       });
 
-      setAlert({ message: "Emotion generation completed successfully!", type: "success" });
+      setAlert({
+        message: "Emotion generation completed successfully!",
+        type: "success",
+      });
     } catch (error) {
       console.error("Error generating emotion:", error);
-      setAlert({ message: "Failed to generate emotion. Please try again.", type: "error" });
+      setAlert({
+        message: "Failed to generate avatar view. Please try again.",
+        type: "error",
+      });
     }
   };
 
@@ -516,7 +665,7 @@ const AvatarGestureEmotionUI = () => {
             >
               ✕
             </button>
-            <div className="md:col-span-7 md:border-b-0 md:border-r border-gray-200 p-4 sm:p-6 flex flex-col h-full">
+            <div className="md:col-span-7 md:border-b-0 p-4 sm:p-6 flex flex-col h-full">
               <div className="mb-4 sm:mb-6">
                 <h3 className="text-[#9B25A7] font-bold text-lg sm:text-xl mb-3 sm:mb-4">
                   Settings
@@ -561,9 +710,9 @@ const AvatarGestureEmotionUI = () => {
                   </h3>
                   <button
                     className="w-full sm:w-auto bg-[#9B25A7] text-white text-sm py-2 px-4 rounded-md flex items-center gap-1 hover:bg-[#7A1C86] transition-colors"
-                    onClick={generateEmotion}
+                    onClick={generateAvatarView}
                   >
-                    <Plus size={16} /> Generate Emotion
+                    <Plus size={16} /> Generate Avatar View
                   </button>
                 </div>
 
@@ -721,7 +870,10 @@ const AvatarGestureEmotionUI = () => {
                         ? "bg-blue-500 text-white"
                         : "bg-white hover:bg-gray-100"
                     }`}
-                    onClick={() => handleGestureSelect(gesture)}
+                    onClick={() => {
+                      handleGestureSelect(gesture);
+                      handleGestureClick(gesture); // Trigger gesture application
+                    }}
                   >
                     <div className="text-2xl text-center mb-1">
                       {gesture.thumbnail}
@@ -753,7 +905,10 @@ const AvatarGestureEmotionUI = () => {
                         ? "bg-blue-500 text-white"
                         : "bg-white hover:bg-gray-100"
                     }`}
-                    onClick={() => handleEmotionSelect(emotion)}
+                    onClick={() => {
+                      handleEmotionSelect(emotion);
+                      handleEmotionClick(emotion); // Trigger emotion application
+                    }}
                   >
                     <div className="text-2xl text-center mb-1">
                       {typeof emotion.icon === "string"
@@ -884,7 +1039,7 @@ const AvatarGestureEmotionUI = () => {
 
             <div className="flex items-center space-x-2">
               <button
-                className="p-2 bg-purple-500 text-white rounded hover:bg-purple-600"
+                className="p-2 bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] disabled:bg-[#E3C5F0] text-white rounded"
                 onClick={() => setIsModalOpen(true)}
               >
                 Avatar Preview
@@ -905,7 +1060,7 @@ const AvatarGestureEmotionUI = () => {
               <div className="w-2/3 bg-white shadow rounded-l flex items-center justify-center mr-4">
                 <div className="relative">
                   {/* Avatar placeholder */}
-                  <div className="w-48 aspect-[9/16] bg-gray-100 rounded-lg relative flex items-center justify-center">
+                  <div className="w-48 aspect-[9/16] rounded-lg relative flex items-center justify-center">
                     {selectedAvatar ? (
                       <img
                         src={selectedAvatar.imgSrc}
@@ -913,12 +1068,14 @@ const AvatarGestureEmotionUI = () => {
                         className="w-full h-full object-contain rounded-lg"
                       />
                     ) : (
-                      <div className="text-center text-gray-500 p-8">
-                        <div className="w-32 h-32 sm:w-40 sm:h-40 mx-auto border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center mb-4">
-                          <Plus size={32} className="text-gray-300" />
+                      <div className="w-full min-w-[600px] max-w-4xl text-center text-gray-500 p-16 mx-auto">
+                        <div className="w-56 h-56 sm:w-64 sm:h-64 mx-auto border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center mb-8">
+                          <Plus size={48} className="text-gray-300" />
                         </div>
-                        <p className="text-base sm:text-lg">No Avatar Selected</p>
-                        <p className="text-sm mt-2 max-w-md mx-auto">
+                        <p className="text-xl sm:text-2xl">
+                          No Avatar Selected
+                        </p>
+                        <p className="text-lg mt-4 max-w-2xl mx-auto">
                           {avatars.length === 0
                             ? selectedStyle
                               ? `No avatars available in ${selectedStyle} style. Try selecting a different style or create a new avatar.`

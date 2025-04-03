@@ -240,6 +240,80 @@ const RenderNewStudio = () => {
 
   return (
     <div className="flex flex-row flex-wrap justify-between items-center content-center gap-y-5 h-full w-full p-6">
+
+      {/* Reference Image Upload & AI Generation Prompt */}
+      <div className="flex flex-col md:flex-row items-start p-6 gap-6 w-full bg-white shadow-md rounded-2xl">
+        {/* Reference Image Upload */}
+        <div className="w-full md:w-1/2 flex flex-col items-center p-2 gap-6">
+          <h2 className="font-medium mb-4">Reference Image Upload</h2>
+          <div
+            className={`border-2 border-dashed ${
+              referenceImage ? "border-[#9B25A7]" : "border-gray-300"
+            } rounded-lg p-8 text-center`}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+          >
+            {previewUrl ? (
+              <div className="mb-4">
+                <img
+                  src={previewUrl}
+                  alt="Preview"
+                  className="max-h-48 mx-auto"
+                />
+                <p className="text-sm text-gray-500 mt-2">
+                  {referenceImage.name}
+                </p>
+                <button
+                  className="text-red-500 text-sm mt-2"
+                  onClick={() => setReferenceImage(null)}
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <>
+                <Upload className="mx-auto mb-4 text-gray-400" size={48} />
+                <p className="text-gray-500 mb-2">
+                  Drag & drop your reference image here
+                </p>
+                <p className="text-gray-400 text-sm mb-4">or</p>
+                <label className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]">
+                  Browse Files
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                  />
+                </label>
+              </>
+            )}
+          </div>
+          <p className="text-sm text-gray-500 mt-2">
+            Reference image is optional
+          </p>
+        </div>
+
+        {/* AI Generation Prompt */}
+        <div className="w-full md:w-1/2 flex flex-col items-start p-2 gap-6">
+          <h2 className="font-medium mb-4">AI Generation Prompt</h2>
+          <textarea
+            className="w-full h-32 md:h-40 border rounded-lg p-3 border-gray-300 text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent focus:outline-none"
+            placeholder="Enter your studio generation prompt..."
+            value={promptText}
+            onChange={(e) => setPromptText(e.target.value)}
+          />
+
+          <button
+            className={`w-full px-4 py-3 bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] flex items-center justify-center transition font-medium
+            }`}
+            onClick={handleSubmit}
+            disabled={isLoading}
+          >
+            {isLoading ? "Generating..." : "Generate Studio"}
+          </button>
+        </div>
+      </div>
       <div className="flex flex-row justify-between items-start p-6 gap-12 w-full h-[437px] bg-white shadow-md rounded-2xl">
         {/* Left Column - Image Preview */}
         <div className="w-full md:w-1/2 flex justify-center min-h-[400px] h-full">
@@ -321,79 +395,7 @@ const RenderNewStudio = () => {
         </div>
       </div>
 
-      {/* Reference Image Upload & AI Generation Prompt */}
-      <div className="flex flex-col md:flex-row items-start p-6 gap-6 w-full bg-white shadow-md rounded-2xl">
-        {/* Reference Image Upload */}
-        <div className="w-full md:w-1/2 flex flex-col items-center p-2 gap-6">
-          <h2 className="font-medium mb-4">Reference Image Upload</h2>
-          <div
-            className={`border-2 border-dashed ${
-              referenceImage ? "border-[#9B25A7]" : "border-gray-300"
-            } rounded-lg p-8 text-center`}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-          >
-            {previewUrl ? (
-              <div className="mb-4">
-                <img
-                  src={previewUrl}
-                  alt="Preview"
-                  className="max-h-48 mx-auto"
-                />
-                <p className="text-sm text-gray-500 mt-2">
-                  {referenceImage.name}
-                </p>
-                <button
-                  className="text-red-500 text-sm mt-2"
-                  onClick={() => setReferenceImage(null)}
-                >
-                  Remove
-                </button>
-              </div>
-            ) : (
-              <>
-                <Upload className="mx-auto mb-4 text-gray-400" size={48} />
-                <p className="text-gray-500 mb-2">
-                  Drag & drop your reference image here
-                </p>
-                <p className="text-gray-400 text-sm mb-4">or</p>
-                <label className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]">
-                  Browse Files
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                  />
-                </label>
-              </>
-            )}
-          </div>
-          <p className="text-sm text-gray-500 mt-2">
-            Reference image is optional
-          </p>
-        </div>
-
-        {/* AI Generation Prompt */}
-        <div className="w-full md:w-1/2 flex flex-col items-start p-2 gap-6">
-          <h2 className="font-medium mb-4">AI Generation Prompt</h2>
-          <textarea
-            className="w-full h-32 md:h-40 border rounded-lg p-3 border-gray-300 text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent focus:outline-none"
-            placeholder="Enter your studio generation prompt..."
-            value={promptText}
-            onChange={(e) => setPromptText(e.target.value)}
-          />
-
-          <button
-            className={`w-full px-4 py-3 bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] flex items-center justify-center transition font-medium
-            }`}
-            onClick={handleSubmit}
-            disabled={isLoading}
-          >
-            {isLoading ? "Generating..." : "Generate Studio"}
-          </button>
-        </div>
-      </div>
+      
 
       {/* Alert Component */}
       <Alert
