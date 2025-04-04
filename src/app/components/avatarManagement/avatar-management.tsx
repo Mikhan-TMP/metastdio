@@ -107,6 +107,12 @@ const AvatarManagement = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState("");
+  const startEditing = () => setIsEditing(true);
+const cancelEditing = () => {
+  setEditName(selectedStudio.name);
+  setIsEditing(false);
+};
+
   const email = localStorage.getItem("userEmail");
 
   const addAvatarToList = (avatar) => {
@@ -635,98 +641,110 @@ const AvatarManagement = () => {
               Avatar Preview
             </h3>
             <div className="flex-1 flex items-center justify-center bg-white rounded-lg overflow-auto">
-              {selectedAvatar ? (
-                <div className="flex flex-col items-center bg-white rounded-lg overflow-auto p-4 w-[550px]">
-                  <div className="relative mb-4 flex justify-center w-[200px] h-[355px]">
-                    <img
-                      src={selectedAvatar.imgSrc}
-                      alt={selectedAvatar.name}
-                      className="rounded-lg w-full h-full object-contain"
-                    />
-                  </div>
+            {selectedAvatar ? (
+  <div className="flex flex-col items-center bg-white rounded-lg overflow-auto p-4 w-[550px]">
+    <div className="relative mb-4 flex justify-center w-[200px] h-[355px]">
+      <img
+        src={selectedAvatar.imgSrc}
+        alt={selectedAvatar.name}
+        className="rounded-lg w-full h-full object-contain"
+      />
+    </div>
 
-                  <div className="space-y-2 mb-4 w-full">
-                    <label className="block text-sm font-medium text-gray-700">
-                      Name
-                    </label>
-                    <div className="flex items-center border rounded-lg p-2 w-full">
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          value={editedName}
-                          onChange={(e) => setEditedName(e.target.value)}
-                          className="flex-grow outline-none px-2"
-                          autoFocus
-                        />
-                      ) : (
-                        <span className="flex-grow">{selectedAvatar.name}</span>
-                      )}
-                      {!isEditing && (
-                        <Pencil
-                          size={20}
-                          className="text-gray-500 cursor-pointer"
-                          onClick={handleNameEdit}
-                        />
-                      )}
-                    </div>
-                  </div>
+    <div className="space-y-2 mb-4 w-full">
+      <label className="block text-sm font-medium text-gray-700">Name</label>
+      <div className="flex items-center border rounded-lg p-2 w-full">
+        {isEditing ? (
+          <input
+            type="text"
+            value={editedName}
+            onChange={(e) => setEditedName(e.target.value)}
+            className="flex-grow outline-none px-2"
+            autoFocus
+          />
+        ) : (
+          <span className="flex-grow">{selectedAvatar.name}</span>
+        )}
+        {!isEditing && (
+          <Pencil
+            size={20}
+            className="text-gray-500 cursor-pointer"
+            onClick={handleNameEdit}
+          />
+        )}
+      </div>
+    </div>
 
-                  <div className="grid grid-cols-2 gap-2 mb-4 w-full">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        ID
-                      </label>
-                      <div className="bg-gray-100 rounded-lg p-2 w-full">
-                        {selectedAvatar.id}
-                      </div>
-                    </div>
+    <div className="grid grid-cols-2 gap-2 mb-4 w-full">
+      <div>
+        <label className="block text-sm font-medium text-gray-700">ID</label>
+        <div className="bg-gray-100 rounded-lg p-2 w-full">{selectedAvatar.id}</div>
+      </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Style
-                      </label>
-                      <div className="bg-gray-100 rounded-lg p-2 w-full">
-                        {selectedAvatar.style || "N/A"}
-                      </div>
-                    </div>
-                  </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700">Style</label>
+        <div className="bg-gray-100 rounded-lg p-2 w-full">
+          {selectedAvatar.style || "N/A"}
+        </div>
+      </div>
+    </div>
 
-                  <div className="space-y-2 w-full">
-                    <button
-                      className="w-full bg-[#9B25A7] text-white py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-[#7A1C86] transition"
-                      onClick={handleNameSave}
-                    >
-                      <Save size={16} /> Save Changes
-                    </button>
-                    <button
-                      className="w-full bg-white border border-[#9B25A7] text-[#9B25A7] py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-[#F4E3F8] transition"
-                      onClick={handleDownloadAvatar}
-                    >
-                      <Download size={16} /> Download Avatar
-                    </button>
-                    <button
-                      className="w-full bg-red-500 text-white py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-red-600 transition"
-                      onClick={handleDeleteAvatar}
-                    >
-                      <Trash2 size={16} /> Delete
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center text-gray-500 p-8">
-                  <div className="w-32 h-32 sm:w-40 sm:h-40 mx-auto border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center mb-4">
-                    <Plus size={32} className="text-gray-300" />
-                  </div>
-                  <p className="text-base sm:text-lg">No Avatar Selected</p>
-                  <p className="text-sm mt-2 max-w-md mx-auto">
-                    {myAvatars.length === 0
-                      ? style
-                        ? `No avatars available in ${style} style. Try selecting a different style or create a new avatar.`
-                        : "No avatars exist in your collection. Start by creating your first avatar!"
-                      : "Choose an avatar from the list or create a new one"}
-                  </p>
-                </div>
-              )}
+    <div className="space-y-2 w-full">
+      {isEditing ? (
+        <>
+          <button
+            className="w-full bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-[#7A1C86] transition"
+            onClick={handleNameSave}
+          >
+            <Save size={16} /> Save Changes
+          </button>
+          <button
+            className="w-full bg-white border border-[#9B25A7] text-[#9B25A7] py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-[#F4E3F8] transition"
+            onClick={handleDownloadAvatar}
+          >
+            <Download size={16} /> Download Avatar
+          </button>
+          <button
+            className="w-full bg-gray-500 text-white py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-600 transition"
+            onClick={() => setIsEditing(false)}
+          >
+            Cancel
+          </button>
+        </>
+      ) : (
+        <>
+          <button
+            className="w-full bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] py-2 rounded-lg flex items-center justify-center gap-2 transition"
+            onClick={() => setIsEditing(true)}
+          >
+            <Pencil size={16} /> Edit Studio
+          </button>
+          <button
+            className="w-full bg-[#D31515] text-white py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-red-600 transition"
+            onClick={handleDeleteAvatar}
+          >
+            <Trash2 size={16} /> Delete
+          </button>
+        </>
+      )}
+    </div>
+  </div>
+) : (
+  <div className="text-center text-gray-500 p-8">
+    <div className="w-32 h-32 sm:w-40 sm:h-40 mx-auto border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center mb-4">
+      <Plus size={32} className="text-gray-300" />
+    </div>
+    <p className="text-base sm:text-lg">No Avatar Selected</p>
+    <p className="text-sm mt-2 max-w-md mx-auto">
+      {myAvatars.length === 0
+        ? style
+          ? `No avatars available in ${style} style. Try selecting a different style or create a new avatar.`
+          : "No avatars exist in your collection. Start by creating your first avatar!"
+        : "Choose an avatar from the list or create a new one"}
+    </p>
+  </div>
+)}
+
             </div>
           </div>
         </div>

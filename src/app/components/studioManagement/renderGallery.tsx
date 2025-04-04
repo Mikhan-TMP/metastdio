@@ -1,5 +1,13 @@
-import React, { useState, useEffect } from "react";
-import { Search, RefreshCw, ChevronDown, Pencil, Save, Trash2, Plus } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  Search,
+  RefreshCw,
+  ChevronDown,
+  Pencil,
+  Save,
+  Trash2,
+  Plus,
+} from "lucide-react";
 import axios from "axios";
 
 const StudioGallery = () => {
@@ -16,6 +24,21 @@ const StudioGallery = () => {
 
   const studioTypes = ["News", "Podcast", "Meeting", "Education"];
 
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   const fetchStudios = async () => {
     try {
       setIsLoading(true);
@@ -24,15 +47,20 @@ const StudioGallery = () => {
       // Build params object with all filters
       const params = {
         email,
-        ...(styleFilter && styleFilter !== "All" ? { studioType: styleFilter } : {}),
+        ...(styleFilter && styleFilter !== "All"
+          ? { studioType: styleFilter }
+          : {}),
         ...(nameFilter ? { name: nameFilter } : {}),
       };
 
-      const response = await axios.get(`http://192.168.1.141:3001/studio/getStudios`, { params });
+      const response = await axios.get(
+        `http://192.168.1.141:3001/studio/getStudios`,
+        { params }
+      );
       console.log("API Response:", response.data);
 
       const fetchedStudios = response.data.map((studio, index) => ({
-        id: studio._id || index,
+        id: studio.id || index,
         imgSrc: `data:image/png;base64,${studio.imgSrc}`,
         name: studio.name || `Studio ${index + 1}`,
         studioType: studio.studioType,
@@ -41,7 +69,9 @@ const StudioGallery = () => {
       setGalleryStudioList(fetchedStudios);
     } catch (error) {
       if (error.response && error.response.status === 404) {
-        alert("The requested resource was not found. Please check the API endpoint.");
+        alert(
+          "The requested resource was not found. Please check the API endpoint."
+        );
       } else {
         console.error("Error fetching studios:", error);
         alert("Failed to fetch studios. Please try again later.");
@@ -54,6 +84,11 @@ const StudioGallery = () => {
 
   const deleteStudio = async () => {
     if (!selectedStudio) return;
+
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete the studio "${selectedStudio.name}"?`
+    );
+    if (!confirmDelete) return;
 
     try {
       const email = localStorage.getItem("userEmail") || "test@example.com";
@@ -70,7 +105,9 @@ const StudioGallery = () => {
       }
     } catch (error) {
       if (error.response && error.response.status === 404) {
-        alert("The requested resource was not found. Please check the API endpoint.");
+        alert(
+          "The requested resource was not found. Please check the API endpoint."
+        );
       } else {
         console.error("Error deleting studio:", error);
         alert("Failed to delete the studio. Please try again.");
@@ -84,13 +121,31 @@ const StudioGallery = () => {
       return;
     }
 
+    const confirmEdit = window.confirm(
+      `Are you sure you want to update the studio "${selectedStudio.name}"?`
+    );
+    if (!confirmEdit) return;
+
     try {
       const email = localStorage.getItem("userEmail") || "test@example.com";
-      const response = await axios.put(
-        `http://192.168.1.141:3001/studio/updateStudio?email=${email}&name=${editName}&id=${selectedStudio.id}&type=${editType}`
+
+      const response = await axios.patch(
+        `http://192.168.1.141:3001/studio/updateStudio`,
+        null, // No request body
+        {
+          params: {
+            email,
+            name: editName,
+            id: selectedStudio.id,
+            type: editType,
+          },
+        }
       );
 
-      if (response.data.status === "success" || response.data.status === "info") {
+      if (
+        response.data.status === "success" ||
+        response.data.status === "info"
+      ) {
         alert(response.data.message);
         setGalleryStudioList((prev) =>
           prev.map((studio) =>
@@ -99,12 +154,18 @@ const StudioGallery = () => {
               : studio
           )
         );
-        setSelectedStudio((prev) => ({ ...prev, name: editName, studioType: editType }));
+        setSelectedStudio((prev) => ({
+          ...prev,
+          name: editName,
+          studioType: editType,
+        }));
         setIsEditing(false);
       }
     } catch (error) {
       if (error.response && error.response.status === 404) {
-        alert("The requested resource was not found. Please check the API endpoint.");
+        alert(
+          "The requested resource was not found. Please check the API endpoint."
+        );
       } else {
         console.error("Error updating studio:", error);
         alert("Failed to update the studio. Please try again.");
@@ -140,7 +201,7 @@ const StudioGallery = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Studio Type
                 </label>
-                <div className="relative">
+                <div className="relative" ref={dropdownRef}>
                   <button
                     className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm text-gray-700 flex justify-between items-center focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent"
                     onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -153,6 +214,7 @@ const StudioGallery = () => {
                       }`}
                     />
                   </button>
+
                   {dropdownOpen && (
                     <div className="absolute w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-10">
                       <div
@@ -180,20 +242,24 @@ const StudioGallery = () => {
                   Search
                 </label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                  <Search
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
+                    size={16}
+                  />
                   <input
                     type="text"
                     placeholder="Search gallery..."
                     value={nameFilter}
                     onChange={(e) => setNameFilter(e.target.value)}
                     className="w-full p-2 sm:p-3 pl-10 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent focus:outline-none"
+                    style={{ paddingLeft: "2.5rem" }}
                   />
                 </div>
               </div>
 
               <div className="w-full flex items-end">
                 <button
-                  className="w-full bg-[#9B25A7] text-white text-sm py-2 px-4 rounded-md flex items-center justify-center gap-1 hover:bg-[#7A1C86] transition-colors"
+                  className="w-full bg-[#9B25A7] text-white text-sm py-2 sm:py-3 px-4 rounded-md flex items-center justify-center gap-1 hover:bg-[#7A1C86] transition-colors h-[45px]"
                   onClick={fetchStudios}
                 >
                   Apply Filters
@@ -207,7 +273,7 @@ const StudioGallery = () => {
             <h3 className="text-[#9B25A7] font-bold text-lg sm:text-xl mb-4">
               Available Studios
             </h3>
-            
+
             <div className="max-h-[600px] overflow-y-auto p-4">
               {isLoading ? (
                 <div className="flex items-center justify-center h-64">
@@ -271,7 +337,7 @@ const StudioGallery = () => {
         <div className="flex-1 flex items-center justify-center bg-white rounded-lg overflow-auto">
           {selectedStudio ? (
             <div className="flex flex-col items-center bg-white rounded-lg overflow-auto p-4 w-[550px]">
-              <div className="relative mb-4 flex justify-center w-[200px] h-[355px]">
+              <div className="relative mb-4 flex justify-center w-[500px] h-[355px]">
                 <img
                   src={convertBase64ToImageUrl(selectedStudio.imgSrc)}
                   alt={selectedStudio.name}
@@ -329,7 +395,7 @@ const StudioGallery = () => {
                 {isEditing ? (
                   <>
                     <button
-                      className="w-full bg-green-500 text-white py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-green-600 transition"
+                      className="w-full bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] py-2 rounded-lg flex items-center justify-center gap-2 transition"
                       onClick={updateStudio}
                     >
                       <Save size={16} /> Save Changes
@@ -344,13 +410,13 @@ const StudioGallery = () => {
                 ) : (
                   <>
                     <button
-                      className="w-full bg-blue-500 text-white py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-600 transition"
+                      className="w-full bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] py-2 rounded-lg flex items-center justify-center gap-2 transition"
                       onClick={() => setIsEditing(true)}
                     >
                       <Pencil size={16} /> Edit Studio
                     </button>
                     <button
-                      className="w-full bg-red-500 text-white py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-red-600 transition"
+                      className="w-full bg-[#D31515] text-white py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-red-600 transition"
                       onClick={deleteStudio}
                     >
                       <Trash2 size={16} /> Delete Studio
