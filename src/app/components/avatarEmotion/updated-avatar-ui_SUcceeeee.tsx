@@ -126,154 +126,27 @@ const AvatarGestureEmotionUI = () => {
   const [alert, setAlert] = useState({ message: "", type: "" });
   const email = localStorage.getItem("userEmail");
 
-  // Mock data
-  const gestures = [
-    {
-      id: 1,
-      name: "Wave",
-      thumbnail: "👋",
-      category: "Greeting",
-      duration: 2.5,
-    },
-    {
-      id: 2,
-      name: "Point",
-      thumbnail: "👉",
-      category: "Direction",
-      duration: 1.8,
-    },
-    {
-      id: 3,
-      name: "Clap",
-      thumbnail: "👏",
-      category: "Reaction",
-      duration: 2.0,
-    },
-    {
-      id: 4,
-      name: "Thumbs Up",
-      thumbnail: "👍",
-      category: "Reaction",
-      duration: 1.5,
-    },
-    {
-      id: 5,
-      name: "Handshake",
-      thumbnail: "🤝",
-      category: "Greeting",
-      duration: 3.0,
-    },
-    {
-      id: 6,
-      name: "Thinking",
-      thumbnail: "🤔",
-      category: "Contemplative",
-      duration: 2.2,
-    },
-    {
-      id: 7,
-      name: "Explain",
-      thumbnail: "🙌",
-      category: "Presentation",
-      duration: 2.8,
-    },
-    {
-      id: 8,
-      name: "Arms Crossed",
-      thumbnail: "🧍",
-      category: "Stance",
-      duration: 1.5,
-    },
-    {
-      id: 9,
-      name: "Check Watch",
-      thumbnail: "⌚",
-      category: "Action",
-      duration: 1.7,
-    },
-    {
-      id: 10,
-      name: "Nodding",
-      thumbnail: "🙂",
-      category: "Reaction",
-      duration: 1.2,
-    },
-    {
-      id: 11,
-      name: "Shrug",
-      thumbnail: "🤷",
-      category: "Reaction",
-      duration: 1.5,
-    },
-    {
-      id: 12,
-      name: "Head Tilt",
-      thumbnail: "😌",
-      category: "Contemplative",
-      duration: 1.3,
-    },
-  ];
+  const [gestures, setGestures] = useState([]);
+  const [emotions, setEmotions] = useState([]);
 
-  const emotions = [
-    {
-      id: 1,
-      name: "Happy",
-      intensity: 80,
-      icon: <Smile size={20} />,
-      category: "Positive",
-    },
-    {
-      id: 2,
-      name: "Sad",
-      intensity: 60,
-      icon: <Frown size={20} />,
-      category: "Negative",
-    },
-    {
-      id: 3,
-      name: "Surprised",
-      intensity: 70,
-      icon: "😮",
-      category: "Reaction",
-    },
-    { id: 4, name: "Angry", intensity: 90, icon: "😠", category: "Negative" },
-    {
-      id: 5,
-      name: "Neutral",
-      intensity: 50,
-      icon: <Meh size={20} />,
-      category: "Neutral",
-    },
-    { id: 6, name: "Excited", intensity: 85, icon: "😃", category: "Positive" },
-    {
-      id: 7,
-      name: "Confused",
-      intensity: 65,
-      icon: "😕",
-      category: "Reaction",
-    },
-    {
-      id: 8,
-      name: "Concerned",
-      intensity: 75,
-      icon: "😟",
-      category: "Negative",
-    },
-    {
-      id: 9,
-      name: "Confident",
-      intensity: 90,
-      icon: "😎",
-      category: "Positive",
-    },
-    {
-      id: 10,
-      name: "Thoughtful",
-      intensity: 60,
-      icon: "🤔",
-      category: "Neutral",
-    },
-  ];
+  // Fetch gestures and emotions from the API
+  useEffect(() => {
+    const fetchGesturesAndEmotions = async () => {
+      try {
+        const [gesturesResponse, emotionsResponse] = await Promise.all([
+          axios.get("http://192.168.1.141:3001/gestures/"),
+          axios.get("http://192.168.1.141:3001/emotions/"),
+        ]);
+
+        setGestures(gesturesResponse.data);
+        setEmotions(emotionsResponse.data);
+      } catch (error) {
+        console.error("Error fetching gestures or emotions:", error);
+      }
+    };
+
+    fetchGesturesAndEmotions();
+  }, []);
 
   const emotionCategories = [
     "All",
@@ -368,6 +241,74 @@ const AvatarGestureEmotionUI = () => {
       console.error("Error applying emotion:", error);
       setAlert({
         message: `Failed to apply ${emotion.name} emotion. Please try again.`,
+        type: "error",
+      });
+    }
+  };
+
+  const handleGestureClick = async (gesture) => {
+    if (!selectedAvatar) {
+      console.error("No avatar selected");
+      return;
+    }
+
+    // Show loading alert
+    setAlert({
+      message: `Applying ${gesture.name} gesture to the avatar...`,
+      type: "generating",
+    });
+
+    try {
+      // Convert base64 image to a Blob
+      const base64Image = selectedAvatar.imgSrc.split("base64,")[1];
+      const byteCharacters = atob(base64Image);
+      const byteNumbers = new Array(byteCharacters.length)
+        .fill(0)
+        .map((_, i) => byteCharacters.charCodeAt(i));
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: "image/png" });
+
+      // Create FormData and append the file, gesture, and views
+      const formData = new FormData();
+      formData.append("file", blob, `${selectedAvatar.name || "avatar"}.png`);
+      formData.append("gesture", gesture.name);
+      formData.append(
+        "views",
+        JSON.stringify(["front", "side", "close-up", "back-view"])
+      );
+
+      // Send the file, gesture, and views to the API
+      const response = await axios.post(
+        "http://192.168.1.71:8083/emotions_gen/gesture", // Corrected endpoint
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+
+      console.log("Gesture application response:", response.data);
+
+      // Update state with the generated images
+      const { views } = response.data;
+      if (views) {
+        setGeneratedImages({
+          front: views.front || null,
+          backView: views["back-view"] || null,
+          side: views.side || null,
+          closeUp: views["close-up"] || null,
+        });
+
+        setAlert({
+          message: `${gesture.name} gesture applied successfully!`,
+          type: "success",
+        });
+      } else {
+        throw new Error("No views generated");
+      }
+    } catch (error) {
+      console.error("Error applying gesture:", error);
+      setAlert({
+        message: `Failed to apply ${gesture.name} gesture. Please try again.`,
         type: "error",
       });
     }
@@ -802,7 +743,10 @@ const AvatarGestureEmotionUI = () => {
                         ? "bg-blue-500 text-white"
                         : "bg-white hover:bg-gray-100"
                     }`}
-                    onClick={() => handleGestureSelect(gesture)}
+                    onClick={() => {
+                      handleGestureSelect(gesture);
+                      handleGestureClick(gesture); // Trigger gesture application
+                    }}
                   >
                     <div className="text-2xl text-center mb-1">
                       {gesture.thumbnail}
