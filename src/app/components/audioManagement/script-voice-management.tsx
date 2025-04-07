@@ -310,10 +310,18 @@ const AudioScript = () => {
         }
       }
   
+      // Retrieve email from localStorage
+      const email = localStorage.getItem("userEmail");
+      if (!email) {
+        alert("No email found in localStorage.");
+        return;
+      }
+  
       // Prepare payload
+      const folderTitle = scriptTitle || "Untitled"; // Use scriptTitle or fallback to "Untitled"
       const payload = {
-        email: "forehead614@gmail.com",
-        title: "NBA STARS",
+        email: email,
+        title: folderTitle,
         audio: audioFiles,
       };
   

@@ -126,27 +126,154 @@ const AvatarGestureEmotionUI = () => {
   const [alert, setAlert] = useState({ message: "", type: "" });
   const email = localStorage.getItem("userEmail");
 
-  const [gestures, setGestures] = useState([]);
-  const [emotions, setEmotions] = useState([]);
+  // Mock data
+  const gestures = [
+    {
+      id: 1,
+      name: "Wave",
+      thumbnail: "👋",
+      category: "Greeting",
+      duration: 2.5,
+    },
+    {
+      id: 2,
+      name: "Point",
+      thumbnail: "👉",
+      category: "Direction",
+      duration: 1.8,
+    },
+    {
+      id: 3,
+      name: "Clap",
+      thumbnail: "👏",
+      category: "Reaction",
+      duration: 2.0,
+    },
+    {
+      id: 4,
+      name: "Thumbs Up",
+      thumbnail: "👍",
+      category: "Reaction",
+      duration: 1.5,
+    },
+    {
+      id: 5,
+      name: "Handshake",
+      thumbnail: "🤝",
+      category: "Greeting",
+      duration: 3.0,
+    },
+    {
+      id: 6,
+      name: "Thinking",
+      thumbnail: "🤔",
+      category: "Contemplative",
+      duration: 2.2,
+    },
+    {
+      id: 7,
+      name: "Explain",
+      thumbnail: "🙌",
+      category: "Presentation",
+      duration: 2.8,
+    },
+    {
+      id: 8,
+      name: "Arms Crossed",
+      thumbnail: "🧍",
+      category: "Stance",
+      duration: 1.5,
+    },
+    {
+      id: 9,
+      name: "Check Watch",
+      thumbnail: "⌚",
+      category: "Action",
+      duration: 1.7,
+    },
+    {
+      id: 10,
+      name: "Nodding",
+      thumbnail: "🙂",
+      category: "Reaction",
+      duration: 1.2,
+    },
+    {
+      id: 11,
+      name: "Shrug",
+      thumbnail: "🤷",
+      category: "Reaction",
+      duration: 1.5,
+    },
+    {
+      id: 12,
+      name: "Head Tilt",
+      thumbnail: "😌",
+      category: "Contemplative",
+      duration: 1.3,
+    },
+  ];
 
-  // Fetch gestures and emotions from the API
-  useEffect(() => {
-    const fetchGesturesAndEmotions = async () => {
-      try {
-        const [gesturesResponse, emotionsResponse] = await Promise.all([
-          axios.get("http://192.168.1.141:3001/gestures/"),
-          axios.get("http://192.168.1.141:3001/emotions/"),
-        ]);
-
-        setGestures(gesturesResponse.data);
-        setEmotions(emotionsResponse.data);
-      } catch (error) {
-        console.error("Error fetching gestures or emotions:", error);
-      }
-    };
-
-    fetchGesturesAndEmotions();
-  }, []);
+  const emotions = [
+    {
+      id: 1,
+      name: "Happy",
+      intensity: 80,
+      icon: <Smile size={20} />,
+      category: "Positive",
+    },
+    {
+      id: 2,
+      name: "Sad",
+      intensity: 60,
+      icon: <Frown size={20} />,
+      category: "Negative",
+    },
+    {
+      id: 3,
+      name: "Surprised",
+      intensity: 70,
+      icon: "😮",
+      category: "Reaction",
+    },
+    { id: 4, name: "Angry", intensity: 90, icon: "😠", category: "Negative" },
+    {
+      id: 5,
+      name: "Neutral",
+      intensity: 50,
+      icon: <Meh size={20} />,
+      category: "Neutral",
+    },
+    { id: 6, name: "Excited", intensity: 85, icon: "😃", category: "Positive" },
+    {
+      id: 7,
+      name: "Confused",
+      intensity: 65,
+      icon: "😕",
+      category: "Reaction",
+    },
+    {
+      id: 8,
+      name: "Concerned",
+      intensity: 75,
+      icon: "😟",
+      category: "Negative",
+    },
+    {
+      id: 9,
+      name: "Confident",
+      intensity: 90,
+      icon: "😎",
+      category: "Positive",
+    },
+    {
+      id: 10,
+      name: "Thoughtful",
+      intensity: 60,
+      icon: "🤔",
+      category: "Neutral",
+    },
+  ];
 
   const emotionCategories = [
     "All",
