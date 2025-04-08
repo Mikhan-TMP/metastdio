@@ -41,6 +41,7 @@ import {
   Repeat,
   RefreshCw,
 } from "lucide-react";
+import { Dialog } from "@headlessui/react"; // Example: Using Headless UI for modal
 
 const Alert = ({ message, type, onClose }) => {
   return (
@@ -131,6 +132,8 @@ const AudioManagerUI = () => {
   const audioRef = React.useRef(new Audio());
   const [alert, setAlert] = useState({ message: "", type: "" });
   const [viewMode, setViewMode] = useState("grid"); // State for toggling view mode
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
 
   const [audioProperties, setAudioProperties] = useState({
     name: "",
@@ -162,105 +165,6 @@ const AudioManagerUI = () => {
 
   const handlePropertyChange = (field, value) => {
     setAudioProperties((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const saveAudioProperties = async () => {
-    try {
-      // Debugging logs
-      console.log("Debugging selectedAudio:", selectedAudio);
-      console.log("selectedAudio.id:", selectedAudio?.id);
-      console.log("Type of selectedAudio.id:", typeof selectedAudio?.id);
-
-      // Validate required inputs
-      if (!selectedAudio || !selectedAudio.id) {
-        setAlert({ message: "Invalid audio selected. Please try again.", type: "error" });
-        console.error("Error: Invalid selectedAudio object:", selectedAudio);
-        return;
-      }
-      if (!selectedFolder || !selectedFolder.id) {
-        setAlert({ message: "No folder selected.", type: "error" });
-        return;
-      }
-      if (!email) {
-        setAlert({ message: "User email not found.", type: "error" });
-        return;
-      }
-
-      const formattedAudioId = String(selectedAudio.id); // Ensure it's a string
-
-      // Debugging logs for API request
-      console.log("Sending API Request with:");
-      console.log("audioId:", formattedAudioId);
-      console.log("titleId:", selectedFolder?.id);
-      console.log("email:", email);
-
-      // Prepare payload
-      const payload = {
-        name: audioProperties.name.trim(),
-        category: audioProperties.category,
-        speaker: audioProperties.speaker,
-        type: audioProperties.type,
-        volume: audioProperties.volume,
-        fadeIn: audioProperties.fadeIn,
-        fadeOut: audioProperties.fadeOut,
-        voiceEnhance: audioProperties.voiceEnhance,
-        noiseReduction: audioProperties.noiseReduction,
-      };
-
-      // API request
-      const apiUrl = `http://192.168.1.141:3001/audio/updateAudio`;
-
-      console.log("Sending request to:", apiUrl);
-      console.log("Payload:", payload);
-
-      const response = await axios.patch(apiUrl, payload, {
-        params: {
-          email,
-          titleId: selectedFolder.id,
-          audioId: formattedAudioId,
-        },
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-        },
-        timeout: 10000, // 10 seconds timeout
-      });
-
-      // Handle response
-      console.log("API Response:", response);
-
-      if (response.data.status === "success") {
-        setSelectedAudio({ ...selectedAudio, ...payload });
-        setAudios((prevAudios) =>
-          prevAudios.map((audio) =>
-            audio.id === selectedAudio.id ? { ...audio, ...payload } : audio
-          )
-        );
-        setAlert({ message: response.data.message, type: "success" });
-      } else if (response.data.status === "info") {
-        setAlert({ message: response.data.message, type: "info" });
-      } else {
-        throw new Error(response.data.message || "Unexpected server response.");
-      }
-    } catch (error) {
-      console.error("Audio Update Error:", error);
-
-      let errorMessage = "Update failed. Please try again.";
-      if (error.response) {
-        console.error("Server Response:", error.response);
-        errorMessage = `Error ${error.response.status}: ${error.response.data?.message || "Server error."}`;
-      } else if (error.request) {
-        console.error("No response received:", error.request);
-        errorMessage = "No response from server. Check your connection.";
-      } else {
-        console.error("Request Error:", error.message);
-        errorMessage = `Error: ${error.message}`;
-      }
-
-      setAlert({ message: errorMessage, type: "error" });
-    } finally {
-      setTimeout(() => setAlert({ message: "", type: "" }), 3000);
-    }
   };
 
   const deleteFolder = async (folderId) => {
@@ -429,27 +333,6 @@ const AudioManagerUI = () => {
     { id: 3, name: "Last Test" },
   ];
 
-  const mockDialogueAudio = [
-    {
-      id: 1,
-      name: "Introduction",
-      duration: "0:15",
-      type: "dialogue",
-      speaker: "Main Presenter",
-      category: "Opening",
-      path: "intro.mp3",
-    },
-    {
-      id: 2,
-      name: "Main Point 1",
-      duration: "0:22",
-      type: "dialogue",
-      speaker: "Main Presenter",
-      category: "Content",
-      path: "point1.mp3",
-    },
-  ];
-
   const fetchFolders = async () => {
     setLoading((prev) => ({ ...prev, folders: true }));
     setError((prev) => ({ ...prev, folders: null }));
@@ -535,6 +418,92 @@ const AudioManagerUI = () => {
     }
   };
 
+
+const createFolder = async () => {
+  if (!newFolderName.trim()) {
+    setAlert({ message: "Folder name cannot be empty.", type: "error" });
+    return;
+  }
+
+  if (!email) {
+    setAlert({ message: "User email not found.", type: "error" });
+    return;
+  }
+
+  try {
+    setAlert({ message: "Creating folder...", type: "generating" });
+    
+    const response = await axios.post(
+      "http://192.168.1.141:3001/audio/addAudio",
+      {
+        email,
+        title: newFolderName.trim(),
+        audio: [],
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    console.log("Create folder response:", response.data);
+
+    // Check for any id in the response - it might be in a different field
+    const folderId = response.data.id || response.data._id || response.data.titleId;
+    
+    if (response.data.status === "success" || folderId) {
+      const newFolder = { 
+        id: folderId || `temp-${Date.now()}`, 
+        name: newFolderName.trim() 
+      };
+
+      // Update folders state immediately
+      setFolders(prevFolders => [...prevFolders, newFolder]);
+      
+      // Close modal and clear the input
+      setIsModalOpen(false);
+      setNewFolderName("");
+      
+      setAlert({ message: "Folder created successfully.", type: "success" });
+      
+      // Wait a moment before fetching folders to give the server time to complete
+      setTimeout(() => fetchFolders(), 500);
+    } else {
+      throw new Error(response.data.message || "Failed to create folder.");
+    }
+  } catch (error) {
+    console.error("Create Folder Error:", error);
+    console.error("Error details:", {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
+
+    let errorMessage = "Failed to create folder. Please try again.";
+    
+    if (error.code === "ERR_NETWORK") {
+      errorMessage = "Network error. Please check your connection.";
+    } else if (error.response && error.response.data && error.response.data.message) {
+      errorMessage = error.response.data.message;
+    }
+
+    setAlert({
+      message: errorMessage,
+      type: "error",
+    });
+  }
+};
+
+  useEffect(() => {
+    fetchFolders();
+  }, [email]);
+
+  const handleFolderClick = (folder) => {
+    setSelectedFolder(folder);
+    fetchAudios(folder.id);
+  };
+
   const fetchAudios = async (folderId) => {
     setLoading((prev) => ({ ...prev, audios: true }));
     setError((prev) => ({ ...prev, audios: null }));
@@ -558,22 +527,17 @@ const AudioManagerUI = () => {
         Array.isArray(response.data.audios)
       ) {
         const formattedAudios = response.data.audios.map((audio) => {
-          const audioPath = (() => {
-            if (audio.audioSrc.startsWith("data:audio/")) {
-              return audio.audioSrc;
-            }
-
-            return `data:audio/wav;base64,${audio.audioSrc}`;
-          })();
-
           return {
-            id: audio._id ,
+            id: audio._id,
             name: audio.name || "Unnamed Audio",
             category: audio.category || "Uncategorized",
             speaker: audio.speaker || "Unknown Speaker",
             type: audio.type ? audio.type.toLowerCase() : "dialogue",
             duration: "0:30",
-            path: audioPath,
+            path: `http://192.168.1.141:3001${audio.audioSrc}`.replace(
+              /([^:]\/)\/+/g,
+              "$1"
+            ),
             volume: audio.volume,
             fadeIn: audio.fadeIn,
             fadeOut: audio.fadeOut,
@@ -609,23 +573,114 @@ const AudioManagerUI = () => {
     }
   };
 
-  useEffect(() => {
-    fetchFolders();
-  }, [email]);
-
-  const handleFolderClick = (folder) => {
-    setSelectedFolder(folder);
-    fetchAudios(folder.id);
+  const getAudioData = () => {
+    return audios;
   };
 
-  const getAudioData = () => {
-    switch (activeTab) {
-      case "dialogue":
-        return mockDialogueAudio;
-      default:
-        return mockDialogueAudio;
+  const saveAudioProperties = async () => {
+    try {
+      // Debugging logs
+      console.log("Debugging selectedAudio:", selectedAudio);
+      console.log("selectedAudio.id:", selectedAudio?.id);
+      console.log("Type of selectedAudio.id:", typeof selectedAudio?.id);
+
+      // Validate required inputs
+      if (!selectedAudio || !selectedAudio.id) {
+        setAlert({
+          message: "Invalid audio selected. Please try again.",
+          type: "error",
+        });
+        console.error("Error: Invalid selectedAudio object:", selectedAudio);
+        return;
+      }
+      if (!selectedFolder || !selectedFolder.id) {
+        setAlert({ message: "No folder selected.", type: "error" });
+        return;
+      }
+      if (!email) {
+        setAlert({ message: "User email not found.", type: "error" });
+        return;
+      }
+
+      const formattedAudioId = String(selectedAudio.id); // Ensure it's a string
+
+      // Debugging logs for API request
+      console.log("Sending API Request with:");
+      console.log("audioId:", formattedAudioId);
+      console.log("titleId:", selectedFolder?.id);
+      console.log("email:", email);
+
+      // Prepare payload
+      const payload = {
+        name: audioProperties.name.trim(),
+        category: audioProperties.category,
+        speaker: audioProperties.speaker,
+        type: audioProperties.type,
+        volume: audioProperties.volume,
+        fadeIn: audioProperties.fadeIn,
+        fadeOut: audioProperties.fadeOut,
+        voiceEnhance: audioProperties.voiceEnhance,
+        noiseReduction: audioProperties.noiseReduction,
+      };
+
+      // API request
+      const apiUrl = `http://192.168.1.141:3001/audio/updateAudio`;
+
+      console.log("Sending request to:", apiUrl);
+      console.log("Payload:", payload);
+
+      const response = await axios.patch(apiUrl, payload, {
+        params: {
+          email,
+          titleId: selectedFolder.id,
+          audioId: formattedAudioId,
+        },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        timeout: 10000, // 10 seconds timeout
+      });
+
+      // Handle response
+      console.log("API Response:", response);
+
+      if (response.data.status === "success") {
+        setSelectedAudio({ ...selectedAudio, ...payload });
+        setAudios((prevAudios) =>
+          prevAudios.map((audio) =>
+            audio.id === selectedAudio.id ? { ...audio, ...payload } : audio
+          )
+        );
+        setAlert({ message: response.data.message, type: "success" });
+      } else if (response.data.status === "info") {
+        setAlert({ message: response.data.message, type: "info" });
+      } else {
+        throw new Error(response.data.message || "Unexpected server response.");
+      }
+    } catch (error) {
+      console.error("Audio Update Error:", error);
+
+      let errorMessage = "Update failed. Please try again.";
+      if (error.response) {
+        console.error("Server Response:", error.response);
+        errorMessage = `Error ${error.response.status}: ${
+          error.response.data?.message || "Server error."
+        }`;
+      } else if (error.request) {
+        console.error("No response received:", error.request);
+        errorMessage = "No response from server. Check your connection.";
+      } else {
+        console.error("Request Error:", error.message);
+        errorMessage = `Error: ${error.message}`;
+      }
+
+      setAlert({ message: errorMessage, type: "error" });
+    } finally {
+      setTimeout(() => setAlert({ message: "", type: "" }), 3000);
     }
   };
+
 
   const getCategories = () => {
     const audioData = getAudioData();
@@ -711,7 +766,7 @@ const AudioManagerUI = () => {
         type={alert.type}
         onClose={() => setAlert({ message: "", type: "" })}
       />
-  
+
       {/* Error Display */}
       {(error.folders || error.audios) && (
         <div className="bg-amber-50 p-3 text-amber-800 border-l-4 border-amber-500 mb-2 mx-2 rounded-md shadow-sm">
@@ -719,7 +774,7 @@ const AudioManagerUI = () => {
           {error.audios && <p>Audios Error: {error.audios}</p>}
         </div>
       )}
-  
+
       {/* Top Navigation */}
       <div className="flex justify-between items-center p-3 bg-white border-b shadow-sm">
         <div className="flex space-x-3">
@@ -732,7 +787,7 @@ const AudioManagerUI = () => {
           </button>
         </div>
       </div>
-  
+
       <div className="flex flex-1 overflow-hidden">
         {/* Main Content Area */}
         <div className="w-3/4 bg-white flex flex-col border-r shadow-sm">
@@ -758,13 +813,19 @@ const AudioManagerUI = () => {
               {!selectedFolder && (
                 <button
                   className="p-2 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
-                  onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+                  onClick={() =>
+                    setViewMode(viewMode === "grid" ? "list" : "grid")
+                  }
                 >
-                  {viewMode === "grid" ? <List size={16} /> : <Grid size={16} />}
+                  {viewMode === "grid" ? (
+                    <List size={16} />
+                  ) : (
+                    <Grid size={16} />
+                  )}
                 </button>
               )}
             </div>
-            
+
             {/* Content Display */}
             {loading.folders ? (
               <div className="flex items-center justify-center p-6">
@@ -777,11 +838,18 @@ const AudioManagerUI = () => {
               <div className="flex items-center mb-4">
                 <Folder size={18} className="text-[#9B25A7] mr-2" />
                 <p className="text-gray-600">
-                  Viewing audios in: <span className="font-medium">{selectedFolder.name}</span>
+                  Viewing audios in:{" "}
+                  <span className="font-medium">{selectedFolder.name}</span>
                 </p>
               </div>
             ) : (
-              <div className={`grid ${viewMode === "grid" ? "grid-cols-3 gap-4" : "grid-cols-1 gap-2"}`}>
+              <div
+                className={`grid ${
+                  viewMode === "grid"
+                    ? "grid-cols-3 gap-4"
+                    : "grid-cols-1 gap-2"
+                }`}
+              >
                 {folders.map((folder) => (
                   <div
                     key={folder.id}
@@ -790,14 +858,22 @@ const AudioManagerUI = () => {
                     } hover:bg-gray-50 hover:border-[#9B25A7] transition-all duration-200`}
                   >
                     <button
-                      className={`flex items-center ${viewMode === "grid" ? "flex-col" : "flex-row"} flex-1`}
+                      className={`flex items-center ${
+                        viewMode === "grid" ? "flex-col" : "flex-row"
+                      } flex-1`}
                       onClick={() => handleFolderClick(folder)}
                     >
                       <Folder
                         size={viewMode === "grid" ? 48 : 24}
-                        className={`${viewMode === "grid" ? "mb-3 text-[#9B25A7]" : "mr-3 text-[#9B25A7]"}`}
+                        className={`${
+                          viewMode === "grid"
+                            ? "mb-3 text-[#9B25A7]"
+                            : "mr-3 text-[#9B25A7]"
+                        }`}
                       />
-                      <span className="text-sm font-medium text-gray-800">{folder.name}</span>
+                      <span className="text-sm font-medium text-gray-800">
+                        {folder.name}
+                      </span>
                     </button>
                     <button
                       className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50"
@@ -807,20 +883,27 @@ const AudioManagerUI = () => {
                     </button>
                   </div>
                 ))}
-                <button className="flex items-center justify-center p-4 rounded-lg border border-dashed border-gray-300 hover:border-[#9B25A7] hover:bg-[#E3C5F0] transition-all">
+                <button
+                  className="flex items-center justify-center p-4 rounded-lg border border-dashed border-gray-300 hover:border-[#9B25A7] hover:bg-[#E3C5F0] transition-all"
+                  onClick={() => setIsModalOpen(true)}
+                >
                   <Plus size={18} className="mr-2 text-[#9B25A7]" />
-                  <span className="text-sm font-medium text-gray-800">New Folder</span>
+                  <span className="text-sm font-medium text-gray-800">
+                    New Folder
+                  </span>
                 </button>
               </div>
             )}
           </div>
-  
+
           {/* Audio Files Section */}
           <div className="flex-1 overflow-auto">
             {loading.audios ? (
               <div className="flex items-center justify-center p-6">
                 <RefreshCw className="w-8 h-8 text-[#9B25A7] animate-spin" />
-                <span className="ml-2 text-gray-600">Loading audio files...</span>
+                <span className="ml-2 text-gray-600">
+                  Loading audio files...
+                </span>
               </div>
             ) : error.audios ? (
               <p className="text-red-500 p-4">{error.audios}</p>
@@ -844,36 +927,42 @@ const AudioManagerUI = () => {
                           selectedAudio?.id === audio.id ? "bg-[#E3C5F0]" : ""
                         }`}
                       >
-                        <td 
-                          className="py-3 px-3 font-medium text-gray-800 cursor-pointer" 
+                        <td
+                          className="py-3 px-3 font-medium text-gray-800 cursor-pointer"
                           onClick={() => playAudio(audio)}
                         >
                           {audio.name}
                         </td>
-                        <td 
-                          className="py-3 px-3 text-gray-600 cursor-pointer" 
+                        <td
+                          className="py-3 px-3 text-gray-600 cursor-pointer"
                           onClick={() => playAudio(audio)}
                         >
                           {audio.category}
                         </td>
-                        <td 
-                          className="py-3 px-3 text-gray-600 cursor-pointer" 
+                        <td
+                          className="py-3 px-3 text-gray-600 cursor-pointer"
                           onClick={() => playAudio(audio)}
                         >
                           {audio.speaker}
                         </td>
-                        <td 
-                          className="py-3 px-3 cursor-pointer" 
+                        <td
+                          className="py-3 px-3 cursor-pointer"
                           onClick={() => playAudio(audio)}
                         >
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            audio.type === "dialogue" 
-                              ? "bg-green-100 text-green-800" 
-                              : audio.type === "music" 
-                                ? "bg-[#E3C5F0] text-[#9B25A7]" 
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              audio.type === "dialogue"
+                                ? "bg-green-100 text-green-800"
+                                : audio.type === "music"
+                                ? "bg-[#E3C5F0] text-[#9B25A7]"
                                 : "bg-blue-100 text-blue-800"
-                          }`}>
-                            {audio.type === "dialogue" ? "Dialogue" : audio.type === "music" ? "Music" : "SFX"}
+                            }`}
+                          >
+                            {audio.type === "dialogue"
+                              ? "Dialogue"
+                              : audio.type === "music"
+                              ? "Music"
+                              : "SFX"}
                           </span>
                         </td>
                         <td className="py-3 px-3">
@@ -902,18 +991,13 @@ const AudioManagerUI = () => {
             )}
           </div>
         </div>
-  
+
         {/* Preview & Properties Panel */}
         <div className="w-1/4 bg-white flex flex-col">
-          <div className="p-3 border-b flex items-center">
-            <h3 className="text-md font-semibold text-gray-800">Preview & Properties</h3>
-          </div>
-  
           <div className="flex items-center p-3 border-b bg-gray-50">
-            <button className="p-2 bg-white rounded-md hover:bg-gray-100 transition-colors">
-              <ChevronLeft size={16} />
-            </button>
-            <h2 className="text-lg font-semibold flex-1 ml-2 text-gray-800">Audio Manager</h2>
+            <h2 className="text-lg font-semibold flex-1 ml-2 text-gray-800">
+              Audio Manager
+            </h2>
             <button
               className="flex items-center p-2 bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] transition-colors disabled:bg-[#E3C5F0] disabled:cursor-not-allowed"
               onClick={saveAudioProperties}
@@ -923,13 +1007,20 @@ const AudioManagerUI = () => {
               Save
             </button>
           </div>
-  
+          <div className="p-3 border-b flex items-center">
+            <h3 className="text-md font-semibold text-gray-800">
+              Preview & Properties
+            </h3>
+          </div>
+
           <div className="flex-1 flex flex-col overflow-auto">
             {selectedAudio ? (
               <>
                 {/* Audio Preview Section */}
                 <div className="p-4 border-b">
-                  <h3 className="font-medium text-lg mb-3 text-gray-800">{selectedAudio.name}</h3>
+                  <h3 className="font-medium text-lg mb-3 text-gray-800">
+                    {selectedAudio.name}
+                  </h3>
                   <div className="mb-4 flex items-center text-sm text-gray-600">
                     <div className="mr-4 flex items-center">
                       {selectedAudio.type === "dialogue" ? (
@@ -952,7 +1043,7 @@ const AudioManagerUI = () => {
                       {selectedAudio.duration}
                     </div>
                   </div>
-  
+
                   {/* Waveform Visualization */}
                   <div className="mb-4 h-20 bg-gray-100 rounded-lg relative flex items-center overflow-hidden shadow-inner">
                     <div className="absolute inset-0 flex items-center">
@@ -977,13 +1068,13 @@ const AudioManagerUI = () => {
                         ></div>
                       ))}
                     </div>
-  
+
                     <div
                       className="absolute top-0 bottom-0 w-px bg-gray-800 z-10"
                       style={{ left: `${currentProgress}%` }}
                     ></div>
                   </div>
-  
+
                   {/* Playback Controls */}
                   <div className="mb-4">
                     <div className="flex items-center justify-between mb-1">
@@ -1031,7 +1122,7 @@ const AudioManagerUI = () => {
                       </button>
                     </div>
                   </div>
-  
+
                   {/* Volume Control */}
                   <div className="flex items-center space-x-2 px-2">
                     <button className="p-1.5 text-gray-500">
@@ -1050,11 +1141,13 @@ const AudioManagerUI = () => {
                     </button>
                   </div>
                 </div>
-  
+
                 {/* Audio Properties Section */}
                 <div className="p-4 border-b bg-gray-50">
-                  <h3 className="font-medium mb-4 text-gray-800">Audio Properties</h3>
-  
+                  <h3 className="font-medium mb-4 text-gray-800">
+                    Audio Properties
+                  </h3>
+
                   <div className="space-y-3">
                     <div>
                       <label className="block text-xs text-gray-500 mb-1 font-medium">
@@ -1069,7 +1162,7 @@ const AudioManagerUI = () => {
                         }
                       />
                     </div>
-  
+
                     <div>
                       <label className="block text-xs text-gray-500 mb-1 font-medium">
                         Category
@@ -1083,7 +1176,7 @@ const AudioManagerUI = () => {
                         }
                       />
                     </div>
-  
+
                     <div>
                       <label className="block text-xs text-gray-500 mb-1 font-medium">
                         Speaker
@@ -1097,7 +1190,7 @@ const AudioManagerUI = () => {
                         }
                       />
                     </div>
-  
+
                     <div>
                       <label className="block text-xs text-gray-500 mb-1 font-medium">
                         Type
@@ -1114,7 +1207,7 @@ const AudioManagerUI = () => {
                         <option value="sound">Sound Effect</option>
                       </select>
                     </div>
-  
+
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs text-gray-500 mb-1 font-medium">
@@ -1139,7 +1232,7 @@ const AudioManagerUI = () => {
                           </span>
                         </div>
                       </div>
-  
+
                       <div>
                         <label className="block text-xs text-gray-500 mb-1 font-medium">
                           Fade In (s)
@@ -1160,7 +1253,7 @@ const AudioManagerUI = () => {
                         />
                       </div>
                     </div>
-  
+
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs text-gray-500 mb-1 font-medium">
@@ -1181,7 +1274,7 @@ const AudioManagerUI = () => {
                           step="0.5"
                         />
                       </div>
-  
+
                       <div>
                         <div className="flex items-center mt-6">
                           <div className="flex items-center h-5">
@@ -1198,13 +1291,16 @@ const AudioManagerUI = () => {
                               }
                             />
                           </div>
-                          <label htmlFor="voiceEnhance" className="ml-2 text-sm text-gray-700">
+                          <label
+                            htmlFor="voiceEnhance"
+                            className="ml-2 text-sm text-gray-700"
+                          >
                             Voice Enhance
                           </label>
                         </div>
                       </div>
                     </div>
-  
+
                     <div className="flex items-center h-5">
                       <input
                         type="checkbox"
@@ -1218,17 +1314,22 @@ const AudioManagerUI = () => {
                           )
                         }
                       />
-                      <label htmlFor="noiseReduction" className="ml-2 text-sm text-gray-700">
+                      <label
+                        htmlFor="noiseReduction"
+                        className="ml-2 text-sm text-gray-700"
+                      >
                         Noise Reduction
                       </label>
                     </div>
                   </div>
                 </div>
-  
+
                 {/* Audio Adjustments Section */}
                 <div className="p-4 border-b">
-                  <h3 className="font-medium mb-4 text-gray-800">Audio Adjustments</h3>
-  
+                  <h3 className="font-medium mb-4 text-gray-800">
+                    Audio Adjustments
+                  </h3>
+
                   <div className="space-y-3">
                     <div>
                       <label className="block text-xs text-gray-500 mb-1 font-medium">
@@ -1247,7 +1348,7 @@ const AudioManagerUI = () => {
                         </span>
                       </div>
                     </div>
-  
+
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs text-gray-500 mb-1 font-medium">
@@ -1260,7 +1361,7 @@ const AudioManagerUI = () => {
                           <option>2s</option>
                         </select>
                       </div>
-  
+
                       <div>
                         <label className="block text-xs text-gray-500 mb-1 font-medium">
                           Fade Out
@@ -1273,7 +1374,7 @@ const AudioManagerUI = () => {
                         </select>
                       </div>
                     </div>
-  
+
                     {selectedAudio.type === "music" && (
                       <>
                         <div className="flex items-center h-5 mt-2">
@@ -1282,11 +1383,14 @@ const AudioManagerUI = () => {
                             id="loopAudio"
                             className="h-4 w-4 text-[#9B25A7] rounded border-gray-300 focus:ring-[#9B25A7]"
                           />
-                          <label htmlFor="loopAudio" className="ml-2 text-sm text-gray-700">
+                          <label
+                            htmlFor="loopAudio"
+                            className="ml-2 text-sm text-gray-700"
+                          >
                             Loop Audio
                           </label>
                         </div>
-  
+
                         <div className="mt-3">
                           <label className="block text-xs text-gray-500 mb-1 font-medium">
                             EQ Preset
@@ -1301,7 +1405,7 @@ const AudioManagerUI = () => {
                         </div>
                       </>
                     )}
-  
+
                     {selectedAudio.type === "dialogue" && (
                       <>
                         <div>
@@ -1321,7 +1425,7 @@ const AudioManagerUI = () => {
                             </span>
                           </div>
                         </div>
-  
+
                         <div>
                           <label className="block text-xs text-gray-500 mb-1 font-medium">
                             Voice Enhancement
@@ -1335,7 +1439,7 @@ const AudioManagerUI = () => {
                         </div>
                       </>
                     )}
-  
+
                     <div>
                       <label className="block text-xs text-gray-500 mb-1 font-medium">
                         Timing
@@ -1354,14 +1458,17 @@ const AudioManagerUI = () => {
                 <div className="mb-4 p-5 rounded-full bg-gray-100">
                   <Volume2 size={32} className="text-gray-400" />
                 </div>
-                <p className="text-gray-600 mb-2 font-medium">No audio selected</p>
+                <p className="text-gray-600 mb-2 font-medium">
+                  No audio selected
+                </p>
                 <p className="text-sm text-gray-500 max-w-xs">
-                  Select an audio file from the library to view and edit its properties
+                  Select an audio file from the library to view and edit its
+                  properties
                 </p>
               </div>
             )}
           </div>
-  
+
           {/* Bottom Action Buttons */}
           <div className="p-4 border-t bg-gray-50">
             <button
@@ -1380,6 +1487,36 @@ const AudioManagerUI = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal for creating a new folder */}
+      <Dialog open={isModalOpen} onClose={() => setIsModalOpen(false)}>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+            <h2 className="text-lg font-semibold mb-4">Create New Folder</h2>
+            <input
+              type="text"
+              placeholder="Enter folder name"
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              className="w-full p-2 border rounded-md mb-4"
+            />
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={createFolder}
+                className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 };

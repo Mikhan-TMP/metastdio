@@ -61,7 +61,7 @@ const StudioGallery = () => {
 
       const fetchedStudios = response.data.map((studio, index) => ({
         id: studio.id || index,
-        imgSrc: `data:image/png;base64,${studio.imgSrc}`,
+        imgSrc: `http://192.168.1.141:3001${studio.imgSrc}`.replace(/([^:]\/)\/+/g, "$1"),
         name: studio.name || `Studio ${index + 1}`,
         studioType: studio.studioType,
       }));

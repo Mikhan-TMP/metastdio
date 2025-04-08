@@ -374,12 +374,7 @@ const AvatarGestureEmotionUI = () => {
       const fetchedAvatars = response.data.map((avatar, index) => ({
         id: avatar.id || index,
         // Option 1: Store image URL directly if available
-        imgSrc: avatar.imageUrl
-          ? avatar.imageUrl
-          : // Option 2: If base64 is the only option, store it more compactly
-            `data:image/png;base64,${
-              avatar.imgSrc.split(",")[1] || avatar.imgSrc
-            }`,
+        imgSrc: `http://192.168.1.141:3001${avatar.imgSrc}`.replace(/([^:]\/)\/+/g, "$1"),
         name: avatar.name || `Avatar ${index + 1}`,
         style: avatar.style,
       }));
