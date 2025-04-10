@@ -119,9 +119,9 @@ const AvatarGestureEmotionUI = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [generatedImages, setGeneratedImages] = useState({
     front: null,
-    backView: null,
+    back: null,
     side: null,
-    closeUp: null,
+    close: null,
   });
   const [alert, setAlert] = useState({ message: "", type: "" });
   const [gestures, setGestures] = useState([]);
@@ -348,7 +348,7 @@ const AvatarGestureEmotionUI = () => {
       formData.append("emotion", emotion.name);
       formData.append(
         "views",
-        JSON.stringify(["front", "side", "close-up", "back-view"])
+        JSON.stringify(["front", "side", "close", "back"])
       );
 
       const response = await axios.post(
@@ -365,9 +365,9 @@ const AvatarGestureEmotionUI = () => {
       const { views } = response.data;
       setGeneratedImages({
         front: views.front || null,
-        backView: views["back-view"] || null,
+        back: views.back || null,
         side: views.side || null,
-        closeUp: views["close-up"] || null,
+        close: views.close || null,
       });
 
       setAlert({
@@ -402,7 +402,7 @@ const AvatarGestureEmotionUI = () => {
       formData.append("gesture", gesture.name);
       formData.append(
         "views",
-        JSON.stringify(["front", "side", "close-up", "back-view"])
+        JSON.stringify(["front", "side", "close", "back"])
       );
 
       const response = await axios.post(
@@ -419,9 +419,9 @@ const AvatarGestureEmotionUI = () => {
       const { views } = response.data;
       setGeneratedImages({
         front: views.front || null,
-        backView: views["back-view"] || null,
+        back: views.back || null,
         side: views.side || null,
-        closeUp: views["close-up"] || null,
+        close: views.close || null,
       });
 
       setAlert({
@@ -498,7 +498,7 @@ const AvatarGestureEmotionUI = () => {
       formData.append("file_path", selectedAvatar.imgSrc); // Use file path instead of base64
       formData.append(
         "views",
-        JSON.stringify(["front", "side", "close-up", "back-view"])
+        JSON.stringify(["front", "side", "close", "back"])
       );
 
       // Send the file path and views to the API
@@ -516,9 +516,9 @@ const AvatarGestureEmotionUI = () => {
       const { views } = response.data;
       setGeneratedImages({
         front: views.front || null,
-        backView: views["back-view"] || null,
+        back: views.back || null,
         side: views.side || null,
-        closeUp: views["close-up"] || null,
+        close: views.close || null,
       });
 
       setAlert({
@@ -529,6 +529,78 @@ const AvatarGestureEmotionUI = () => {
       console.error("Error generating emotion:", error);
       setAlert({
         message: "Failed to generate avatar view. Please try again.",
+        type: "error",
+      });
+    }
+  };
+
+  const regenerateView = async (view) => {
+    if (!selectedAvatar) {
+      console.error("No avatar selected");
+      return;
+    }
+
+    // Show loading state for the specific view
+    setGeneratedImages((prev) => ({
+      ...prev,
+      [view]: "loading",
+    }));
+
+    setAlert({
+      message: `Regenerating ${view} view...`,
+      type: "generating",
+    });
+
+    try {
+      // Send the file path directly to the API
+      const formData = new FormData();
+      formData.append("file_path", selectedAvatar.imgSrc); // Use file path instead of base64
+      formData.append("views", JSON.stringify([view]));
+
+      // Send the file path and specific view to the API
+      const response = await axios.post(
+        "http://192.168.1.71:8083/emotions_gen",
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+
+      console.log(`${view} view regeneration response:`, response.data);
+
+      // Map API response keys to state keys
+      const apiToStateKeyMap = {
+        "front": "front",
+        "side": "side",
+        "close": "close",
+        "back": "back",
+      };
+
+      const { views } = response.data;
+      setGeneratedImages((prev) => ({
+        ...prev,
+        [apiToStateKeyMap[view]]: views[view] || null,
+      }));
+
+      setAlert({
+        message: `${view} view regenerated successfully!`,
+        type: "success",
+      });
+    } catch (error) {
+      console.error(`Error regenerating ${view} view:`, error);
+
+      // Handle API error
+      setGeneratedImages((prev) => ({
+        ...prev,
+        [view]: null,
+      }));
+
+      setAlert({
+        message: `Failed to regenerate ${view} view. ${
+          error.response?.status === 500
+            ? "Server error occurred. Please try again later."
+            : "Please try again."
+        }`,
         type: "error",
       });
     }
@@ -555,7 +627,7 @@ const AvatarGestureEmotionUI = () => {
       formData.append("file", blob, `${selectedAvatar.name || "avatar"}.png`);
       formData.append(
         "views",
-        JSON.stringify(["front", "side", "close-up", "back-view"])
+        JSON.stringify(["front", "side", "close", "back"])
       );
 
       // Send the file and views to the API
@@ -574,9 +646,9 @@ const AvatarGestureEmotionUI = () => {
       if (base64Img) {
         setGeneratedImages({
           front: `data:image/png;base64,${base64Img}`, // Assuming the API returns one image for simplicity
-          backView: `data:image/png;base64,${base64Img}`,
+          back: `data:image/png;base64,${base64Img}`,
           side: `data:image/png;base64,${base64Img}`,
-          closeUp: `data:image/png;base64,${base64Img}`,
+          close: `data:image/png;base64,${base64Img}`,
         });
       } else {
         alert("No image generated. Please try again.");
@@ -975,50 +1047,34 @@ const AvatarGestureEmotionUI = () => {
                   Camera Views
                 </h3>
                 <div className="grid grid-cols-2 gap-3 mb-auto">
-                  <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center text-xs">
-                    {generatedImages.front ? (
-                      <img
-                        src={generatedImages.front}
-                        alt="Front View"
-                        className="w-full h-full object-contain rounded-lg"
-                      />
-                    ) : (
-                      "Front View"
-                    )}
-                  </div>
-                  <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center text-xs">
-                    {generatedImages.side ? (
-                      <img
-                        src={generatedImages.side}
-                        alt="Side View"
-                        className="w-full h-full object-contain rounded-lg"
-                      />
-                    ) : (
-                      "Side View"
-                    )}
-                  </div>
-                  <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center text-xs">
-                    {generatedImages.closeUp ? (
-                      <img
-                        src={generatedImages.closeUp}
-                        alt="Close-up View"
-                        className="w-full h-full object-contain rounded-lg"
-                      />
-                    ) : (
-                      "Face Close-up"
-                    )}
-                  </div>
-                  <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center text-xs">
-                    {generatedImages.backView ? (
-                      <img
-                        src={generatedImages.backView}
-                        alt="Back View View"
-                        className="w-full h-full object-contain rounded-lg"
-                      />
-                    ) : (
-                      "Back View"
-                    )}
-                  </div>
+                  {["front", "side", "close", "back"].map((view) => (
+                    <div
+                      key={view}
+                      className="aspect-square bg-gray-100 rounded-lg flex flex-col items-center justify-center text-xs"
+                    >
+                      {generatedImages[view] === "loading" ? (
+                        <div className="flex items-center justify-center w-full h-full">
+                          <div className="loader border-t-2 border-[#9B25A7] rounded-full w-6 h-6 animate-spin"></div>
+                        </div>
+                      ) : generatedImages[view] ? (
+                        <>
+                          <img
+                            src={generatedImages[view]}
+                            alt={`${view} View`}
+                            className="w-full h-full object-contain rounded-lg mb-2"
+                          />
+                          <button
+                            className="mt-2 px-2 py-1 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] text-xs"
+                            onClick={() => regenerateView(view)}
+                          >
+                            Regenerate
+                          </button>
+                        </>
+                      ) : (
+                        `${view.charAt(0).toUpperCase() + view.slice(1)} View`
+                      )}
+                    </div>
+                  ))}
                 </div>
 
                 {/* Playback Controls */}
