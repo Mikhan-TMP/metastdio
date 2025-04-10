@@ -209,10 +209,12 @@ const VoiceGenerator = () => {
         response.data.status === "success" &&
         Array.isArray(response.data.titles)
       ) {
-        const formattedFolders = response.data.titles.map((titleObj, index) => ({
-          id: titleObj.id || `folder-${index}`,
-          name: titleObj.title || `Unnamed Folder ${index}`,
-        }));
+        const formattedFolders = response.data.titles.map(
+          (titleObj, index) => ({
+            id: titleObj.id || `folder-${index}`,
+            name: titleObj.title || `Unnamed Folder ${index}`,
+          })
+        );
         setFolders(formattedFolders);
       } else {
         throw new Error("Failed to fetch folders");
@@ -416,7 +418,7 @@ const VoiceGenerator = () => {
       setAlert({ message: "No audio to save.", type: "error" });
       return;
     }
-  
+
     if (!selectedFolder) {
       setAlert({
         message: "Please select a folder to save the audio.",
@@ -424,73 +426,93 @@ const VoiceGenerator = () => {
       });
       return;
     }
-    
+
     try {
       setAlert({ message: "Saving audio...", type: "generating" });
-    
-      // Validate audioUrl format
-      if (!audioUrl.startsWith("data:audio/")) {
-        throw new Error("Invalid audio URL format.");
-      }
-    
-      // Extract Base64 data if necessary
-      const base64Audio = audioUrl.includes(",") ? audioUrl.split(",")[1] : audioUrl;
-      if (!base64Audio) {
-        throw new Error("Failed to extract Base64 audio data.");
-      }
-    
-      console.log("audioUrl:", audioUrl);
-    
+
+      // Convert blob URL to base64
+      const audioResponse = await fetch(audioUrl);
+      const audioBlob = await audioResponse.blob();
+
+      const base64Data = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const result = reader.result as string;
+          const base64String = result.split(",")[1];
+          resolve(base64String);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(audioBlob);
+      });
+
+      // Prepare audio data
       const audioData = {
-        name: `Audio_${Date.now()}`, // Unique name for the audio
-        audioSrc: base64Audio, // Use Base64 data
-        category: "Introduction", // Updated category
-        speaker: "Person 1", // Updated speaker
-        type: "Dialog", // Updated type
-        volume: "90", // Updated volume
-        fadeIn: "1", // Updated fadeIn
-        fadeOut: "1", // Updated fadeOut
-        voiceEnhance: "false", // Updated voiceEnhance
-        noiseReduction: "false", // Updated noiseReduction
+        name: `Audio_${Date.now()}`,
+        audioSrc: base64Data,
+        category: "Introduction",
+        speaker: "Person 1",
+        type: "Dialog",
+        volume: "90",
+        fadeIn: "1",
+        fadeOut: "1",
+        voiceEnhance: "false",
+        noiseReduction: "false",
       };
-    
+
+      // Prepare payload
+      const email = localStorage.getItem("userEmail") || email; // fallback if localStorage fails
       const payload = {
         email,
         title: selectedFolder.name,
         audio: [audioData],
       };
-    
-      console.log("Payload before sending:", JSON.stringify(payload, null, 2));
-    
-      const response = await axios.post(
+
+      console.log(
+        "Payload before sending:",
+        JSON.stringify(
+          {
+            ...payload,
+            audio: [{ ...audioData, audioSrc: "[BASE64_DATA]" }],
+          },
+          null,
+          2
+        )
+      );
+
+      // Send to API
+      const saveResponse = await axios.post(
         "http://192.168.1.141:3001/audio/addAudio",
         payload,
         {
           headers: {
             "Content-Type": "application/json",
           },
-          timeout: 10000, // 10-second timeout
+          timeout: 10000,
         }
       );
-    
-      console.log("Save to library response:", response.data);
-    
-      if (response.data.status === "success") {
+
+      console.log("Save to library response:", saveResponse);
+
+      if (saveResponse.status === 200 || saveResponse.status === 201) {
         setAlert({ message: "Audio saved successfully!", type: "success" });
         setIsFolderModalOpen(false);
       } else {
-        throw new Error(response.data.message || "Failed to save audio.");
+        throw new Error(
+          `Unexpected response: ${saveResponse.status} - ${JSON.stringify(
+            saveResponse.data
+          )}`
+        );
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving audio:", error);
       console.error("Error details:", {
         message: error.message,
         response: error.response?.data,
         status: error.response?.status,
       });
-    
+
       let errorMessage = "Failed to save audio. Please try again.";
-    
+
       if (error.code === "ERR_NETWORK") {
         errorMessage = "Network error. Please check your connection.";
       } else if (
@@ -500,7 +522,7 @@ const VoiceGenerator = () => {
       ) {
         errorMessage = error.response.data.message;
       }
-    
+
       setAlert({
         message: errorMessage,
         type: "error",
@@ -737,7 +759,7 @@ const VoiceGenerator = () => {
             <SkipBack size={20} className="hidden sm:block" />
           </button>
           <button
-            className="p-2 sm:p-3 border rounded-full hover:bg-gray-100 transition-colors bg-blue-50 text-blue-600"
+            className="p-2 sm:p-3 border rounded-full hover:bg-[#7A1C86] transition-colors bg-[#9B25A7] text-white"
             onClick={handlePlayPause}
           >
             {isPlaying ? (
@@ -782,7 +804,7 @@ const VoiceGenerator = () => {
             </label>
             <textarea
               ref={textAreaRef}
-              className="w-full border border-gray-300 rounded-lg p-2 sm:p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+              className="w-full border border-gray-300 rounded-lg p-2 sm:p-3 focus:outline-none focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent text-sm sm:text-base"
               placeholder="Enter the text to convert to speech..."
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
@@ -801,7 +823,7 @@ const VoiceGenerator = () => {
               Voice Selection <span className="text-red-500">*</span>
             </label>
             <select
-              className="w-full border border-gray-300 rounded-lg p-2 sm:p-3 bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+              className="w-full border border-gray-300 rounded-lg p-2 sm:p-3 bg-white text-black focus:outline-none focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent text-sm sm:text-base"
               value={voiceSelection}
               onChange={(e) => setVoiceSelection(e.target.value)}
               required
@@ -861,7 +883,7 @@ const VoiceGenerator = () => {
           <button
             className={`w-full px-4 py-2 sm:py-3 text-white rounded-lg transition-colors flex items-center justify-center text-sm sm:text-base ${
               isGenerating
-                ? "bg-blue-400 cursor-not-allowed"
+                ? "bg-[#9B25A7] cursor-not-allowed"
                 : "bg-[#9B25A7] hover:bg-[#871f90] cursor-pointer"
             }`}
             onClick={handleGenerateVoice}
@@ -881,7 +903,7 @@ const VoiceGenerator = () => {
                   savedGenerations.map((gen) => (
                     <div
                       key={gen.id}
-                      className="p-2 border rounded-lg flex justify-between items-center bg-white hover:bg-blue-50 cursor-pointer"
+                      className="p-2 border rounded-lg flex justify-between items-center bg-white hover:bg-[#9B25A7]cursor-pointer"
                       onClick={() => playSavedGeneration(gen)}
                     >
                       <div className="flex items-center">
@@ -942,7 +964,7 @@ const VoiceGenerator = () => {
                   savedGenerations.map((gen) => (
                     <div
                       key={gen.id}
-                      className="p-2 border rounded-lg flex justify-between items-center bg-white hover:bg-blue-50 cursor-pointer"
+                      className="p-2 border rounded-lg flex justify-between items-center bg-white hover:bg-[#9B25A7]cursor-pointer"
                       onClick={() => playSavedGeneration(gen)}
                     >
                       <div className="flex items-center">
@@ -967,7 +989,7 @@ const VoiceGenerator = () => {
             <button
               className={`flex-1 px-2 sm:px-3 py-1 sm:py-2 rounded text-xs sm:text-sm flex items-center justify-center ${
                 audioUrl
-                  ? "bg-blue-600 text-white hover:bg-[#9B25A7]"
+                  ? "bg-[#9B25A7] text-white hover:bg-[#7A1C86]"
                   : "bg-gray-200 text-gray-500 cursor-not-allowed"
               }`}
               onClick={handleDownload}
@@ -980,7 +1002,7 @@ const VoiceGenerator = () => {
             <button
               className={`flex-1 px-2 sm:px-3 py-1 sm:py-2 rounded text-xs sm:text-sm flex items-center justify-center ${
                 audioUrl
-                  ? "border border-[#9B25A7] text-[#9B25A7] hover:bg-blue-50"
+                  ? "border border-[#9B25A7] text-[#9B25A7] hover:bg-[#7A1C86]"
                   : "border border-gray-300 text-gray-400 cursor-not-allowed"
               }`}
               onClick={() => setIsFolderModalOpen(true)}
@@ -999,15 +1021,45 @@ const VoiceGenerator = () => {
           open={isFolderModalOpen}
           onClose={() => setIsFolderModalOpen(false)}
         >
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-            <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-              <h2 className="text-lg font-semibold mb-4">Save Audio to Folder</h2>
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white w-full max-w-md p-6 rounded-2xl shadow-xl space-y-6">
+              {/* Title */}
+              <h2 className="text-xl font-semibold text-gray-800">
+                Save Audio to Folder
+              </h2>
+
+              {/* Create New Folder */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Create New Folder
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="New folder name"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    className="flex-1 p-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#9B25A7]"
+                  />
+                  <button
+                    onClick={createFolder}
+                    className="px-4 py-2 bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] text-sm transition"
+                  >
+                    Create
+                  </button>
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div className="border-t border-gray-200" />
+
+              {/* Folder Selector */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Select Folder
                 </label>
                 <select
-                  className="w-full p-2 border rounded-md"
+                  className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#9B25A7]"
                   value={selectedFolder?.id || ""}
                   onChange={(e) =>
                     setSelectedFolder(
@@ -1025,34 +1077,18 @@ const VoiceGenerator = () => {
                   ))}
                 </select>
               </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">
-                  Or Create New Folder
-                </label>
-                <input
-                  type="text"
-                  placeholder="Enter folder name"
-                  value={newFolderName}
-                  onChange={(e) => setNewFolderName(e.target.value)}
-                  className="w-full p-2 border rounded-md"
-                />
-                <button
-                  onClick={createFolder}
-                  className="mt-2 px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
-                >
-                  Create Folder
-                </button>
-              </div>
-              <div className="flex justify-end space-x-2">
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-2 pt-4">
                 <button
                   onClick={() => setIsFolderModalOpen(false)}
-                  className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
+                  className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSaveToLibrary}
-                  className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
+                  className="px-4 py-2 text-sm bg-[#9B25A7] text-white hover:bg-[#7A1C86] rounded-lg transition"
                 >
                   Save
                 </button>
@@ -1066,6 +1102,12 @@ const VoiceGenerator = () => {
         message={notification}
         type={notificationType}
         onClose={() => setNotification("")}
+      />
+
+      <Alert
+        message={alert.message}
+        type={alert.type}
+        onClose={() => setAlert({ message: "", type: "" })}
       />
     </div>
   );
