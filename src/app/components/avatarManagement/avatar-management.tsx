@@ -246,22 +246,61 @@ const AvatarManagement = () => {
     }
   };
 
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const newAvatar = {
-          id: Date.now(),
-          imgSrc: e.target.result,
-          name: file.name.split(".")[0] || "Uploaded Avatar",
-        };
-        setMyAvatars((prev) => [...prev, newAvatar]);
-        showNotification("Avatar uploaded successfully!", "success");
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  // const handleFileUpload = async (event) => {
+  //   const file = event.target.files[0];
+  //   if (file) {
+  //     const reader = new FileReader();
+  //     reader.onload = async (e) => {
+  //       const base64String = e.target.result.split(",")[1];
+
+  //       if (!base64String) {
+  //         showNotification("Failed to process image data", "error");
+  //         return;
+  //       }
+
+  //       const payload = {
+  //         email: localStorage.getItem("userEmail") || "test@example.com",
+  //         image: base64String,
+  //         name: file.name.split(".")[0] || "Uploaded Avatar",
+  //       };
+
+  //       try {
+  //         showNotification("Uploading avatar...", "generating");
+
+  //         const response = await axios.post(
+  //           "http://192.168.1.141:3001/avatar/addAvatar",
+  //           payload
+  //         );
+
+  //         const data = response.data;
+  //         console.log("API Response:", data);
+
+  //         if (data && data.imgSrc) {
+  //           const uploadedAvatar = {
+  //             id: data._id || Date.now(),
+  //             imgSrc: `http://192.168.1.141:3001${data.imgSrc}`.replace(/([^:]\/\/)+/g, "$1"),
+  //             name: payload.name,
+  //           };
+
+  //           setMyAvatars((prev) => [...prev, uploadedAvatar]);
+  //           showNotification("Avatar uploaded successfully!", "success");
+  //         } else {
+  //           console.error("Invalid API response:", data);
+  //           showNotification("Failed to upload avatar: Invalid response from server", "error");
+  //         }
+  //       } catch (error) {
+  //         console.error("Error uploading avatar:", error.response || error);
+  //         showNotification(
+  //           `Failed to upload avatar: ${error.response?.data?.message || error.message}`,
+  //           "error"
+  //         );
+  //       }
+  //     };
+  //     reader.readAsDataURL(file);
+  //   } else {
+  //     showNotification("No file selected for upload.", "error");
+  //   }
+  // };
 
   const handleReferenceImageUpload = (event) => {
     const file = event.target.files[0];
@@ -595,7 +634,7 @@ const AvatarManagement = () => {
                       type="file"
                       accept="image/*"
                       className="hidden"
-                      onChange={handleFileUpload}
+                      // onChange={handleFileUpload}
                     />
                   </label>
                 </div>
