@@ -493,6 +493,8 @@ const AvatarGestureEmotionUI = () => {
     });
 
     try {
+      const email = localStorage.getItem("userEmail") || "default@example.com";
+
       // Send the file path directly to the API
       const formData = new FormData();
       formData.append("file_path", selectedAvatar.imgSrc); // Use file path instead of base64
@@ -514,11 +516,32 @@ const AvatarGestureEmotionUI = () => {
 
       // Update state with the generated images
       const { views } = response.data;
-      setGeneratedImages({
+      const generatedImages = {
         front: views.front || null,
         back: views.back || null,
         side: views.side || null,
         close: views.close || null,
+      };
+      setGeneratedImages(generatedImages);
+
+      // Prepare payload for API
+      const payload = {
+        email,
+        avatarID: selectedAvatar.id,
+        cameraViews: {
+          front: { base64: generatedImages.front },
+          side: { base64: generatedImages.side },
+          back: { base64: generatedImages.back },
+          close_up: { base64: generatedImages.close },
+        },
+      };
+
+      // Log payload for debugging
+      console.log("Payload being sent to API:", JSON.stringify(payload, null, 2));
+
+      // Send payload to API
+      await axios.post("http://192.168.1.141:3001/avatarfx/initializeAvatarFx", payload, {
+        headers: { "Content-Type": "application/json" },
       });
 
       setAlert({
@@ -552,6 +575,8 @@ const AvatarGestureEmotionUI = () => {
     });
 
     try {
+      const email = localStorage.getItem("userEmail") || "default@example.com";
+
       // Send the file path directly to the API
       const formData = new FormData();
       formData.append("file_path", selectedAvatar.imgSrc); // Use file path instead of base64
@@ -577,10 +602,26 @@ const AvatarGestureEmotionUI = () => {
       };
 
       const { views } = response.data;
+      const updatedImage = views[view] || null;
+      console.log("TESTING BOSSING MICHAEL", updatedImage);
       setGeneratedImages((prev) => ({
         ...prev,
-        [apiToStateKeyMap[view]]: views[view] || null,
+        [apiToStateKeyMap[view]]: updatedImage,
       }));
+
+      // Save updated view to the database
+      const updatedCameraViews = {
+        front: view === "front" ? { base64: updatedImage } : generatedImages.front,
+        side: view === "side" ? { base64: updatedImage } : generatedImages.side,
+        back: view === "back" ? { base64: updatedImage } : generatedImages.back,
+        close_up: view === "close" ? { base64: updatedImage } : generatedImages.close,
+      };
+
+      await axios.post("http://192.168.1.141:3001/avatarfx/initializeAvatarFx", {
+        email,
+        avatarID: selectedAvatar.id,
+        cameraViews: updatedCameraViews,
+      });
 
       setAlert({
         message: `${view} view regenerated successfully!`,
@@ -645,10 +686,10 @@ const AvatarGestureEmotionUI = () => {
       const { generated_image: base64Img } = response.data;
       if (base64Img) {
         setGeneratedImages({
-          front: `data:image/png;base64,${base64Img}`, // Assuming the API returns one image for simplicity
-          back: `data:image/png;base64,${base64Img}`,
-          side: `data:image/png;base64,${base64Img}`,
-          close: `data:image/png;base64,${base64Img}`,
+          front: `${base64Img}`, // Assuming the API returns one image for simplicity
+          back: `${base64Img}`,
+          side: `${base64Img}`,
+          close: `${base64Img}`,
         });
       } else {
         alert("No image generated. Please try again.");
