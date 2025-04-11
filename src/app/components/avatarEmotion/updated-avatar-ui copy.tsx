@@ -524,8 +524,8 @@ const AvatarGestureEmotionUI = () => {
       };
       setGeneratedImages(generatedImages);
 
-      // Save generated images to the database
-      await axios.post("http://192.168.1.141:3001/avatarfx/initializeAvatarFx", {
+      // Prepare payload for API
+      const payload = {
         email,
         avatarID: selectedAvatar.id,
         cameraViews: {
@@ -534,6 +534,14 @@ const AvatarGestureEmotionUI = () => {
           back: { base64: generatedImages.back },
           close_up: { base64: generatedImages.close },
         },
+      };
+
+      // Log payload for debugging
+      console.log("Payload being sent to API:", JSON.stringify(payload, null, 2));
+
+      // Send payload to API
+      await axios.post("http://192.168.1.141:3001/avatarfx/initializeAvatarFx", payload, {
+        headers: { "Content-Type": "application/json" },
       });
 
       setAlert({
@@ -587,34 +595,34 @@ const AvatarGestureEmotionUI = () => {
 
       // Map API response keys to state keys
       const apiToStateKeyMap = {
-        "front": "front",
-        "side": "side",
-        "close": "close",
-        "back": "back",
+        front: "front",
+        side: "side",
+        close: "close",
+        back: "back",
       };
 
       const { views } = response.data;
-      console.log("TESTING BOSSING JANG", views);
+      const updatedImage = views[view] || null;
 
-      const updatedImage = views[view] ? views[view].replace("data:image/png;base64,", "") : null;
-      console.log("TESTING BOSSING MICHAEL", updatedImage);
-
+      // Update the state with the new image
       setGeneratedImages((prev) => ({
         ...prev,
         [apiToStateKeyMap[view]]: updatedImage,
       }));
 
-      // Save updated view to the database
-      await axios.post("http://192.168.1.141:3001/avatarfx/initializeAvatarFx", {
+      // Save the updated view to the database (overwrite the existing image)
+      const updatedCameraView = {
+        [view]: { base64: updatedImage },
+      };
+
+      await axios.post("http://192.168.1.141:3001/avatarfx/updateAvatarView", {
         email,
         avatarID: selectedAvatar.id,
-        cameraViews: {
-          [view]: { base64: updatedImage },
-        },
+        cameraView: updatedCameraView,
       });
 
       setAlert({
-        message: `${view} view regenerated successfully!`,
+        message: `${view} view regenerated and updated successfully!`,
         type: "success",
       });
     } catch (error) {
@@ -676,10 +684,10 @@ const AvatarGestureEmotionUI = () => {
       const { generated_image: base64Img } = response.data;
       if (base64Img) {
         setGeneratedImages({
-          front: `data:image/png;base64,${base64Img}`, // Assuming the API returns one image for simplicity
-          back: `data:image/png;base64,${base64Img}`,
-          side: `data:image/png;base64,${base64Img}`,
-          close: `data:image/png;base64,${base64Img}`,
+          front: `${base64Img}`, // Assuming the API returns one image for simplicity
+          back: `${base64Img}`,
+          side: `${base64Img}`,
+          close: `${base64Img}`,
         });
       } else {
         alert("No image generated. Please try again.");
