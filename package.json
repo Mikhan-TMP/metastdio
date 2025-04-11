@@ -9,11 +9,16 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@headlessui/react": "^2.2.1",
+    "@mui/material": "^7.0.1",
     "@nestjs/mongoose": "^11.0.1",
     "@types/nodemailer": "^6.4.17",
     "axios": "^1.8.3",
     "dotenv": "^16.4.7",
     "framer-motion": "^12.5.0",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.483.0",
     "mongoose": "^8.12.1",
     "next": "15.2.3",

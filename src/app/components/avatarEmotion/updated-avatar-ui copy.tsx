@@ -331,10 +331,6 @@ const AvatarGestureEmotionUI = () => {
 
   const handleEmotionClick = async (emotion) => {
     if (!selectedAvatar) {
-      setAlert({
-        message: "Please select an avatar before proceeding.",
-        type: "error",
-      });
       console.error("No avatar selected");
       return;
     }
@@ -389,11 +385,7 @@ const AvatarGestureEmotionUI = () => {
 
   const handleGestureClick = async (gesture) => {
     if (!selectedAvatar) {
-      setAlert({
-        message: "Please select an avatar before proceeding.",
-        type: "error",
-      });
-      // console.error("No avatar selected");
+      console.error("No avatar selected");
       return;
     }
 
@@ -487,11 +479,7 @@ const AvatarGestureEmotionUI = () => {
 
   const generateAvatarView = async () => {
     if (!selectedAvatar) {
-      setAlert({
-        message: "Please select an avatar before proceeding.",
-        type: "error",
-      });
-      // console.error("No avatar selected");
+      console.error("No avatar selected");
       return;
     }
 
@@ -571,10 +559,6 @@ const AvatarGestureEmotionUI = () => {
 
   const regenerateView = async (view) => {
     if (!selectedAvatar) {
-      setAlert({
-        message: "Please select an avatar before proceeding.",
-        type: "error",
-      });
       console.error("No avatar selected");
       return;
     }
@@ -617,61 +601,45 @@ const AvatarGestureEmotionUI = () => {
         back: "back",
       };
 
-      const { views } = response.data || {};
-      const updatedImage = views?.[view] || null;
+      const { views } = response.data;
+      const updatedImage = views[view] || null;
 
-      if (updatedImage) {
-        // Update the state with the new image
-        setGeneratedImages((prev) => ({
-          ...prev,
-          [apiToStateKeyMap[view]]: updatedImage,
-        }));
+      // Update the state with the new image
+      setGeneratedImages((prev) => ({
+        ...prev,
+        [apiToStateKeyMap[view]]: updatedImage,
+      }));
 
-        // Save the updated view to the database (overwrite the existing image)
-        const updatedCameraView = {
-          [view]: { base64: updatedImage },
-        };
+      // Save the updated view to the database (overwrite the existing image)
+      const updatedCameraView = {
+        [view]: { base64: updatedImage },
+      };
 
-        await axios.post("http://192.168.1.141:3001/avatarfx/updateAvatarView", {
-          email,
-          avatarID: selectedAvatar.id,
-          cameraView: updatedCameraView,
-        });
+      await axios.post("http://192.168.1.141:3001/avatarfx/updateAvatarView", {
+        email,
+        avatarID: selectedAvatar.id,
+        cameraView: updatedCameraView,
+      });
 
-        setAlert({
-          message: `${view} view regenerated and updated successfully!`,
-          type: "success",
-        });
-      } else {
-        console.warn("No new image received from the API, but proceeding.");
-        setGeneratedImages((prev) => ({
-          ...prev,
-          [apiToStateKeyMap[view]]: prev[apiToStateKeyMap[view]],
-        }));
-
-        setAlert({
-          message: `${view} view regenerated successfully, but no new image was returned.`,
-          type: "info",
-        });
-      }
+      setAlert({
+        message: `${view} view regenerated and updated successfully!`,
+        type: "success",
+      });
     } catch (error) {
       console.error(`Error regenerating ${view} view:`, error);
 
-      // Keep the existing image intact
+      // Handle API error
       setGeneratedImages((prev) => ({
         ...prev,
-        [view]: prev[view] !== "loading" ? prev[view] : null,
+        [view]: null,
       }));
 
-      const errorMessage =
-        error.response?.status === 404
-          ? "The requested endpoint was not found. Please contact support."
-          : error.response?.status === 500
-          ? "Server error occurred. Please try again later."
-          : "Failed to regenerate the view. Please try again.";
-
       setAlert({
-        message: errorMessage,
+        message: `Failed to regenerate ${view} view. ${
+          error.response?.status === 500
+            ? "Server error occurred. Please try again later."
+            : "Please try again."
+        }`,
         type: "error",
       });
     }
@@ -679,10 +647,6 @@ const AvatarGestureEmotionUI = () => {
 
   const fetchGeneratedImages = async () => {
     if (!selectedAvatar) {
-      setAlert({
-        message: "Please select an avatar before proceeding.",
-        type: "error",
-      });
       console.error("No avatar selected");
       return;
     }

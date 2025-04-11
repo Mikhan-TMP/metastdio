@@ -1,588 +1,1372 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  Mic, Music, Volume2, Play, Pause, SkipBack, SkipForward, 
-  Search, Filter, Plus, Trash2, Edit, Save, Upload, Download,
-  Folder, List, Grid, Copy, Star, Scissors, ChevronLeft, 
-  Volume, VolumeX, RotateCcw, Clock, Headphones, StopCircle,
-  Layers, Moon, Check, X, Menu, Maximize, Settings, WifiOff,
-  Repeat
-} from 'lucide-react';
+  Mic,
+  Music,
+  Volume2,
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  Search,
+  Filter,
+  Plus,
+  Trash2,
+  Edit,
+  Save,
+  Upload,
+  Download,
+  Folder,
+  List,
+  Grid,
+  Copy,
+  Star,
+  Scissors,
+  ChevronLeft,
+  Volume,
+  VolumeX,
+  RotateCcw,
+  Clock,
+  Headphones,
+  StopCircle,
+  Layers,
+  Moon,
+  Check,
+  X,
+  Menu,
+  Maximize,
+  Settings,
+  WifiOff,
+  Repeat,
+  RefreshCw,
+} from "lucide-react";
+import { Dialog } from "@headlessui/react"; // Example: Using Headless UI for modal
+
+const Alert = ({ message, type, onClose }) => {
+  return (
+    <AnimatePresence>
+      {message && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8, y: -20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.8, y: -20 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 z-50"
+        >
+          <div
+            className={`relative max-w-sm w-full p-5 rounded-lg shadow-lg flex items-center gap-3 border ${
+              type === "success"
+                ? "bg-green-100 text-green-800 border-green-300"
+                : type === "generating"
+                ? "bg-blue-100 text-blue-800 border-blue-300"
+                : "bg-red-100 text-red-800 border-red-300"
+            }`}
+          >
+            {type === "success" ? (
+              <svg
+                className="w-6 h-6 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M5 13l4 4L19 7"
+                ></path>
+              </svg>
+            ) : type === "generating" ? (
+              <RefreshCw className="w-6 h-6 text-blue-600 animate-spin" />
+            ) : (
+              <svg
+                className="w-6 h-6 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 18L18 6M6 6l12 12"
+                ></path>
+              </svg>
+            )}
+            <p className="font-semibold text-sm md:text-base">{message}</p>
+            <motion.button
+              whileHover={{ scale: 1.2 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={onClose}
+              className="absolute top-2 right-2 text-black-600 hover:text-black-900 transition-all"
+            >
+              &times;
+            </motion.button>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
 
 const AudioManagerUI = () => {
-  const [activeTab, setActiveTab] = useState('dialogue');
+  // State Variables
+  const [activeTab, setActiveTab] = useState("dialogue");
   const [selectedAudio, setSelectedAudio] = useState(null);
-  const [viewMode, setViewMode] = useState('list');
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentProgress, setCurrentProgress] = useState(20); // Percentage for visualization
-  const [currentCategory, setCurrentCategory] = useState('all');
-  const [isRecording, setIsRecording] = useState(false);
+  const [currentProgress, setCurrentProgress] = useState(20);
+  const [currentCategory, setCurrentCategory] = useState("all");
+  const [folders, setFolders] = useState([]);
+  const [audios, setAudios] = useState([]);
+  const [selectedFolder, setSelectedFolder] = useState(null);
+  const [loading, setLoading] = useState({
+    folders: false,
+    audios: false,
+  });
+  const [error, setError] = useState({
+    folders: null,
+    audios: null,
+  });
+  const email = localStorage.getItem("userEmail");
+  const audioRef = React.useRef(new Audio());
+  const [alert, setAlert] = useState({ message: "", type: "" });
+  const [viewMode, setViewMode] = useState("grid"); // State for toggling view mode
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
 
-  // Mock data
-  const dialogueAudio = [
-    { id: 1, name: "Introduction", duration: "0:15", type: "dialogue", speaker: "Main Presenter", transcript: "Hello and welcome to our presentation...", path: "intro.mp3", favorite: true, category: "Opening" },
-    { id: 2, name: "Main Point 1", duration: "0:22", type: "dialogue", speaker: "Main Presenter", transcript: "Our first key point is...", path: "point1.mp3", favorite: false, category: "Content" },
-    { id: 3, name: "Question 1", duration: "0:08", type: "dialogue", speaker: "Guest", transcript: "Can you elaborate on that point?", path: "question1.mp3", favorite: false, category: "Interview" },
-    { id: 4, name: "Response 1", duration: "0:18", type: "dialogue", speaker: "Main Presenter", transcript: "That's an excellent question...", path: "response1.mp3", favorite: true, category: "Interview" },
-    { id: 5, name: "Main Point 2", duration: "0:25", type: "dialogue", speaker: "Main Presenter", transcript: "Moving on to our second point...", path: "point2.mp3", favorite: false, category: "Content" },
-    { id: 6, name: "Conclusion", duration: "0:12", type: "dialogue", speaker: "Main Presenter", transcript: "In conclusion, we've shown that...", path: "conclusion.mp3", favorite: true, category: "Closing" },
-  ];
-  
-  const musicAudio = [
-    { id: 7, name: "Corporate Intro", duration: "1:30", type: "music", mood: "Professional", tempo: "Medium", path: "corporate_intro.mp3", favorite: true, category: "Business" },
-    { id: 8, name: "Upbeat Background", duration: "2:45", type: "music", mood: "Energetic", tempo: "Fast", path: "upbeat.mp3", favorite: false, category: "Energetic" },
-    { id: 9, name: "Ambient Loop", duration: "3:15", type: "music", mood: "Calm", tempo: "Slow", path: "ambient.mp3", favorite: true, category: "Calm" },
-    { id: 10, name: "Inspiring", duration: "2:05", type: "music", mood: "Motivational", tempo: "Medium", path: "inspiring.mp3", favorite: false, category: "Motivational" },
-    { id: 11, name: "Corporate Outro", duration: "1:15", type: "music", mood: "Professional", tempo: "Medium", path: "corporate_outro.mp3", favorite: false, category: "Business" },
-    { id: 12, name: "Tech Atmosphere", duration: "2:30", type: "music", mood: "Modern", tempo: "Medium", path: "tech.mp3", favorite: true, category: "Technology" },
-  ];
-  
-  const soundEffects = [
-    { id: 13, name: "Notification", duration: "0:02", type: "sfx", category: "UI", path: "notification.mp3", favorite: false },
-    { id: 14, name: "Applause", duration: "0:05", type: "sfx", category: "Audience", path: "applause.mp3", favorite: true },
-    { id: 15, name: "Click", duration: "0:01", type: "sfx", category: "UI", path: "click.mp3", favorite: false },
-    { id: 16, name: "Whoosh", duration: "0:02", type: "sfx", category: "Transition", path: "whoosh.mp3", favorite: true },
-    { id: 17, name: "Bell", duration: "0:02", type: "sfx", category: "Notification", path: "bell.mp3", favorite: false },
-    { id: 18, name: "Success", duration: "0:03", type: "sfx", category: "UI", path: "success.mp3", favorite: false },
-  ];
+  const [audioProperties, setAudioProperties] = useState({
+    name: "",
+    category: "",
+    speaker: "",
+    type: "",
+    volume: 80,
+    fadeIn: 0,
+    fadeOut: 0,
+    voiceEnhance: false,
+    noiseReduction: false,
+  });
 
-  // Get the appropriate audio data based on active tab
-  const getAudioData = () => {
-    switch (activeTab) {
-      case 'dialogue': return dialogueAudio;
-      case 'music': return musicAudio;
-      case 'sfx': return soundEffects;
-      default: return dialogueAudio;
+  useEffect(() => {
+    if (selectedAudio) {
+      setAudioProperties({
+        name: selectedAudio.name,
+        category: selectedAudio.category,
+        speaker: selectedAudio.speaker,
+        type: selectedAudio.type,
+        volume: selectedAudio.volume || 80,
+        fadeIn: selectedAudio.fadeIn || 0,
+        fadeOut: selectedAudio.fadeOut || 0,
+        voiceEnhance: selectedAudio.voiceEnhance || false,
+        noiseReduction: selectedAudio.noiseReduction || false,
+      });
+    }
+  }, [selectedAudio]);
+
+  const handlePropertyChange = (field, value) => {
+    setAudioProperties((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const deleteFolder = async (folderId) => {
+    if (!email || !folderId) {
+      setAlert({ message: "Missing required parameters.", type: "error" });
+      return;
+    }
+
+    if (!window.confirm("Are you sure you want to delete this folder?")) {
+      return;
+    }
+
+    try {
+      const response = await axios.delete(
+        `http://192.168.1.141:3001/audio/deleteScript`,
+        {
+          params: {
+            email,
+            titleId: folderId,
+          },
+        }
+      );
+
+      if (response.data.status === "success") {
+        setFolders((prevFolders) =>
+          prevFolders.filter((folder) => folder.id !== folderId)
+        );
+        setSelectedFolder(null);
+        setAudios([]);
+        setAlert({ message: response.data.message, type: "success" });
+      } else {
+        throw new Error(response.data.message || "Failed to delete folder.");
+      }
+    } catch (error) {
+      console.error("Delete Folder Error:", error);
+      setAlert({
+        message: error.response?.data?.message || "Failed to delete folder.",
+        type: "error",
+      });
+    } finally {
+      setTimeout(() => setAlert({ message: "", type: "" }), 3000);
     }
   };
 
-  // Get categories for the active tab
+  const deleteAudio = async (audioId) => {
+    if (!email || !selectedFolder?.id || !audioId) {
+      setAlert({ message: "Missing required parameters.", type: "error" });
+      return;
+    }
+
+    if (!window.confirm("Are you sure you want to delete this audio?")) {
+      return;
+    }
+
+    try {
+      const response = await axios.delete(
+        `http://192.168.1.141:3001/audio/deleteAudio`,
+        {
+          params: {
+            email,
+            titleId: selectedFolder.id,
+            audioId,
+          },
+        }
+      );
+
+      if (response.data.status === "success") {
+        setAudios((prevAudios) =>
+          prevAudios.filter((audio) => audio.id !== audioId)
+        );
+        setAlert({ message: response.data.message, type: "success" });
+      } else {
+        throw new Error(response.data.message || "Failed to delete audio.");
+      }
+    } catch (error) {
+      console.error("Delete Audio Error:", error);
+      setAlert({
+        message: error.response?.data?.message || "Failed to delete audio.",
+        type: "error",
+      });
+    } finally {
+      setTimeout(() => setAlert({ message: "", type: "" }), 3000);
+    }
+  };
+
+  const playAudio = (audio) => {
+    console.log("Attempting to play audio:", {
+      name: audio.name,
+      path: audio.path,
+      type: typeof audio.path,
+    });
+
+    if (!audio.path) {
+      console.error("No valid audio path provided");
+      alert("Unable to play audio: Invalid file path");
+      return;
+    }
+
+    audioRef.current.pause();
+    audioRef.current.src = "";
+
+    try {
+      audioRef.current.src = audio.path;
+
+      audioRef.current.onerror = (e) => {
+        console.error("Audio Error Event:", {
+          error: e,
+          src: audioRef.current.src,
+          networkState: audioRef.current.networkState,
+          readyState: audioRef.current.readyState,
+        });
+        alert(
+          `Failed to load audio: ${audio.name}. Please check the file path.`
+        );
+      };
+
+      const playPromise = audioRef.current.play();
+
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            console.log("Audio playback started successfully");
+            setIsPlaying(true);
+            setSelectedAudio(audio);
+          })
+          .catch((error) => {
+            console.error("Playback Error:", {
+              name: error.name,
+              message: error.message,
+              code: error.code,
+            });
+
+            if (error.name === "NotSupportedError") {
+              alert("Audio format not supported. Please check the file type.");
+            } else if (error.name === "NotAllowedError") {
+              alert(
+                "Audio playback was prevented. Check browser autoplay settings."
+              );
+            } else {
+              alert(`Unable to play audio: ${error.message}`);
+            }
+
+            setIsPlaying(false);
+          });
+      }
+    } catch (error) {
+      console.error("Audio Playback Setup Error:", {
+        name: error.name,
+        message: error.message,
+      });
+      alert(`Error setting up audio playback: ${error.message}`);
+    }
+  };
+
+  const toggleFavorite = (audioId) => {
+    setAudios((prevAudios) =>
+      prevAudios.map((audio) =>
+        audio.id === audioId ? { ...audio, favorite: !audio.favorite } : audio
+      )
+    );
+  };
+
+  const mockFolders = [
+    { id: 1, name: "Highway Subway" },
+    { id: 2, name: "Title Test" },
+    { id: 3, name: "Last Test" },
+  ];
+
+  const fetchFolders = async () => {
+    setLoading((prev) => ({ ...prev, folders: true }));
+    setError((prev) => ({ ...prev, folders: null }));
+
+    try {
+      console.log("Fetching folders with email:", email);
+
+      const response = await axios.get(
+        `http://192.168.1.141:3001/audio/getAllScript`,
+        {
+          params: { email },
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      console.log("Raw API Response:", {
+        status: response.status,
+        data: response.data,
+        headers: response.headers,
+      });
+
+      if (!response.data) {
+        throw new Error("No data received from server");
+      }
+
+      console.log("Response Type:", typeof response.data);
+      console.log("Response Keys:", Object.keys(response.data));
+
+      if (response.data.status !== "success") {
+        throw new Error(
+          `Server returned non-success status: ${response.data.status}`
+        );
+      }
+
+      if (!response.data.titles) {
+        throw new Error("No titles found in the response");
+      }
+
+      if (!Array.isArray(response.data.titles)) {
+        throw new Error(
+          `Unexpected titles format: ${typeof response.data.titles}`
+        );
+      }
+
+      const formattedFolders = response.data.titles.map((titleObj, index) => ({
+        id: titleObj.id || `folder-${index}`,
+        name: titleObj.title || `Unnamed Folder ${index}`,
+      }));
+
+      console.log("Formatted Folders:", formattedFolders);
+
+      setFolders(formattedFolders);
+    } catch (error) {
+      console.error("COMPREHENSIVE FETCH ERROR:", {
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
+        responseData: error.response?.data,
+        responseStatus: error.response?.status,
+        requestConfig: error.config,
+      });
+
+      let errorMessage = "Failed to load folders";
+
+      if (error.response) {
+        errorMessage = `Server Error (${error.response.status}): ${
+          error.response.data?.message || "Unexpected server response"
+        }`;
+      } else if (error.request) {
+        errorMessage = "No response from server. Check network connection.";
+      } else {
+        errorMessage = `Request Error: ${error.message}`;
+      }
+
+      setError((prev) => ({
+        ...prev,
+        folders: errorMessage,
+      }));
+    } finally {
+      setLoading((prev) => ({ ...prev, folders: false }));
+    }
+  };
+
+
+const createFolder = async () => {
+  if (!newFolderName.trim()) {
+    setAlert({ message: "Folder name cannot be empty.", type: "error" });
+    return;
+  }
+
+  if (!email) {
+    setAlert({ message: "User email not found.", type: "error" });
+    return;
+  }
+
+  try {
+    setAlert({ message: "Creating folder...", type: "generating" });
+    
+    const response = await axios.post(
+      "http://192.168.1.141:3001/audio/addAudio",
+      {
+        email,
+        title: newFolderName.trim(),
+        audio: [],
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    console.log("Create folder response:", response.data);
+
+    // Check for any id in the response - it might be in a different field
+    const folderId = response.data.id || response.data._id || response.data.titleId;
+    
+    if (response.data.status === "success" || folderId) {
+      const newFolder = { 
+        id: folderId || `temp-${Date.now()}`, 
+        name: newFolderName.trim() 
+      };
+
+      // Update folders state immediately
+      setFolders(prevFolders => [...prevFolders, newFolder]);
+      
+      // Close modal and clear the input
+      setIsModalOpen(false);
+      setNewFolderName("");
+      
+      setAlert({ message: "Folder created successfully.", type: "success" });
+      
+      // Wait a moment before fetching folders to give the server time to complete
+      setTimeout(() => fetchFolders(), 500);
+    } else {
+      throw new Error(response.data.message || "Failed to create folder.");
+    }
+  } catch (error) {
+    console.error("Create Folder Error:", error);
+    console.error("Error details:", {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
+
+    let errorMessage = "Failed to create folder. Please try again.";
+    
+    if (error.code === "ERR_NETWORK") {
+      errorMessage = "Network error. Please check your connection.";
+    } else if (error.response && error.response.data && error.response.data.message) {
+      errorMessage = error.response.data.message;
+    }
+
+    setAlert({
+      message: errorMessage,
+      type: "error",
+    });
+  }
+};
+
+  useEffect(() => {
+    fetchFolders();
+  }, [email]);
+
+  const handleFolderClick = (folder) => {
+    setSelectedFolder(folder);
+    fetchAudios(folder.id);
+  };
+
+  const fetchAudios = async (folderId) => {
+    setLoading((prev) => ({ ...prev, audios: true }));
+    setError((prev) => ({ ...prev, audios: null }));
+
+    try {
+      const response = await axios.get(
+        `http://192.168.1.141:3001/audio/getScript`,
+        {
+          params: {
+            email,
+            titleId: folderId,
+          },
+        }
+      );
+
+      console.log("Full Audios API Response:", response.data);
+
+      if (
+        response.data &&
+        response.data.status === "success" &&
+        Array.isArray(response.data.audios)
+      ) {
+        const formattedAudios = response.data.audios.map((audio) => {
+          return {
+            id: audio._id,
+            name: audio.name || "Unnamed Audio",
+            category: audio.category || "Uncategorized",
+            speaker: audio.speaker || "Unknown Speaker",
+            type: audio.type ? audio.type.toLowerCase() : "dialogue",
+            duration: "0:30",
+            path: `http://192.168.1.141:3001${audio.audioSrc}`.replace(
+              /([^:]\/)\/+/g,
+              "$1"
+            ),
+            volume: audio.volume,
+            fadeIn: audio.fadeIn,
+            fadeOut: audio.fadeOut,
+            voiceEnhance: audio.voiceEnhance,
+            noiseReduction: audio.noiseReduction,
+          };
+        });
+
+        setAudios(formattedAudios);
+      } else {
+        throw new Error("Invalid audios response format");
+      }
+    } catch (error) {
+      console.error("Audios Fetch Error:", error);
+
+      let errorMessage = "Failed to load audios";
+      if (error.response) {
+        errorMessage = `Server Error (${error.response.status}): ${
+          error.response.data?.message || "Unknown error"
+        }`;
+      } else if (error.request) {
+        errorMessage = "No response from server. Check network connection.";
+      } else {
+        errorMessage = `Request Error: ${error.message}`;
+      }
+
+      setError((prev) => ({
+        ...prev,
+        audios: errorMessage,
+      }));
+    } finally {
+      setLoading((prev) => ({ ...prev, audios: false }));
+    }
+  };
+
+  const getAudioData = () => {
+    return audios;
+  };
+
+  const saveAudioProperties = async () => {
+    try {
+      // Debugging logs
+      console.log("Debugging selectedAudio:", selectedAudio);
+      console.log("selectedAudio.id:", selectedAudio?.id);
+      console.log("Type of selectedAudio.id:", typeof selectedAudio?.id);
+
+      // Validate required inputs
+      if (!selectedAudio || !selectedAudio.id) {
+        setAlert({
+          message: "Invalid audio selected. Please try again.",
+          type: "error",
+        });
+        console.error("Error: Invalid selectedAudio object:", selectedAudio);
+        return;
+      }
+      if (!selectedFolder || !selectedFolder.id) {
+        setAlert({ message: "No folder selected.", type: "error" });
+        return;
+      }
+      if (!email) {
+        setAlert({ message: "User email not found.", type: "error" });
+        return;
+      }
+
+      const formattedAudioId = String(selectedAudio.id); // Ensure it's a string
+
+      // Debugging logs for API request
+      console.log("Sending API Request with:");
+      console.log("audioId:", formattedAudioId);
+      console.log("titleId:", selectedFolder?.id);
+      console.log("email:", email);
+
+      // Prepare payload
+      const payload = {
+        name: audioProperties.name.trim(),
+        category: audioProperties.category,
+        speaker: audioProperties.speaker,
+        type: audioProperties.type,
+        volume: audioProperties.volume,
+        fadeIn: audioProperties.fadeIn,
+        fadeOut: audioProperties.fadeOut,
+        voiceEnhance: audioProperties.voiceEnhance,
+        noiseReduction: audioProperties.noiseReduction,
+      };
+
+      // API request
+      const apiUrl = `http://192.168.1.141:3001/audio/updateAudio`;
+
+      console.log("Sending request to:", apiUrl);
+      console.log("Payload:", payload);
+
+      const response = await axios.patch(apiUrl, payload, {
+        params: {
+          email,
+          titleId: selectedFolder.id,
+          audioId: formattedAudioId,
+        },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        timeout: 10000, // 10 seconds timeout
+      });
+
+      // Handle response
+      console.log("API Response:", response);
+
+      if (response.data.status === "success") {
+        setSelectedAudio({ ...selectedAudio, ...payload });
+        setAudios((prevAudios) =>
+          prevAudios.map((audio) =>
+            audio.id === selectedAudio.id ? { ...audio, ...payload } : audio
+          )
+        );
+        setAlert({ message: response.data.message, type: "success" });
+      } else if (response.data.status === "info") {
+        setAlert({ message: response.data.message, type: "info" });
+      } else {
+        throw new Error(response.data.message || "Unexpected server response.");
+      }
+    } catch (error) {
+      console.error("Audio Update Error:", error);
+
+      let errorMessage = "Update failed. Please try again.";
+      if (error.response) {
+        console.error("Server Response:", error.response);
+        errorMessage = `Error ${error.response.status}: ${
+          error.response.data?.message || "Server error."
+        }`;
+      } else if (error.request) {
+        console.error("No response received:", error.request);
+        errorMessage = "No response from server. Check your connection.";
+      } else {
+        console.error("Request Error:", error.message);
+        errorMessage = `Error: ${error.message}`;
+      }
+
+      setAlert({ message: errorMessage, type: "error" });
+    } finally {
+      setTimeout(() => setAlert({ message: "", type: "" }), 3000);
+    }
+  };
+
+
   const getCategories = () => {
     const audioData = getAudioData();
     let categories = ["all"];
-    
-    // Extract unique categories
-    audioData.forEach(audio => {
+
+    audioData.forEach((audio) => {
       if (audio.category && !categories.includes(audio.category)) {
         categories.push(audio.category);
       }
     });
-    
+
     return categories;
   };
 
-  // Filter audio by category
-  const filteredAudio = currentCategory === 'all'
-    ? getAudioData()
-    : getAudioData().filter(audio => audio.category === currentCategory);
+  const filteredAudio =
+    currentCategory === "all"
+      ? getAudioData()
+      : getAudioData().filter((audio) => audio.category === currentCategory);
 
   const handleSelectAudio = (audio) => {
+    if (!audio || !audio.id) {
+      console.error("Invalid audio selected:", audio);
+      alert("Invalid audio selected. Please try again.");
+      return;
+    }
     setSelectedAudio(audio);
   };
 
   const togglePlay = () => {
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
+    }
     setIsPlaying(!isPlaying);
   };
 
-  const toggleRecording = () => {
-    setIsRecording(!isRecording);
+  const handleSkip = (direction) => {
+    const currentIndex = audios.findIndex(
+      (audio) => audio.id === selectedAudio?.id
+    );
+    if (currentIndex !== -1) {
+      const newIndex =
+        direction === "next" ? currentIndex + 1 : currentIndex - 1;
+      if (newIndex >= 0 && newIndex < audios.length) {
+        playAudio(audios[newIndex]);
+      }
+    }
   };
 
-  return (
-    <div className="flex flex-col h-screen bg-gray-100">
-      {/* Top Toolbar */}
-      <div className="flex justify-between items-center p-2 bg-white border-b">
-        <div className="flex items-center">
-          <button className="p-2 bg-gray-100 rounded hover:bg-gray-200 mr-2">
-            <ChevronLeft size={16} />
-          </button>
-          <h1 className="text-lg font-medium">Audio Manager</h1>
-        </div>
+  const handleVolumeChange = (e) => {
+    const volume = e.target.value / 100;
+    audioRef.current.volume = volume;
+  };
 
-        <div className="flex space-x-2">
-          <button className="p-2 bg-gray-100 rounded hover:bg-gray-200">
-            <Save size={16} />
+  const handleProgressChange = (e) => {
+    const progress = e.target.value;
+    audioRef.current.currentTime = (progress / 100) * audioRef.current.duration;
+    setCurrentProgress(progress);
+  };
+
+  useEffect(() => {
+    const updateProgress = () => {
+      const progress =
+        (audioRef.current.currentTime / audioRef.current.duration) * 100;
+      setCurrentProgress(progress || 0);
+    };
+
+    audioRef.current.addEventListener("timeupdate", updateProgress);
+    audioRef.current.addEventListener("ended", () => setIsPlaying(false));
+
+    return () => {
+      audioRef.current.removeEventListener("timeupdate", updateProgress);
+      audioRef.current.removeEventListener("ended", () => setIsPlaying(false));
+    };
+  }, []);
+
+  return (
+    <div className="flex flex-col h-screen bg-gray-50">
+      {/* Alert Component */}
+      <Alert
+        message={alert.message}
+        type={alert.type}
+        onClose={() => setAlert({ message: "", type: "" })}
+      />
+
+      {/* Error Display */}
+      {(error.folders || error.audios) && (
+        <div className="bg-amber-50 p-3 text-amber-800 border-l-4 border-amber-500 mb-2 mx-2 rounded-md shadow-sm">
+          {error.folders && <p>Folders Error: {error.folders}</p>}
+          {error.audios && <p>Audios Error: {error.audios}</p>}
+        </div>
+      )}
+
+      {/* Top Navigation */}
+      <div className="flex justify-between items-center p-3 bg-white border-b shadow-sm">
+        <div className="flex space-x-3">
+          <button className="p-2 bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] disabled:bg-[#E3C5F0] flex items-center">
+            <Save size={16} className="mr-2" />
+            <span className="text-sm font-medium">Save</span>
           </button>
-          <button className="p-2 bg-[#9B25A7] text-white rounded hover:bg-[#9B25A7]">
-            Apply to Timeline
+          <button className="p-2 bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] disabled:bg-[#E3C5F0] flex items-center">
+            <span className="text-sm font-medium">Apply to Timeline</span>
           </button>
         </div>
       </div>
 
-      {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Panel - Browser */}
-        <div className="w-3/4 bg-white flex flex-col">
-          {/* Tabs & Search */}
-          <div className="bg-white border-b p-2 flex justify-between">
-            <div className="flex">
-              <button
-                className={`px-3 py-1 rounded-l flex items-center ${activeTab === 'dialogue' ? 'bg-[#9B25A7] text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
-                onClick={() => setActiveTab('dialogue')}
-              >
-                <Mic size={16} className="mr-1" /> Dialogue
-              </button>
-              <button
-                className={`px-3 py-1 flex items-center ${activeTab === 'music' ? 'bg-[#9B25A7] text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
-                onClick={() => setActiveTab('music')}
-              >
-                <Music size={16} className="mr-1" /> Music
-              </button>
-              <button
-                className={`px-3 py-1 rounded-r flex items-center ${activeTab === 'sfx' ? 'bg-[#9B25A7] text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
-                onClick={() => setActiveTab('sfx')}
-              >
-                <Volume2 size={16} className="mr-1" /> Sound FX
-              </button>
-            </div>
-
-            <div className="flex space-x-2">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search audio..."
-                  className="bg-white border rounded px-3 py-1 pl-8 text-sm"
-                />
-                <Search size={14} className="absolute left-2.5 top-2 text-gray-500" />
-              </div>
-
-              <button className="p-1 border rounded hover:bg-gray-50">
-                <Filter size={18} />
-              </button>
-
-              <div className="flex">
-                <button
-                  className={`p-1 rounded-l border ${viewMode === 'list' ? 'bg-[#9B25A7] text-white' : 'bg-white hover:bg-gray-50'}`}
-                  onClick={() => setViewMode('list')}
-                >
-                  <List size={18} />
-                </button>
-                <button
-                  className={`p-1 rounded-r border ${viewMode === 'grid' ? 'bg-[#9B25A7] text-white' : 'bg-white hover:bg-gray-50'}`}
-                  onClick={() => setViewMode('grid')}
-                >
-                  <Grid size={18} />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Category Filter */}
-          <div className="bg-white p-2 border-b flex flex-wrap">
-            {getCategories().map(category => (
-              <button
-                key={category}
-                className={`px-3 py-1 text-sm rounded mr-2 mb-1 ${currentCategory === category ? 'bg-[#9B25A7] text-white' : 'border hover:bg-gray-50'}`}
-                onClick={() => setCurrentCategory(category)}
-              >
-                {category === 'all' ? 'All Categories' : category}
-              </button>
-            ))}
-          </div>
-
-          {/* Main Content */}
-          <div className="flex-1 overflow-auto">
-            {viewMode === 'list' ? (
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="text-left text-sm text-gray-500 border-b">
-                    <th className="py-2 px-3"></th>
-                    <th className="py-2 px-3">Name</th>
-                    <th className="py-2 px-3">Duration</th>
-                    {activeTab === 'dialogue' && <th className="py-2 px-3">Speaker</th>}
-                    {activeTab === 'music' && <th className="py-2 px-3">Mood</th>}
-                    <th className="py-2 px-3">Category</th>
-                    <th className="py-2 px-3">Favorite</th>
-                    <th className="py-2 px-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAudio.map(audio => (
-                    <tr
-                      key={audio.id}
-                      className={`border-b text-sm hover:bg-gray-50 cursor-pointer ${selectedAudio?.id === audio.id ? 'bg-blue-50' : ''}`}
-                      onClick={() => handleSelectAudio(audio)}
-                    >
-                      <td className="py-2 px-3">
-                        <button
-                          className="p-1.5 border rounded-full hover:bg-gray-100"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            togglePlay();
-                          }}
-                        >
-                          {isPlaying && selectedAudio?.id === audio.id ? (
-                            <Pause size={14} />
-                          ) : (
-                            <Play size={14} />
-                          )}
-                        </button>
-                      </td>
-                      <td className="py-2 px-3">{audio.name}</td>
-                      <td className="py-2 px-3">{audio.duration}</td>
-                      {activeTab === 'dialogue' && <td className="py-2 px-3">{audio.speaker}</td>}
-                      {activeTab === 'music' && <td className="py-2 px-3">{audio.mood}</td>}
-                      <td className="py-2 px-3">{audio.category}</td>
-                      <td className="py-2 px-3">
-                        {audio.favorite ? (
-                          <Star size={16} className="text-yellow-500" fill="currentColor" />
-                        ) : (
-                          <Star size={16} className="text-gray-400" />
-                        )}
-                      </td>
-                      <td className="py-2 px-3 text-right">
-                        <button
-                          className="p-1 text-gray-500 hover:text-gray-700 inline-block mr-1"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Edit size={16} />
-                        </button>
-                        <button
-                          className="p-1 text-gray-500 hover:text-gray-700 inline-block mr-1"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Copy size={16} />
-                        </button>
-                        <button
-                          className="p-1 text-gray-500 hover:text-red-500 inline-block"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div className="grid grid-cols-3 gap-4 p-4">
-                {filteredAudio.map(audio => (
-                  <div
-                    key={audio.id}
-                    className={`bg-white rounded-lg border overflow-hidden cursor-pointer transition-all hover:shadow-md ${selectedAudio?.id === audio.id ? 'ring-2 ring-blue-500' : ''}`}
-                    onClick={() => handleSelectAudio(audio)}
+        {/* Main Content Area */}
+        <div className="w-3/4 bg-white flex flex-col border-r shadow-sm">
+          {/* Folder/Audio Header */}
+          <div className="bg-white p-3 border-b">
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="text-lg font-semibold text-gray-800">
+                {selectedFolder ? (
+                  <button
+                    className="text-[#9B25A7] hover:text-[#7A1C86] transition-colors flex items-center"
+                    onClick={() => {
+                      setSelectedFolder(null);
+                      setAudios([]);
+                    }}
                   >
-                    {/* Audio Waveform Visual */}
-                    <div className="h-16 bg-gray-100 flex items-center justify-center relative p-2">
-                      <div className="w-full h-8 flex items-center">
-                        {Array.from({ length: 30 }).map((_, i) => (
-                          <div
-                            key={i}
-                            className={`w-1 mx-0.5 ${audio.type === 'dialogue' ? 'bg-green-500' : audio.type === 'music' ? 'bg-purple-500' : 'bg-blue-500'}`}
-                            style={{ 
-                              height: `${10 + Math.sin(i / 2) * 20 + Math.random() * 20}px`,
-                              opacity: i > 20 ? 0.5 : 1
-                            }}
-                          ></div>
-                        ))}
-                      </div>
-                      
-                      <button
-                        className="absolute bottom-2 right-2 p-1.5 bg-white border rounded-full shadow-sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          togglePlay();
-                        }}
-                      >
-                        {isPlaying && selectedAudio?.id === audio.id ? (
-                          <Pause size={12} />
-                        ) : (
-                          <Play size={12} />
-                        )}
-                      </button>
-                      
-                      {audio.favorite && (
-                        <div className="absolute top-2 right-2 text-yellow-500">
-                          <Star size={12} fill="currentColor" />
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Info */}
-                    <div className="p-2">
-                      <div className="flex justify-between items-start mb-1">
-                        <div className="truncate text-sm font-medium">{audio.name}</div>
-                        <div className="flex text-xs bg-gray-100 px-1.5 py-0.5 rounded">
-                          <Clock size={10} className="mr-1" />
-                          {audio.duration}
-                        </div>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <div className="text-xs text-gray-500">
-                          {audio.type === 'dialogue' ? audio.speaker : 
-                           audio.type === 'music' ? audio.mood : 
-                           audio.category}
-                        </div>
-                        <div className="flex space-x-1">
-                          <button className="p-0.5 text-gray-400 hover:text-gray-700">
-                            <Copy size={12} />
-                          </button>
-                          <button className="p-0.5 text-gray-400 hover:text-gray-700">
-                            <Edit size={12} />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                    <ChevronLeft size={18} className="mr-1" />
+                    Back to Folders
+                  </button>
+                ) : (
+                  "Audio Library"
+                )}
+              </h2>
+              {!selectedFolder && (
+                <button
+                  className="p-2 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+                  onClick={() =>
+                    setViewMode(viewMode === "grid" ? "list" : "grid")
+                  }
+                >
+                  {viewMode === "grid" ? (
+                    <List size={16} />
+                  ) : (
+                    <Grid size={16} />
+                  )}
+                </button>
+              )}
+            </div>
+
+            {/* Content Display */}
+            {loading.folders ? (
+              <div className="flex items-center justify-center p-6">
+                <RefreshCw className="w-8 h-8 text-[#9B25A7] animate-spin" />
+                <span className="ml-2 text-gray-600">Loading folders...</span>
+              </div>
+            ) : error.folders ? (
+              <p className="text-red-500 p-4">{error.folders}</p>
+            ) : selectedFolder ? (
+              <div className="flex items-center mb-4">
+                <Folder size={18} className="text-[#9B25A7] mr-2" />
+                <p className="text-gray-600">
+                  Viewing audios in:{" "}
+                  <span className="font-medium">{selectedFolder.name}</span>
+                </p>
+              </div>
+            ) : (
+              <div
+                className={`grid ${
+                  viewMode === "grid"
+                    ? "grid-cols-3 gap-4"
+                    : "grid-cols-1 gap-2"
+                }`}
+              >
+                {folders.map((folder) => (
+                  <div
+                    key={folder.id}
+                    className={`flex items-center p-4 rounded-lg border border-gray-200 ${
+                      viewMode === "grid" ? "flex-col text-center" : "flex-row"
+                    } hover:bg-gray-50 hover:border-[#9B25A7] transition-all duration-200`}
+                  >
+                    <button
+                      className={`flex items-center ${
+                        viewMode === "grid" ? "flex-col" : "flex-row"
+                      } flex-1`}
+                      onClick={() => handleFolderClick(folder)}
+                    >
+                      <Folder
+                        size={viewMode === "grid" ? 48 : 24}
+                        className={`${
+                          viewMode === "grid"
+                            ? "mb-3 text-[#9B25A7]"
+                            : "mr-3 text-[#9B25A7]"
+                        }`}
+                      />
+                      <span className="text-sm font-medium text-gray-800">
+                        {folder.name}
+                      </span>
+                    </button>
+                    <button
+                      className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50"
+                      onClick={() => deleteFolder(folder.id)}
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 ))}
+                <button
+                  className="flex items-center justify-center p-4 rounded-lg border border-dashed border-gray-300 hover:border-[#9B25A7] hover:bg-[#E3C5F0] transition-all"
+                  onClick={() => setIsModalOpen(true)}
+                >
+                  <Plus size={18} className="mr-2 text-[#9B25A7]" />
+                  <span className="text-sm font-medium text-gray-800">
+                    New Folder
+                  </span>
+                </button>
               </div>
             )}
           </div>
 
-          {/* Bottom Toolbar */}
-          <div className="bg-white border-t p-2 flex justify-between">
-            <div className="flex space-x-2">
-              <button className="px-3 py-1 bg-[#9B25A7] text-white rounded hover:bg-[#9B25A7] flex items-center">
-                <Plus size={16} className="mr-1" /> Add New
-              </button>
-              <button className="px-3 py-1 border rounded hover:bg-gray-50 flex items-center">
-                <Upload size={16} className="mr-1" /> Upload
-              </button>
-              <button 
-                className={`px-3 py-1 rounded flex items-center ${isRecording ? 'bg-red-500 text-white hover:bg-red-600' : 'border hover:bg-gray-50'}`}
-                onClick={toggleRecording}
-              >
-                <Mic size={16} className="mr-1" /> {isRecording ? 'Recording...' : 'Record'}
-              </button>
-            </div>
-
-            <div>
-              <span className="text-sm text-gray-500">
-                {filteredAudio.length} items • {activeTab === 'dialogue' ? 'Dialogue' : activeTab === 'music' ? 'Music' : 'Sound Effects'}
-              </span>
-            </div>
+          {/* Audio Files Section */}
+          <div className="flex-1 overflow-auto">
+            {loading.audios ? (
+              <div className="flex items-center justify-center p-6">
+                <RefreshCw className="w-8 h-8 text-[#9B25A7] animate-spin" />
+                <span className="ml-2 text-gray-600">
+                  Loading audio files...
+                </span>
+              </div>
+            ) : error.audios ? (
+              <p className="text-red-500 p-4">{error.audios}</p>
+            ) : audios.length > 0 ? (
+              <div className="p-2">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="text-left text-sm text-gray-500 border-b">
+                      <th className="py-3 px-3 font-medium">Name</th>
+                      <th className="py-3 px-3 font-medium">Category</th>
+                      <th className="py-3 px-3 font-medium">Speaker</th>
+                      <th className="py-3 px-3 font-medium">Type</th>
+                      <th className="py-3 px-3 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {audios.map((audio, index) => (
+                      <tr
+                        key={index}
+                        className={`border-b text-sm hover:bg-gray-50 transition-colors ${
+                          selectedAudio?.id === audio.id ? "bg-[#E3C5F0]" : ""
+                        }`}
+                      >
+                        <td
+                          className="py-3 px-3 font-medium text-gray-800 cursor-pointer"
+                          onClick={() => playAudio(audio)}
+                        >
+                          {audio.name}
+                        </td>
+                        <td
+                          className="py-3 px-3 text-gray-600 cursor-pointer"
+                          onClick={() => playAudio(audio)}
+                        >
+                          {audio.category}
+                        </td>
+                        <td
+                          className="py-3 px-3 text-gray-600 cursor-pointer"
+                          onClick={() => playAudio(audio)}
+                        >
+                          {audio.speaker}
+                        </td>
+                        <td
+                          className="py-3 px-3 cursor-pointer"
+                          onClick={() => playAudio(audio)}
+                        >
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              audio.type === "dialogue"
+                                ? "bg-green-100 text-green-800"
+                                : audio.type === "music"
+                                ? "bg-[#E3C5F0] text-[#9B25A7]"
+                                : "bg-blue-100 text-blue-800"
+                            }`}
+                          >
+                            {audio.type === "dialogue"
+                              ? "Dialogue"
+                              : audio.type === "music"
+                              ? "Music"
+                              : "SFX"}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3">
+                          <button
+                            className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50"
+                            onClick={() => deleteAudio(audio.id)}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-12 text-center">
+                <div className="p-6 bg-gray-100 rounded-full mb-4">
+                  <Folder size={32} className="text-gray-400" />
+                </div>
+                <p className="text-gray-600 mb-2">No audio files to display</p>
+                <p className="text-sm text-gray-500">
+                  Select a folder to view its audio files
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Right Panel - Preview & Properties */}
-        <div className="w-1/4 bg-white border-l flex flex-col">
-          {/* Preview */}
-          <div className="p-3 border-b font-medium">
-            Preview & Properties
+        {/* Preview & Properties Panel */}
+        <div className="w-1/4 bg-white flex flex-col">
+          <div className="flex items-center p-3 border-b bg-gray-50">
+            <h2 className="text-lg font-semibold flex-1 ml-2 text-gray-800">
+              Audio Manager
+            </h2>
+            <button
+              className="flex items-center p-2 bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] transition-colors disabled:bg-[#E3C5F0] disabled:cursor-not-allowed"
+              onClick={saveAudioProperties}
+              disabled={!selectedAudio}
+            >
+              <Save size={16} className="mr-2" />
+              Save
+            </button>
+          </div>
+          <div className="p-3 border-b flex items-center">
+            <h3 className="text-md font-semibold text-gray-800">
+              Preview & Properties
+            </h3>
           </div>
 
           <div className="flex-1 flex flex-col overflow-auto">
             {selectedAudio ? (
               <>
-                {/* Audio Preview Player */}
-                <div className="p-3 border-b">
-                  <h3 className="font-medium mb-2">{selectedAudio.name}</h3>
-                  <div className="mb-3 flex items-center text-sm text-gray-500">
-                    <div className="mr-3">
-                      {selectedAudio.type === 'dialogue' ? (
-                        <Mic size={14} className="mr-1 inline-block" />
-                      ) : selectedAudio.type === 'music' ? (
-                        <Music size={14} className="mr-1 inline-block" />
+                {/* Audio Preview Section */}
+                <div className="p-4 border-b">
+                  <h3 className="font-medium text-lg mb-3 text-gray-800">
+                    {selectedAudio.name}
+                  </h3>
+                  <div className="mb-4 flex items-center text-sm text-gray-600">
+                    <div className="mr-4 flex items-center">
+                      {selectedAudio.type === "dialogue" ? (
+                        <Mic size={14} className="mr-1 text-green-500" />
+                      ) : selectedAudio.type === "music" ? (
+                        <Music size={14} className="mr-1 text-[#9B25A7]" />
                       ) : (
-                        <Volume2 size={14} className="mr-1 inline-block" />
+                        <Volume2 size={14} className="mr-1 text-blue-500" />
                       )}
-                      {selectedAudio.type === 'dialogue' ? 'Dialogue' : 
-                       selectedAudio.type === 'music' ? 'Music' : 'Sound Effect'}
+                      <span className="capitalize">
+                        {selectedAudio.type === "dialogue"
+                          ? "Dialogue"
+                          : selectedAudio.type === "music"
+                          ? "Music"
+                          : "Sound Effect"}
+                      </span>
                     </div>
-                    <div>
-                      <Clock size={14} className="mr-1 inline-block" />
+                    <div className="flex items-center">
+                      <Clock size={14} className="mr-1 text-gray-500" />
                       {selectedAudio.duration}
                     </div>
                   </div>
-                  
+
                   {/* Waveform Visualization */}
-                  <div className="mb-3 h-16 bg-gray-100 rounded relative flex items-center overflow-hidden">
+                  <div className="mb-4 h-20 bg-gray-100 rounded-lg relative flex items-center overflow-hidden shadow-inner">
                     <div className="absolute inset-0 flex items-center">
                       {Array.from({ length: 60 }).map((_, i) => (
                         <div
                           key={i}
                           className={`h-full w-1 mx-px ${
-                            i < currentProgress / 100 * 60 
-                              ? selectedAudio.type === 'dialogue'
-                                ? 'bg-green-500'
-                                : selectedAudio.type === 'music'
-                                  ? 'bg-purple-500'
-                                  : 'bg-blue-500'
-                              : 'bg-gray-300'
+                            i < (currentProgress / 100) * 60
+                              ? selectedAudio.type === "dialogue"
+                                ? "bg-green-500"
+                                : selectedAudio.type === "music"
+                                ? "bg-[#9B25A7]"
+                                : "bg-blue-500"
+                              : "bg-gray-300"
                           }`}
-                          style={{ 
-                            height: `${40 + Math.sin(i / 3) * 30 + Math.random() * 20}%`,
-                            opacity: i > 40 ? 0.7 : 1
+                          style={{
+                            height: `${
+                              40 + Math.sin(i / 3) * 30 + Math.random() * 20
+                            }%`,
+                            opacity: i > 40 ? 0.7 : 1,
                           }}
                         ></div>
                       ))}
                     </div>
-                    
-                    {/* Playhead */}
-                    <div 
-                      className="absolute top-0 bottom-0 w-px bg-gray-700 z-10" 
+
+                    <div
+                      className="absolute top-0 bottom-0 w-px bg-gray-800 z-10"
                       style={{ left: `${currentProgress}%` }}
                     ></div>
                   </div>
-                  
-                  {/* Player Controls */}
-                  <div className="mb-3">
+
+                  {/* Playback Controls */}
+                  <div className="mb-4">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs">00:00</span>
-                      <span className="text-xs">{selectedAudio.duration}</span>
+                      <span className="text-xs text-gray-600">
+                        {audioRef.current.currentTime
+                          ? new Date(audioRef.current.currentTime * 1000)
+                              .toISOString()
+                              .substr(14, 5)
+                          : "00:00"}
+                      </span>
+                      <span className="text-xs text-gray-600">
+                        {audioRef.current.duration
+                          ? new Date(audioRef.current.duration * 1000)
+                              .toISOString()
+                              .substr(14, 5)
+                          : "00:00"}
+                      </span>
                     </div>
-                    <input 
-                      type="range" 
-                      className="w-full mb-2" 
-                      min="0" 
-                      max="100" 
-                      value={currentProgress} 
-                      onChange={(e) => setCurrentProgress(parseInt(e.target.value))}
+                    <input
+                      type="range"
+                      className="w-full accent-[#9B25A7]"
+                      min="0"
+                      max="100"
+                      value={currentProgress}
+                      onChange={handleProgressChange}
                     />
-                    <div className="flex justify-center space-x-3">
-                      <button className="p-1.5 border rounded-full hover:bg-gray-100">
+                    <div className="flex justify-center space-x-4">
+                      <button
+                        className="p-2 border rounded-full hover:bg-gray-100 transition-colors"
+                        onClick={() => handleSkip("prev")}
+                      >
                         <SkipBack size={16} />
                       </button>
-                      <button 
-                        className="p-2 bg-[#9B25A7] text-white rounded-full hover:bg-[#9B25A7]"
+                      <button
+                        className="p-3 bg-[#9B25A7] text-white rounded-full hover:bg-[#7A1C86] transition-colors shadow-sm"
                         onClick={togglePlay}
                       >
                         {isPlaying ? <Pause size={18} /> : <Play size={18} />}
                       </button>
-                      <button className="p-1.5 border rounded-full hover:bg-gray-100">
+                      <button
+                        className="p-2 border rounded-full hover:bg-gray-100 transition-colors"
+                        onClick={() => handleSkip("next")}
+                      >
                         <SkipForward size={16} />
                       </button>
                     </div>
                   </div>
-                  
+
                   {/* Volume Control */}
-                  <div className="flex items-center space-x-2">
-                    <button className="p-1.5 border rounded hover:bg-gray-100">
+                  <div className="flex items-center space-x-2 px-2">
+                    <button className="p-1.5 text-gray-500">
                       <Volume2 size={14} />
                     </button>
-                    <input type="range" className="flex-1" min="0" max="100" defaultValue="80" />
-                    <button className="p-1.5 border rounded hover:bg-gray-100">
+                    <input
+                      type="range"
+                      className="flex-1 accent-[#9B25A7]"
+                      min="0"
+                      max="100"
+                      defaultValue="80"
+                      onChange={handleVolumeChange}
+                    />
+                    <button className="p-1.5 text-gray-500">
                       <Headphones size={14} />
                     </button>
                   </div>
                 </div>
-                
-                {/* Properties */}
-                <div className="p-3 border-b">
-                  <h3 className="font-medium mb-3">Audio Properties</h3>
-                  
+
+                {/* Audio Properties Section */}
+                <div className="p-4 border-b bg-gray-50">
+                  <h3 className="font-medium mb-4 text-gray-800">
+                    Audio Properties
+                  </h3>
+
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Name</label>
+                      <label className="block text-xs text-gray-500 mb-1 font-medium">
+                        Name
+                      </label>
                       <input
                         type="text"
-                        className="w-full bg-gray-100 p-1.5 rounded border text-sm"
-                        value={selectedAudio.name}
-                        readOnly
+                        className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-[#9B25A7] outline-none transition-all"
+                        value={audioProperties.name}
+                        onChange={(e) =>
+                          handlePropertyChange("name", e.target.value)
+                        }
                       />
                     </div>
-                    
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-xs text-gray-500 mb-1">Category</label>
-                        <select className="w-full bg-gray-100 p-1.5 rounded border text-sm">
-                          <option>{selectedAudio.category}</option>
-                          {getCategories().filter(c => c !== 'all' && c !== selectedAudio.category).map(category => (
-                            <option key={category}>{category}</option>
-                          ))}
-                        </select>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-xs text-gray-500 mb-1">Type</label>
-                        <input
-                          type="text"
-                          className="w-full bg-gray-100 p-1.5 rounded border text-sm"
-                          value={selectedAudio.type === 'dialogue' ? 'Dialogue' : 
-                                 selectedAudio.type === 'music' ? 'Music' : 'Sound Effect'}
-                          readOnly
-                        />
-                      </div>
-                    </div>
-                    
+
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">File Path</label>
-                      <div className="flex">
+                      <label className="block text-xs text-gray-500 mb-1 font-medium">
+                        Category
+                      </label>
+                      <input
+                        type="text"
+                        className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-[#9B25A7] outline-none transition-all"
+                        value={audioProperties.category}
+                        onChange={(e) =>
+                          handlePropertyChange("category", e.target.value)
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1 font-medium">
+                        Speaker
+                      </label>
+                      <input
+                        type="text"
+                        className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-[#9B25A7] outline-none transition-all"
+                        value={audioProperties.speaker}
+                        onChange={(e) =>
+                          handlePropertyChange("speaker", e.target.value)
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1 font-medium">
+                        Type
+                      </label>
+                      <select
+                        className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-[#9B25A7] outline-none transition-all"
+                        value={audioProperties.type}
+                        onChange={(e) =>
+                          handlePropertyChange("type", e.target.value)
+                        }
+                      >
+                        <option value="dialogue">Dialogue</option>
+                        <option value="music">Music</option>
+                        <option value="sound">Sound Effect</option>
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1 font-medium">
+                          Volume
+                        </label>
+                        <div className="flex items-center">
+                          <input
+                            type="range"
+                            className="w-full accent-[#9B25A7]"
+                            min="0"
+                            max="100"
+                            value={audioProperties.volume}
+                            onChange={(e) =>
+                              handlePropertyChange(
+                                "volume",
+                                Number(e.target.value)
+                              )
+                            }
+                          />
+                          <span className="ml-2 text-xs font-medium w-8 text-right">
+                            {audioProperties.volume}%
+                          </span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1 font-medium">
+                          Fade In (s)
+                        </label>
                         <input
-                          type="text"
-                          className="flex-1 bg-gray-100 p-1.5 rounded-l border text-sm"
-                          value={selectedAudio.path}
-                          readOnly
+                          type="number"
+                          className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-[#9B25A7] outline-none transition-all"
+                          value={audioProperties.fadeIn}
+                          onChange={(e) =>
+                            handlePropertyChange(
+                              "fadeIn",
+                              Number(e.target.value)
+                            )
+                          }
+                          min="0"
+                          max="10"
+                          step="0.5"
                         />
-                        <button className="bg-gray-200 px-2 rounded-r border">
-                          <Folder size={16} />
-                        </button>
                       </div>
                     </div>
-                    
-                    {selectedAudio.type === 'dialogue' && (
+
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Speaker</label>
-                        <select className="w-full bg-gray-100 p-1.5 rounded border text-sm">
-                          <option>{selectedAudio.speaker}</option>
-                          <option>Guest</option>
-                          <option>Narrator</option>
-                          <option>Secondary Presenter</option>
-                        </select>
-                      </div>
-                    )}
-                    
-                    {selectedAudio.type === 'music' && (
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">Mood</label>
-                          <select className="w-full bg-gray-100 p-1.5 rounded border text-sm">
-                            <option>{selectedAudio.mood}</option>
-                            <option>Energetic</option>
-                            <option>Calm</option>
-                            <option>Dramatic</option>
-                            <option>Inspirational</option>
-                          </select>
-                        </div>
-                        
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">Tempo</label>
-                          <select className="w-full bg-gray-100 p-1.5 rounded border text-sm">
-                            <option>{selectedAudio.tempo}</option>
-                            <option>Slow</option>
-                            <option>Medium</option>
-                            <option>Fast</option>
-                          </select>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {selectedAudio.type === 'dialogue' && (
-                      <div>
-                        <label className="block text-xs text-gray-500 mb-1">Transcript</label>
-                        <textarea
-                          className="w-full bg-gray-100 p-1.5 rounded border text-sm h-20"
-                          value={selectedAudio.transcript}
-                          readOnly
+                        <label className="block text-xs text-gray-500 mb-1 font-medium">
+                          Fade Out (s)
+                        </label>
+                        <input
+                          type="number"
+                          className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-[#9B25A7] outline-none transition-all"
+                          value={audioProperties.fadeOut}
+                          onChange={(e) =>
+                            handlePropertyChange(
+                              "fadeOut",
+                              Number(e.target.value)
+                            )
+                          }
+                          min="0"
+                          max="10"
+                          step="0.5"
                         />
                       </div>
-                    )}
+
+                      <div>
+                        <div className="flex items-center mt-6">
+                          <div className="flex items-center h-5">
+                            <input
+                              type="checkbox"
+                              id="voiceEnhance"
+                              className="h-4 w-4 text-[#9B25A7] rounded border-gray-300 focus:ring-[#9B25A7]"
+                              checked={audioProperties.voiceEnhance}
+                              onChange={(e) =>
+                                handlePropertyChange(
+                                  "voiceEnhance",
+                                  e.target.checked
+                                )
+                              }
+                            />
+                          </div>
+                          <label
+                            htmlFor="voiceEnhance"
+                            className="ml-2 text-sm text-gray-700"
+                          >
+                            Voice Enhance
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center h-5">
+                      <input
+                        type="checkbox"
+                        id="noiseReduction"
+                        className="h-4 w-4 text-[#9B25A7] rounded border-gray-300 focus:ring-[#9B25A7]"
+                        checked={audioProperties.noiseReduction}
+                        onChange={(e) =>
+                          handlePropertyChange(
+                            "noiseReduction",
+                            e.target.checked
+                          )
+                        }
+                      />
+                      <label
+                        htmlFor="noiseReduction"
+                        className="ml-2 text-sm text-gray-700"
+                      >
+                        Noise Reduction
+                      </label>
+                    </div>
                   </div>
                 </div>
-                
-                {/* Adjustment Options */}
-                <div className="p-3 border-b">
-                  <h3 className="font-medium mb-3">Audio Adjustments</h3>
-                  
+
+                {/* Audio Adjustments Section */}
+                <div className="p-4 border-b">
+                  <h3 className="font-medium mb-4 text-gray-800">
+                    Audio Adjustments
+                  </h3>
+
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Volume</label>
-                      <input type="range" className="w-full" min="0" max="100" defaultValue="80" />
+                      <label className="block text-xs text-gray-500 mb-1 font-medium">
+                        Volume
+                      </label>
+                      <div className="flex items-center">
+                        <input
+                          type="range"
+                          className="w-full accent-[#9B25A7]"
+                          min="0"
+                          max="100"
+                          defaultValue="80"
+                        />
+                        <span className="ml-2 text-xs font-medium w-8 text-right">
+                          80%
+                        </span>
+                      </div>
                     </div>
-                    
-                    <div className="grid grid-cols-2 gap-2">
+
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Fade In</label>
-                        <select className="w-full bg-gray-100 p-1.5 rounded border text-sm">
+                        <label className="block text-xs text-gray-500 mb-1 font-medium">
+                          Fade In
+                        </label>
+                        <select className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-[#9B25A7] outline-none transition-all">
                           <option>None</option>
                           <option>0.5s</option>
                           <option>1s</option>
                           <option>2s</option>
                         </select>
                       </div>
-                      
+
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Fade Out</label>
-                        <select className="w-full bg-gray-100 p-1.5 rounded border text-sm">
+                        <label className="block text-xs text-gray-500 mb-1 font-medium">
+                          Fade Out
+                        </label>
+                        <select className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-[#9B25A7] outline-none transition-all">
                           <option>None</option>
                           <option>0.5s</option>
                           <option>1s</option>
@@ -590,17 +1374,28 @@ const AudioManagerUI = () => {
                         </select>
                       </div>
                     </div>
-                    
-                    {selectedAudio.type === 'music' && (
+
+                    {selectedAudio.type === "music" && (
                       <>
-                        <div className="flex items-center space-x-2 text-sm">
-                          <input type="checkbox" id="loopAudio" />
-                          <label htmlFor="loopAudio">Loop Audio</label>
+                        <div className="flex items-center h-5 mt-2">
+                          <input
+                            type="checkbox"
+                            id="loopAudio"
+                            className="h-4 w-4 text-[#9B25A7] rounded border-gray-300 focus:ring-[#9B25A7]"
+                          />
+                          <label
+                            htmlFor="loopAudio"
+                            className="ml-2 text-sm text-gray-700"
+                          >
+                            Loop Audio
+                          </label>
                         </div>
-                        
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">EQ Preset</label>
-                          <select className="w-full bg-gray-100 p-1.5 rounded border text-sm">
+
+                        <div className="mt-3">
+                          <label className="block text-xs text-gray-500 mb-1 font-medium">
+                            EQ Preset
+                          </label>
+                          <select className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-[#9B25A7] outline-none transition-all">
                             <option>Default</option>
                             <option>Background Music</option>
                             <option>Voice Boost</option>
@@ -610,17 +1405,32 @@ const AudioManagerUI = () => {
                         </div>
                       </>
                     )}
-                    
-                    {selectedAudio.type === 'dialogue' && (
+
+                    {selectedAudio.type === "dialogue" && (
                       <>
                         <div>
-                          <label className="block text-xs text-gray-500 mb-1">Noise Reduction</label>
-                          <input type="range" className="w-full" min="0" max="100" defaultValue="30" />
+                          <label className="block text-xs text-gray-500 mb-1 font-medium">
+                            Noise Reduction
+                          </label>
+                          <div className="flex items-center">
+                            <input
+                              type="range"
+                              className="w-full accent-[#9B25A7]"
+                              min="0"
+                              max="100"
+                              defaultValue="30"
+                            />
+                            <span className="ml-2 text-xs font-medium w-8 text-right">
+                              30%
+                            </span>
+                          </div>
                         </div>
-                        
+
                         <div>
-                          <label className="block text-xs text-gray-500 mb-1">Voice Enhancement</label>
-                          <select className="w-full bg-gray-100 p-1.5 rounded border text-sm">
+                          <label className="block text-xs text-gray-500 mb-1 font-medium">
+                            Voice Enhancement
+                          </label>
+                          <select className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-[#9B25A7] outline-none transition-all">
                             <option>None</option>
                             <option>Clarity</option>
                             <option>Warmth</option>
@@ -629,12 +1439,14 @@ const AudioManagerUI = () => {
                         </div>
                       </>
                     )}
-                    
+
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Timing</label>
+                      <label className="block text-xs text-gray-500 mb-1 font-medium">
+                        Timing
+                      </label>
                       <input
                         type="text"
-                        className="w-full bg-gray-100 p-1.5 rounded border text-sm"
+                        className="w-full bg-white p-2 rounded-md border border-gray-300 text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-[#9B25A7] outline-none transition-all"
                         placeholder="Start: 00:00:00.000"
                       />
                     </div>
@@ -642,33 +1454,69 @@ const AudioManagerUI = () => {
                 </div>
               </>
             ) : (
-              <div className="flex-1 flex items-center justify-center flex-col p-6 text-center">
-                <div className="mb-3 p-3 rounded-full bg-gray-100">
-                  <Volume2 size={24} />
+              <div className="flex-1 flex items-center justify-center flex-col p-8 text-center">
+                <div className="mb-4 p-5 rounded-full bg-gray-100">
+                  <Volume2 size={32} className="text-gray-400" />
                 </div>
-                <p className="text-gray-500 mb-1">No audio selected</p>
-                <p className="text-xs text-gray-400">Select an audio file to view and edit its properties</p>
+                <p className="text-gray-600 mb-2 font-medium">
+                  No audio selected
+                </p>
+                <p className="text-sm text-gray-500 max-w-xs">
+                  Select an audio file from the library to view and edit its
+                  properties
+                </p>
               </div>
             )}
           </div>
 
-          {/* Apply Button */}
-          <div className="p-3 border-t">
-            <button 
-              className="w-full bg-[#9B25A7] text-white p-2 rounded font-medium hover:bg-[#9B25A7] mb-2"
+          {/* Bottom Action Buttons */}
+          <div className="p-4 border-t bg-gray-50">
+            <button
+              className="w-full bg-[#9B25A7] text-white p-3 rounded-md font-medium hover:bg-[#7A1C86] transition-colors mb-3 disabled:bg-[#E3C5F0] flex items-center justify-center"
               disabled={!selectedAudio}
             >
-              Apply to Timeline
+              <span>Apply to Timeline</span>
             </button>
-            <button 
-              className="w-full bg-gray-100 p-2 rounded font-medium hover:bg-gray-200"
+            <button
+              className="w-full bg-gray-200 text-gray-800 p-3 rounded-md font-medium hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               disabled={!selectedAudio}
             >
-              Preview in Scene
+              <Play size={16} className="mr-2" />
+              <span>Preview in Scene</span>
             </button>
           </div>
         </div>
       </div>
+
+      {/* Modal for creating a new folder */}
+      <Dialog open={isModalOpen} onClose={() => setIsModalOpen(false)}>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+            <h2 className="text-lg font-semibold mb-4">Create New Folder</h2>
+            <input
+              type="text"
+              placeholder="Enter folder name"
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              className="w-full p-2 border rounded-md mb-4"
+            />
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={createFolder}
+                className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 };

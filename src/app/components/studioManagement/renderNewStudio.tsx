@@ -240,86 +240,6 @@ const RenderNewStudio = () => {
 
   return (
     <div className="flex flex-row flex-wrap justify-between items-center content-center gap-y-5 h-full w-full p-6">
-      <div className="flex flex-row justify-between items-start p-6 gap-12 w-full h-[437px] bg-white shadow-md rounded-2xl">
-        {/* Left Column - Image Preview */}
-        <div className="w-full md:w-1/2 flex justify-center">
-          {generatedImageUrl ? (
-            <div className="border rounded-lg p-3 w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl h-auto min-h-[200px] flex justify-center items-center">
-              <img
-                src={generatedImageUrl}
-                alt="Generated studio"
-                className="w-full h-auto max-h-64 sm:max-h-72 md:max-h-80 lg:max-h-96 object-contain rounded"
-              />
-            </div>
-          ) : (
-            <div className="text-center text-gray-500 p-6 w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl">
-              <div className="w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 mx-auto border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center mb-4">
-                <Plus size={32} className="text-gray-300" />
-              </div>
-              <p className="text-sm sm:text-base md:text-lg">
-                No Image Generated
-              </p>
-              <p className="text-xs sm:text-sm md:text-base mt-2 max-w-md mx-auto">
-                Please generate an image first.
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Right Column - Inputs and Buttons */}
-        <div className="w-full md:w-1/2 flex flex-col justify-center gap-4">
-          <h3 className="font-medium">Generated Studio</h3>
-          <input
-            type="text"
-            placeholder="Enter name"
-            className="w-full px-4 py-2 rounded-lg focus:ring-[#9B25A7] "
-          />
-          <div className="relative">
-            <button
-              className="w-full p-3 border border-gray-300 rounded-lg text-sm text-gray-700 flex justify-between items-center focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent"
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-            >
-              <span>{style || "Select Style"}</span>
-              <ChevronDown
-                size={16}
-                className={`transition-transform ${
-                  dropdownOpen ? "rotate-180" : ""
-                }`}
-              />
-            </button>
-            {dropdownOpen && (
-              <div className="absolute w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
-                {TypesOption.map((option) => (
-                  <div
-                    key={option}
-                    className="p-3 hover:bg-[#E3C5F0] text-sm cursor-pointer"
-                    onClick={() => {
-                      setStyle(option);
-                      setDropdownOpen(false);
-                    }}
-                  >
-                    {option}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
-          <button
-            className="w-full px-4 py-2 bg-[#9b25a7] text-white rounded hover:bg-[#7a1c86]"
-            onClick={handleSaveToLibrary}
-          >
-            
-            Save to Library
-          </button>
-          <button
-            className="w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-            onClick={handleDownload}
-          >
-            Download Image
-          </button>
-        </div>
-      </div>
 
       {/* Reference Image Upload & AI Generation Prompt */}
       <div className="flex flex-col md:flex-row items-start p-6 gap-6 w-full bg-white shadow-md rounded-2xl">
@@ -385,8 +305,7 @@ const RenderNewStudio = () => {
           />
 
           <button
-            className={`w-full px-4 py-2 bg-[#9B25A7] text-white text-sm rounded-md flex items-center justify-center transition-colors ${
-              isLoading ? "opacity-75 cursor-not-allowed" : "hover:bg-[#7A1C86]"
+            className={`w-full px-4 py-3 bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] flex items-center justify-center transition font-medium
             }`}
             onClick={handleSubmit}
             disabled={isLoading}
@@ -395,6 +314,88 @@ const RenderNewStudio = () => {
           </button>
         </div>
       </div>
+      <div className="flex flex-row justify-between items-start p-6 gap-12 w-full h-[437px] bg-white shadow-md rounded-2xl">
+        {/* Left Column - Image Preview */}
+        <div className="w-full md:w-1/2 flex justify-center min-h-[400px] h-full">
+          {generatedImageUrl ? (
+            <div className="border-none rounded-lg p-3 w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl min-h-[300px] h-full flex justify-center items-center shadow-md">
+              <img
+                src={generatedImageUrl}
+                alt="Generated studio"
+                className="w-full h-full object-cover rounded"
+              />
+            </div>
+          ) : (
+            <div className="text-center text-gray-500 p-6 w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl min-h-[300px] h-full flex flex-col justify-center items-center">
+              <div className="w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center mb-4">
+                <Plus size={32} className="text-gray-300" />
+              </div>
+              <p className="text-sm sm:text-base md:text-lg">
+                No Image Generated
+              </p>
+              <p className="text-xs sm:text-sm md:text-base mt-2 max-w-md">
+                Please generate an image first.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Right Column - Inputs and Buttons */}
+        <div className="w-full md:w-1/2 flex flex-col justify-center gap-4">
+          <h3 className="font-medium">Generated Studio</h3>
+          <input
+            type="text"
+            placeholder="Enter name"
+            className="w-full px-4 py-2 rounded-lg border p-3 border-gray-300 text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent focus:outline-none"
+          />
+
+          <div className="relative">
+            <button
+              className="w-full p-3 border border-gray-300 rounded-lg text-sm text-gray-700 flex justify-between items-center focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent"
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+            >
+              <span>{style || "Select Style"}</span>
+              <ChevronDown
+                size={16}
+                className={`transition-transform ${
+                  dropdownOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+            {dropdownOpen && (
+              <div className="absolute w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
+                {TypesOption.map((option) => (
+                  <div
+                    key={option}
+                    className="p-3 hover:bg-[#E3C5F0] text-sm cursor-pointer"
+                    onClick={() => {
+                      setStyle(option);
+                      setDropdownOpen(false);
+                    }}
+                  >
+                    {option}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
+          <button
+            className="w-full px-4 py-3 border-2 border-[#9B25A7] text-[#9B25A7] bg-transparent rounded-lg flex items-center justify-center transition font-medium hover:bg-[#F4E3F8] hover:text-[#9B25A7]"
+            onClick={handleSaveToLibrary}
+          >
+            Save to Library
+          </button>
+          <button
+            className="w-full px-4 py-3 bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] flex items-center justify-center transition font-medium"
+            onClick={handleDownload}
+          >
+            Download Image
+          </button>
+        </div>
+      </div>
+
+      
 
       {/* Alert Component */}
       <Alert
