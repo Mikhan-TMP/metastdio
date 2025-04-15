@@ -28,81 +28,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-
-// Alert Component
-const Alert = ({ message, type, onClose }) => {
-  return (
-    <AnimatePresence>
-      {message && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8, y: -20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.8, y: -20 }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
-          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 z-50"
-        >
-          <div
-            className={`relative max-w-xs sm:max-w-sm w-full p-3 sm:p-5 rounded-lg shadow-lg flex items-center gap-2 sm:gap-3 border ${
-              type === "success"
-                ? "bg-green-100 text-green-800 border-green-300"
-                : type === "generating" || type === "info"
-                ? "bg-blue-100 text-blue-800 border-blue-300"
-                : "bg-red-100 text-red-800 border-red-300"
-            }`}
-          >
-            {/* Icon */}
-            {type === "success" ? (
-              <svg
-                className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M5 13l4 4L19 7"
-                ></path>
-              </svg>
-            ) : type === "generating" || type === "info" ? (
-              <RefreshCw className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 animate-spin flex-shrink-0" />
-            ) : (
-              <svg
-                className="w-5 h-5 sm:w-6 sm:h-6 text-red-600 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                ></path>
-              </svg>
-            )}
-
-            {/* Message */}
-            <p className="font-semibold text-xs sm:text-sm md:text-base">
-              {message}
-            </p>
-
-            {/* Close Button */}
-            <motion.button
-              whileHover={{ scale: 1.2 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={onClose}
-              className="absolute top-1 right-1 sm:top-2 sm:right-2 text-gray-600 hover:text-gray-900 transition-all"
-            >
-              &times;
-            </motion.button>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-};
+import { ToastContainer, toast } from "react-toastify";
 
 const AvatarGestureEmotionUI = () => {
   const [avatars, setAvatars] = useState([]);
@@ -117,13 +43,16 @@ const AvatarGestureEmotionUI = () => {
   const [activeTab, setActiveTab] = useState("gestures");
   const [currentCategory, setCurrentCategory] = useState("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImages, setGeneratedImages] = useState({
     front: null,
     back: null,
     side: null,
     close: null,
   });
-  const [alert, setAlert] = useState({ message: "", type: "" });
+  const [isGestureProcessing, setIsGestureProcessing] = useState(false);
+  const [isEmotionProcessing, setIsEmotionProcessing] = useState(false);
+
   const [gestures, setGestures] = useState([]);
   const [emotions, setEmotions] = useState([]);
   const email =
@@ -330,16 +259,20 @@ const AvatarGestureEmotionUI = () => {
   };
 
   const handleEmotionClick = async (emotion) => {
-    if (!selectedAvatar) {
-      console.error("No avatar selected");
+    if (!selectedAvatar || isEmotionProcessing) {
+      toast.error("Please select an avatar before proceeding.");
       return;
     }
 
+    setIsEmotionProcessing(true); // Disable button
+
     // Show loading alert
-    setAlert({
-      message: `Applying ${emotion.name} emotion to the avatar...`,
-      type: "generating",
-    });
+    toast.info(
+      <div className="flex items-center">
+        <RefreshCw className="animate-spin mr-2" />
+        Applying {emotion.name} emotion to the avatar...
+      </div>
+    );
 
     try {
       // Send the file path, emotion, and views to the API
@@ -370,30 +303,30 @@ const AvatarGestureEmotionUI = () => {
         close: views.close || null,
       });
 
-      setAlert({
-        message: `${emotion.name} emotion applied successfully!`,
-        type: "success",
-      });
+      toast.success(`${emotion.name} emotion applied successfully!`);
     } catch (error) {
       console.error("Error applying emotion:", error);
-      setAlert({
-        message: `Failed to apply ${emotion.name} emotion. Please try again.`,
-        type: "error",
-      });
+      toast.error(`Failed to apply ${emotion.name} emotion. Please try again`);
+    } finally {
+      setIsEmotionProcessing(false); // Re-enable button
     }
   };
 
   const handleGestureClick = async (gesture) => {
-    if (!selectedAvatar) {
-      console.error("No avatar selected");
+    if (!selectedAvatar || isGestureProcessing) {
+      toast.error(`Please select an avatar before proceeding`);
       return;
     }
 
+    setIsGestureProcessing(true); // Disable button
+
     // Show loading alert
-    setAlert({
-      message: `Applying ${gesture.name} gesture to the avatar...`,
-      type: "generating",
-    });
+    toast.info(
+      <div className="flex items-center">
+        <RefreshCw className="animate-spin mr-2" />
+        Applying {gesture.name} gesture to the avatar...
+      </div>
+    );
 
     try {
       // Send the file path, gesture, and views to the API
@@ -424,16 +357,12 @@ const AvatarGestureEmotionUI = () => {
         close: views.close || null,
       });
 
-      setAlert({
-        message: `${gesture.name} gesture applied successfully!`,
-        type: "success",
-      });
+      toast.success(`${gesture.name} gesture applied successfully!`);
     } catch (error) {
       console.error("Error applying gesture:", error);
-      setAlert({
-        message: `Failed to apply ${gesture.name} gesture. Please try again.`,
-        type: "error",
-      });
+      toast.error(`Failed to apply ${gesture.name} gesture. Please try again.`);
+    } finally {
+      setIsGestureProcessing(false); // Re-enable button
     }
   };
 
@@ -479,31 +408,30 @@ const AvatarGestureEmotionUI = () => {
 
   const generateAvatarView = async () => {
     if (!selectedAvatar) {
-      console.error("No avatar selected");
+      toast.error(`Please select an avatar before proceeding.`);
       return;
     }
 
     // Close the modal
     setIsModalOpen(false);
 
+    // Set generating state to true to disable the button
+    setIsGenerating(true);
+
     // Show loading alert
-    setAlert({
-      message: "The avatar view is being generated...",
-      type: "generating",
-    });
+    toast.info("Generating your avatar. This may take a few seconds...");
 
     try {
       const email = localStorage.getItem("userEmail") || "default@example.com";
 
       // Send the file path directly to the API
       const formData = new FormData();
-      formData.append("file_path", selectedAvatar.imgSrc); // Use file path instead of base64
+      formData.append("file_path", selectedAvatar.imgSrc);
       formData.append(
         "views",
         JSON.stringify(["front", "side", "close", "back"])
       );
 
-      // Send the file path and views to the API
       const response = await axios.post(
         "http://192.168.1.71:8083/emotions_gen",
         formData,
@@ -537,28 +465,33 @@ const AvatarGestureEmotionUI = () => {
       };
 
       // Log payload for debugging
-      console.log("Payload being sent to API:", JSON.stringify(payload, null, 2));
+      console.log(
+        "Payload being sent to API:",
+        JSON.stringify(payload, null, 2)
+      );
 
       // Send payload to API
-      await axios.post("http://192.168.1.141:3001/avatarfx/initializeAvatarFx", payload, {
-        headers: { "Content-Type": "application/json" },
-      });
+      await axios.post(
+        "http://192.168.1.141:3001/avatarfx/initializeAvatarFx",
+        payload,
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      );
 
-      setAlert({
-        message: "Emotion generation completed successfully!",
-        type: "success",
-      });
+      toast.success(`Emotion generation completed successfully!`);
     } catch (error) {
       console.error("Error generating emotion:", error);
-      setAlert({
-        message: "Failed to generate avatar view. Please try again.",
-        type: "error",
-      });
+      toast.error(`Failed to generate avatar view. Please try again.`);
+    } finally {
+      // Re-enable the button regardless of success or failure
+      setIsGenerating(false);
     }
   };
 
   const regenerateView = async (view) => {
     if (!selectedAvatar) {
+      toast.error(`Please select an avatar before proceeding.`);
       console.error("No avatar selected");
       return;
     }
@@ -569,10 +502,7 @@ const AvatarGestureEmotionUI = () => {
       [view]: "loading",
     }));
 
-    setAlert({
-      message: `Regenerating ${view} view...`,
-      type: "generating",
-    });
+    toast.info(`Regenerating ${view} view...`);
 
     try {
       const email = localStorage.getItem("userEmail") || "default@example.com";
@@ -595,55 +525,70 @@ const AvatarGestureEmotionUI = () => {
 
       // Map API response keys to state keys
       const apiToStateKeyMap = {
-        "front": "front",
-        "side": "side",
-        "close": "close",
-        "back": "back",
+        front: "front",
+        side: "side",
+        close: "close",
+        back: "back",
       };
 
-      const { views } = response.data;
-      const updatedImage = views[view] || null;
-      console.log("TESTING BOSSING MICHAEL", updatedImage);
-      setGeneratedImages((prev) => ({
-        ...prev,
-        [apiToStateKeyMap[view]]: updatedImage,
-      }));
+      const { views } = response.data || {};
+      const updatedImage = views?.[view] || null;
 
-      // Save updated view to the database
-      await axios.post("http://192.168.1.141:3001/avatarfx/initializeAvatarFx", {
-        email,
-        avatarID: selectedAvatar.id,
-        cameraViews: {
+      if (updatedImage) {
+        // Update the state with the new image
+        setGeneratedImages((prev) => ({
+          ...prev,
+          [apiToStateKeyMap[view]]: updatedImage,
+        }));
+
+        // Save the updated view to the database (overwrite the existing image)
+        const updatedCameraView = {
           [view]: { base64: updatedImage },
-        },
-      });
+        };
 
-      setAlert({
-        message: `${view} view regenerated successfully!`,
-        type: "success",
-      });
+        await axios.post(
+          "http://192.168.1.141:3001/avatarfx/updateAvatarView",
+          {
+            email,
+            avatarID: selectedAvatar.id,
+            cameraView: updatedCameraView,
+          }
+        );
+
+        toast.success(`${view} view regenerated and updated successfully!`);
+      } else {
+        console.warn("No new image received from the API, but proceeding.");
+        setGeneratedImages((prev) => ({
+          ...prev,
+          [apiToStateKeyMap[view]]: prev[apiToStateKeyMap[view]],
+        }));
+        toast.info(
+          `${view} view regenerated successfully, but no new image was returned.`
+        );
+      }
     } catch (error) {
       console.error(`Error regenerating ${view} view:`, error);
 
-      // Handle API error
+      // Keep the existing image intact
       setGeneratedImages((prev) => ({
         ...prev,
-        [view]: null,
+        [view]: prev[view] !== "loading" ? prev[view] : null,
       }));
 
-      setAlert({
-        message: `Failed to regenerate ${view} view. ${
-          error.response?.status === 500
-            ? "Server error occurred. Please try again later."
-            : "Please try again."
-        }`,
-        type: "error",
-      });
+      const errorMessage =
+        error.response?.status === 404
+          ? "The requested endpoint was not found. Please contact support."
+          : error.response?.status === 500
+          ? "Server error occurred. Please try again later."
+          : "Failed to regenerate the view. Please try again.";
+
+      toast.error(errorMessage);
     }
   };
 
   const fetchGeneratedImages = async () => {
     if (!selectedAvatar) {
+      toast.error("Please select an avatar before proceeding.");
       console.error("No avatar selected");
       return;
     }
@@ -687,11 +632,11 @@ const AvatarGestureEmotionUI = () => {
           close: `${base64Img}`,
         });
       } else {
-        alert("No image generated. Please try again.");
+        toast.error("No image generated. Please try again.");
       }
     } catch (error) {
       console.error("Error fetching generated images:", error);
-      alert("Failed to fetch generated images. Please try again.");
+      toast.error("Failed to fetch generated images. Please try again.");
     }
   };
 
@@ -724,12 +669,18 @@ const AvatarGestureEmotionUI = () => {
   return (
     <div className="flex flex-col h-screen bg-gray-100">
       {/* Alert */}
-      <Alert
-        message={alert.message}
-        type={alert.type}
-        onClose={() => setAlert({ message: "", type: "" })}
+      <ToastContainer
+        postion="top-center"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
       />
-
       {/* Top Toolbar - Updated to match modal style */}
       <div className="flex justify-between items-center p-4 bg-white shadow-sm">
         <div className="flex items-center">
@@ -842,7 +793,7 @@ const AvatarGestureEmotionUI = () => {
                         : "border-gray-300 hover:border-[#9B25A7] hover:bg-gray-50"
                     }`}
                     onClick={() => {
-                      if (selectedAvatar) {
+                      if (selectedAvatar && !isGestureProcessing) {
                         handleGestureSelect(gesture);
                         handleGestureClick(gesture);
                       }
@@ -863,6 +814,11 @@ const AvatarGestureEmotionUI = () => {
                     >
                       <Clock size={10} className="mr-0.5" /> {gesture.duration}s
                     </div>
+                    {isGestureProcessing && selectedGesture?.id === gesture.id && (
+                      <div className="flex justify-center mt-2">
+                        <RefreshCw className="animate-spin text-[#9B25A7]" size={16} />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -879,7 +835,7 @@ const AvatarGestureEmotionUI = () => {
                         : "border-gray-300 hover:border-[#9B25A7] hover:bg-gray-50"
                     }`}
                     onClick={() => {
-                      if (selectedAvatar) {
+                      if (selectedAvatar && !isEmotionProcessing) {
                         handleEmotionSelect(emotion);
                         handleEmotionClick(emotion);
                       }
@@ -902,6 +858,11 @@ const AvatarGestureEmotionUI = () => {
                     >
                       Intensity: {emotion.intensity}%
                     </div>
+                    {isEmotionProcessing && selectedEmotion?.id === emotion.id && (
+                      <div className="flex justify-center mt-2">
+                        <RefreshCw className="animate-spin text-[#9B25A7]" size={16} />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1012,10 +973,20 @@ const AvatarGestureEmotionUI = () => {
 
             <div className="flex items-center space-x-3">
               <button
-                className="w-full sm:w-auto bg-[#9B25A7] text-white text-sm py-2 px-4 rounded-md flex items-center gap-1 hover:bg-[#7A1C86] transition-colors"
+                className="w-full sm:w-auto bg-[#9B25A7] text-white text-sm py-2 px-4 rounded-md flex items-center gap-1 hover:bg-[#7A1C86] transition-colors disabled:bg-opacity-50 disabled:cursor-not-allowed"
                 onClick={generateAvatarView}
+                disabled={isGenerating}
               >
-                <Plus size={16} /> Generate Avatar View
+                {isGenerating ? (
+                  <>
+                    <RefreshCw size={16} className="animate-spin mr-1" />{" "}
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Plus size={16} /> Generate Avatar View
+                  </>
+                )}
               </button>
               <button className="p-2 border border-gray-300 rounded-md hover:bg-gray-50 flex items-center">
                 <Camera size={16} className="mr-1" /> Capture

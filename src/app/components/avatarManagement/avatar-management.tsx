@@ -5,87 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import CameraModal from './CameraModal';
 import { ToastContainer, toast } from 'react-toastify';
 
-// Alert component
-const Alert = ({ message, type, onClose }) => {
-  useEffect(() => {
-    if (message) {
-      const timer = setTimeout(() => {
-        onClose();
-      }, 3000); // 3 seconds
-      return () => clearTimeout(timer); // Cleanup timer on unmount or message change
-    }
-  }, [message, onClose]);
 
-  return (
-    <AnimatePresence>
-      {message && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8, y: -20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.8, y: -20 }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
-          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 z-50"
-        >
-          <div
-            className={`relative max-w-sm w-full p-5 rounded-lg shadow-lg flex items-center gap-3 border ${
-              type === "success"
-                ? "bg-green-100 text-green-800 border-green-300"
-                : type === "generating"
-                ? "bg-blue-100 text-blue-800 border-blue-300"
-                : "bg-red-100 text-red-800 border-red-300"
-            }`}
-          >
-            {/* Icon */}
-            {type === "success" ? (
-              <svg
-                className="w-6 h-6 text-green-600"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M5 13l4 4L19 7"
-                ></path>
-              </svg>
-            ) : type === "generating" ? (
-              <RefreshCw className="w-6 h-6 text-blue-600 animate-spin" />
-            ) : (
-              <svg
-                className="w-6 h-6 text-red-600"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                ></path>
-              </svg>
-            )}
-
-            {/* Message */}
-            <p className="font-semibold text-sm md:text-base">{message}</p>
-
-            {/* Close Button */}
-            <motion.button
-              whileHover={{ scale: 1.2 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={onClose}
-              className="absolute top-2 right-2 text-black-600 hover:text-black-900 transition-all"
-            >
-              &times;
-            </motion.button>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-};
 
 const AvatarManagement = () => {
   const preExistingAvatars = [];
@@ -1088,11 +1008,7 @@ const AvatarManagement = () => {
         onCapture={handleCameraCapture}
       />
 
-      <Alert
-        message={notification}
-        type={notificationType}
-        onClose={() => setNotification("")}
-      />
+  
       <ToastContainer
         position="top-right"
         autoClose={3000}
