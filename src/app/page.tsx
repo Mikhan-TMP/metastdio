@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import {AuthAPI} from "../../utils/api";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AiOutlineEye, AiOutlineEyeInvisible, AiFillExclamationCircle } from "react-icons/ai";
+import { ToastContainer, toast } from 'react-toastify';
 
 const floatAnimation = `
   @keyframes float {
@@ -37,7 +38,6 @@ const pulsateAnimation = `
 `;
 
 export default function Login() {
-  
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({ email: "", password: "", username: "", repeatPassword: ""});
   const [errorMessage, setErrorMessage] = useState<string>(''); // Add this line
@@ -45,6 +45,10 @@ export default function Login() {
   const [mounted, setMounted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showRepeatPassword, setShowRepeatPassword] = useState(false);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [isSendingCode, setIsSendingCode] = useState(false);
 
   //reset password
   const searchParams = useSearchParams();
@@ -63,8 +67,6 @@ export default function Login() {
   useEffect(() => {
     setMounted(true);
   }, []);
-
-
   const resetFormFields = () => {
     setFormData({ email: "", password: "", username: "", repeatPassword: "" });
     setEmailReset('');
@@ -88,14 +90,12 @@ export default function Login() {
         token: token
       });
       console.log(response);
-      alert(response.data.message);
-      router.push('/');
+      toast.success(response.data.message);
+      setTimeout(() => router.push('/'), 3000);
     } catch (error) {
       console.error(error);
     }
   }
-
-
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -104,34 +104,41 @@ export default function Login() {
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!mounted) return;
+    if (!mounted || isSendingCode) return;
     
     try {
+      setIsSendingCode(true);
       setErrorMessage(''); 
       const { data } = await AuthAPI.post('/reset-password', {
         email: emailReset,
       });
-      alert('Password reset link has been sent to your email!');
+      toast.info('Password reset link sent to your email!');
       setIsResetPassword(false);
       setIsLogin(true);
     } catch (error: any) {
       console.error('Reset Error:', error);
-      setErrorMessage(error.response?.data?.message || 'Password reset email could not be sent.');
+      toast.error(error.response?.data?.message || 'Password reset email could not be sent.');
+      // setErrorMessage(error.response?.data?.message || 'Password reset email could not be sent.');
+    } finally {
+      setIsSendingCode(false);
     }
   };
 
   const handlePasswordResetSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!mounted) return;
+    if (!mounted || isResetting) return;
 
     try {
+      setIsResetting(true);
       if (newPassword !== confirmNewPassword) {
-        setErrorMessage('Passwords do not match');
+        // setErrorMessage('Passwords do not match');
+        toast.error('Passwords do not match');
         return;
       }
 
       if (newPassword.length < 8 || /\s/.test(newPassword)) {
-        setErrorMessage('Password must be at least 8 characters long and cannot contain spaces');
+        // setErrorMessage('Password must be at least 8 characters long and cannot contain spaces');
+        toast.error('Password must be at least 8 characters long and cannot contain spaces');
         return;
       }
 
@@ -141,47 +148,58 @@ export default function Login() {
         token,
         newPassword
       });
-      alert('Password reset successful!');
-      router.push('/');
+      toast.success('Password reset successfull!');
+      setTimeout(() => router.push('/'), 3000);
     } catch (error: any) {
       console.error('Reset Error:', error);
-      setErrorMessage(error.response?.data?.message || 'Password reset failed');
+      toast.error(error.response?.data?.message || 'Password reset failed');
+      // setErrorMessage(error.response?.data?.message || 'Password reset failed');
+    } finally {
+      setIsResetting(false);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!mounted) return;
+    if (!mounted || isSubmitting) return;
 
     try {
+      setIsSubmitting(true);
       setErrorMessage(''); 
       if (isLogin) {
         const { data } = await AuthAPI.post('/login', formData);
         localStorage.setItem('token', data.token);
         localStorage.setItem('userEmail', data.user.email);
         localStorage.setItem('userName', data.user.username);
-        alert('Login successful!');
-        router.push('/Dashboard');
+        toast.success('Login successful!');
+        setTimeout(() => router.push('/Dashboard'), 1000);
       } else {
         if (formData.password !== formData.repeatPassword) {
-          setErrorMessage('Passwords do not match');
+          // setErrorMessage('Passwords do not match');
+          toast.error('Passwords do not match');
           return;
         }
         if (formData.password.length < 8 || /\s/.test(formData.password)) {
-          setErrorMessage('Password must be at least 8 characters long and cannot contain spaces');
+          // setErrorMessage('Password must be at least 8 characters long and cannot contain spaces');
+          toast.error('Password must be at least 8 characters long and cannot contain spaces');
           return;
         }
         const { data } = await AuthAPI.post('/signup', formData);
         if (data.status === 'success') {
-          alert(data.message);
+          // alert(data.message);
+          toast.success(data.message);
           setIsLogin(true);
         } else {
-          setErrorMessage(data.message);
+          // setErrorMessage(data.message);
+          toast.error(data.message);
         }
       }
     } catch (error: any) {
       console.error('Auth Error:', error);
-      setErrorMessage(error.response?.data?.message || 'Authentication failed');
+      // setErrorMessage(error.response?.data?.message || 'Authentication failed');
+      toast.error(error.response?.data?.message || 'Authentication failed');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -249,8 +267,14 @@ export default function Login() {
                   {showConfirmPassword ? <AiOutlineEyeInvisible size={20} /> : <AiOutlineEye size={20} />}
                 </button>
               </div>
-              <button type="submit" className="bg-[#BB30C4] font-bold cursor-pointer rounded-lg text-background hover:bg-[#961C9FFF] transition-colors p-4">
-                Reset Password
+              <button 
+                type="submit" 
+                disabled={isResetting}
+                className={`bg-[#BB30C4] font-bold cursor-pointer rounded-lg text-white hover:bg-[#961C9FFF] transition-colors p-4 ${
+                  isResetting ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                {isResetting ? 'Resetting...' : 'Reset Password'}
               </button>
               <button 
                 type="button" 
@@ -279,8 +303,14 @@ export default function Login() {
                   className="border-2 border-[#656572] bg-transparent rounded-lg p-3 text-black pl-6"
                   required
                 />
-                <button type="submit" className="bg-[#BB30C4] font-bold cursor-pointer rounded-lg text-background hover:bg-[#961C9FFF] transition-colors p-4">
-                  Send Code
+                <button 
+                  type="submit" 
+                  disabled={isSendingCode}
+                  className={`bg-[#BB30C4] font-bold cursor-pointer rounded-lg text-background hover:bg-[#961C9FFF] transition-colors p-4 ${
+                    isSendingCode ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                >
+                  {isSendingCode ? 'Sending...' : 'Send Code'}
                 </button>
                 <button type="button" onClick={() => {
                   setIsResetPassword(false);
@@ -369,8 +399,14 @@ export default function Login() {
                     </button>
                   </div>
                 )}
-                <button type="submit" className="bg-[#BB30C4] font-bold cursor-pointer rounded-lg text-background hover:bg-[#961C9FFF] transition-colors p-4">
-                  {isLogin ? "Login" : "Sign Up"}
+                <button 
+                  type="submit"  
+                  disabled={isSubmitting}
+                  className={`bg-[#BB30C4] font-bold cursor-pointer rounded-lg text-white hover:bg-[#961C9FFF] transition-colors p-4 ${
+                    isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                >
+                  {isSubmitting ? (isLogin ? 'Logging in...' : 'Signing up...') : (isLogin ? 'Login' : 'Sign Up')}
                 </button>
                 <button type="button" onClick={() => {
                   setIsLogin(!isLogin);
@@ -391,6 +427,18 @@ export default function Login() {
           )}
         </div>
       </div>
+      <ToastContainer
+        position="top-center"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored"
+      />
     </div>
   );
 }

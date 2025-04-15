@@ -1,16 +1,9 @@
 import React, { useState, useEffect } from "react";
-import {
-  Plus,
-  Upload,
-  Save,
-  Download,
-  X,
-  RefreshCw,
-  ChevronDown,
-} from "lucide-react";
+import { Plus, Upload, Save, Download, X, RefreshCw, ChevronDown, Pencil, Trash2, Camera} from "lucide-react";
 import axios from "axios";
 import { AnimatePresence, motion } from "framer-motion";
-import { Pencil, Trash2 } from "lucide-react";
+import CameraModal from './CameraModal';
+import { ToastContainer, toast } from 'react-toastify';
 
 // Alert component
 const Alert = ({ message, type, onClose }) => {
@@ -116,9 +109,13 @@ const AvatarManagement = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState("");
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
+  const [generationStyle, setGenerationStyle] = useState("");
+  const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
+  const [generationDropdownOpen, setGenerationDropdownOpen] = useState(false);
   const startEditing = () => setIsEditing(true);
   const cancelEditing = () => {
-    setEditName(selectedStudio.name);
+    setEditedName(selectedStudio.name);
     setIsEditing(false);
   };
 
@@ -137,86 +134,76 @@ const AvatarManagement = () => {
 
   const handleGenerateAvatar = async () => {
     // Validate required fields
-    if (!gender || !skin || !style) {
-      showNotification("Please fill in all required fields.", "error");
+    if (!gender || !skin || !generationStyle) {
+      toast.error("Please fill in all required fields.");
       return;
     }
-
+  
     const avatarPrompt = `Create a detailed avatar with the following characteristics:
       - Gender: ${gender}
       - Skin: ${skin}
-      - Style: ${style}
+      - Style: ${generationStyle}
     `;
-
+  
     const formData = new FormData();
     formData.append("prompt", avatarPrompt);
+  
     if (referenceImage) {
       if (referenceImage instanceof File) {
-        formData.append("referenceImage", referenceImage); // Append the file directly
+        formData.append("referenceImage", referenceImage);
       } else {
-        showNotification("Invalid reference image format.", "error");
+        toast.error("Invalid Reference Image Format.");
         return;
       }
     }
-
+  
     setIsGenerating(true);
     setGeneratedAvatar(null);
-
+  
     try {
-      // Show blue notification for generating
-      showNotification("Generating your avatar...", "generating");
-
-      // Make API request with FormData
-      const response = await axios.post(
-        "http://192.168.1.71:8083/avatar_gen/generate_avatar",
-        formData,
+      const response = await toast.promise(
+        axios.post(
+          "http://192.168.1.71:8083/avatar_gen/generate_avatar",
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+            responseType: "blob",
+          }
+        ),
         {
-          headers: {
-            "Content-Type": "multipart/form-data", // Set the correct content type
+          pending: "Generating your avatar...",
+          success: "Avatar generated successfully!",
+          error: {
+            render({ data }) {
+              const err = data.response?.data?.message || data.message || "Unknown error occurred";
+              return `Failed to generate avatar: ${err}`;
+            },
           },
-          responseType: "blob", // Specify blob response type
         }
       );
-
-      // Check if response is successful
-      if (!response.data) {
-        throw new Error("Invalid response from server");
-      }
-
-      // Create a blob URL from the binary data
+  
+      // Process blob and create object URL
       const blob = new Blob([response.data], { type: "image/png" });
       const imageUrl = URL.createObjectURL(blob);
-
-      // Create a new avatar object
+  
       const newAvatar = {
         id: Date.now(),
         imgSrc: imageUrl,
-        name: avatarName || `${gender} ${style} Avatar`,
-        blob: blob, // Store the blob for later use
+        name: avatarName || `${gender} ${generationStyle} Avatar`,
+        blob,
       };
-
-      // Update state
+  
       setGeneratedAvatar(newAvatar);
-
-      // Show success notification
-      showNotification("Avatar generated successfully!", "success");
     } catch (error) {
-      // Detailed error logging and user-friendly message
       console.error("Error generating avatar:", error);
-
-      // Extract server error message if available
-      const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
-        "Unknown error occurred";
-
-      // Show error notification
-      showNotification(`Failed to generate avatar: ${errorMessage}`, "error");
+      // No need to show toast.error here since it's handled inside toast.promise
     } finally {
-      // Always set generating to false
       setIsGenerating(false);
     }
   };
+  
 
   const handleDownloadAvatar = () => {
      if (generatedAvatar) {
@@ -246,67 +233,19 @@ const AvatarManagement = () => {
     }
   };
 
-  // const handleFileUpload = async (event) => {
-  //   const file = event.target.files[0];
-  //   if (file) {
-  //     const reader = new FileReader();
-  //     reader.onload = async (e) => {
-  //       const base64String = e.target.result.split(",")[1];
-
-  //       if (!base64String) {
-  //         showNotification("Failed to process image data", "error");
-  //         return;
-  //       }
-
-  //       const payload = {
-  //         email: localStorage.getItem("userEmail") || "test@example.com",
-  //         image: base64String,
-  //         name: file.name.split(".")[0] || "Uploaded Avatar",
-  //       };
-
-  //       try {
-  //         showNotification("Uploading avatar...", "generating");
-
-  //         const response = await axios.post(
-  //           "http://192.168.1.141:3001/avatar/addAvatar",
-  //           payload
-  //         );
-
-  //         const data = response.data;
-  //         console.log("API Response:", data);
-
-  //         if (data && data.imgSrc) {
-  //           const uploadedAvatar = {
-  //             id: data._id || Date.now(),
-  //             imgSrc: `http://192.168.1.141:3001${data.imgSrc}`.replace(/([^:]\/\/)+/g, "$1"),
-  //             name: payload.name,
-  //           };
-
-  //           setMyAvatars((prev) => [...prev, uploadedAvatar]);
-  //           showNotification("Avatar uploaded successfully!", "success");
-  //         } else {
-  //           console.error("Invalid API response:", data);
-  //           showNotification("Failed to upload avatar: Invalid response from server", "error");
-  //         }
-  //       } catch (error) {
-  //         console.error("Error uploading avatar:", error.response || error);
-  //         showNotification(
-  //           `Failed to upload avatar: ${error.response?.data?.message || error.message}`,
-  //           "error"
-  //         );
-  //       }
-  //     };
-  //     reader.readAsDataURL(file);
-  //   } else {
-  //     showNotification("No file selected for upload.", "error");
-  //   }
-  // };
-
   const handleReferenceImageUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
       setReferenceImage(file); // Store the file directly
     }
+  };
+
+  const handleOpenCameraModal = () => {
+    setIsCameraModalOpen(true);
+  };
+
+  const handleCameraCapture = (imageBlob: Blob) => {
+    setReferenceImage(new File([imageBlob], 'camera-photo.jpg', { type: 'image/jpeg' }));
   };
 
   const StylesOption = [
@@ -362,7 +301,12 @@ const AvatarManagement = () => {
 
   const handleStyleChange = (selectedStyle) => {
     setStyle(selectedStyle);
-    setDropdownOpen(false);
+    setFilterDropdownOpen(false);
+  };
+
+  const handleGenerationStyleChange = (selectedStyle) => {
+    setGenerationStyle(selectedStyle);
+    setGenerationDropdownOpen(false);
   };
 
   // Update handleAvatarNameChange
@@ -380,13 +324,13 @@ const AvatarManagement = () => {
 
   const handleSaveAvatar = async () => {
     if (!downloadFileName.trim()) {
-      showNotification("Please provide a file name for the avatar.", "error");
+      toast.info("Please provide a name for the avatar.")
+      // showNotification("Please provide a file name for the avatar.", "error");
       return;
     }
 
     if (generatedAvatar?.blob) {
       try {
-        showNotification("Processing avatar...", "generating");
 
         // Create a function to read the file as Base64
         const readFileAsDataURL = (blob) => {
@@ -410,7 +354,7 @@ const AvatarManagement = () => {
         const payload = {
           email: localStorage.getItem("userEmail") || "test@example.com",
           image: base64Image,
-          style: style.toLowerCase(),
+          style: generationStyle.toLowerCase(),
           name: downloadFileName,
         };
 
@@ -419,11 +363,21 @@ const AvatarManagement = () => {
           base64Image.length
         );
 
-        // Send data to API
-        const response = await axios.post(
-          "http://192.168.1.141:3001/avatar/addAvatar",
-          payload
+        // Show toast.promise and send data to API
+        const response = await toast.promise(
+          axios.post("http://192.168.1.141:3001/avatar/addAvatar", payload),
+          {
+            pending: "Saving avatar...",
+            success: "Avatar added to your collection!",
+            error: {
+              render({ data }) {
+                const errMsg = data?.response?.data?.message || data?.message || "Unknown error occurred";
+                return `Failed to save avatar: ${errMsg}`;
+              },
+            },
+          }
         );
+
 
         const data = response.data;
         console.log("Avatar saved to the database:", data);
@@ -439,34 +393,39 @@ const AvatarManagement = () => {
           setMyAvatars((prev) => [...prev, savedAvatar]);
           setSelectedAvatar(savedAvatar);
           setIsModalOpen(false);
-          showNotification("Avatar added to your collection!", "success");
+          // showNotification("Avatar added to your collection!", "success");
+          // toast.success("Avatar added to your collection!")
 
           //Reset all the data after they input the avatar
           setGeneratedAvatar(null);
           setDownloadFileName("");
-          setStyle("");
+          setGenerationStyle("");  // Changed from setStyle to setGenerationStyle
           setGender("");
           setSkin("");
           setReferenceImage(null);
         }
       } catch (error) {
         console.error("Error saving avatar:", error);
-        showNotification(`Failed to save avatar: ${error.message}`, "error");
+        // showNotification(`Failed to save avatar: ${error.message}`, "error");
+        toast.error("Failed to save avatar: " + error.message);
       }
     } else {
-      showNotification("No avatar to save!", "error");
+      // showNotification("No avatar to save!", "error");
+      toast.error("No Avatar to save. Please try again.");
     }
   };
 
   const handleNameSave = async () => {
     if (!selectedAvatar) {
-      showNotification("No avatar selected to update.", "error");
+      // showNotification("No avatar selected to update.", "error");
+      toast.info("No avatar selected to update.")
       return;
     }
 
     const newName = editedName.trim();
     if (!newName) {
-      showNotification("Please enter a valid name to save.", "error");
+      toast.info("Please enter a valid name to save.");
+      // showNotification("Please enter a valid name to save.", "error");
       return;
     }
 
@@ -490,7 +449,8 @@ const AvatarManagement = () => {
           prev.map((av) => (av.id === avatarId ? updatedAvatar : av))
         );
         setIsEditing(false);
-        showNotification("Avatar name updated successfully!", "success");
+        // showNotification("Avatar name updated successfully!", "success");
+        toast.success("Avatar name updated successfully!")
       } else {
         throw new Error(
           response.data.message || "Failed to update avatar name"
@@ -510,7 +470,7 @@ const AvatarManagement = () => {
 
   const handleDeleteAvatar = async () => {
     if (!selectedAvatar) {
-      showNotification("No avatar selected to delete.", "error");
+      toast.error("No avatar selected to delete.");
       return;
     }
 
@@ -537,29 +497,31 @@ const AvatarManagement = () => {
       if (response.data.status === "success") {
         setMyAvatars((prev) => prev.filter((av) => av.id !== avatarId));
         setSelectedAvatar(null);
-        showNotification("Avatar deleted successfully!", "success");
+        toast.success("Avatar Deleted Successfully!");
       } else {
         throw new Error(response.data.message || "Failed to delete avatar");
       }
     } catch (error) {
       console.error("Error deleting avatar:", error);
-      showNotification(`Failed to delete avatar: ${error.message}`, "error");
+      toast.error(`Failed to delete avatar: ${error.message}`);
+      // showNotification(`Failed to delete avatar: ${error.message}`, "error");
     }
   };
 
   return (
-    // Fixed height container that takes the full viewport height
-    <div className="flex h-3/5 bg-gray-50 rounded-2xl shadow-lg px-4 sm:px-6 lg:px-8 mx-4 overflow-hidden">
-      <div className="w-full max-w-8xl mx-auto rounded-lg h-full">
-        <div className="grid grid-cols-1 md:grid-cols-12 h-full">
-          {/* Left Panel - Settings and Avatar Selection */}
-          <div className="md:col-span-7  md:border-b-0 md:border-r border-gray-200 p-4 sm:p-6 flex flex-col h-full">
-            {/* Settings Section - Fixed height */}
+    // CONTAINER
+    <div className = "px-[100px] flex flex-col"> 
+      {/* MAIN CONTENT */}
+      <div className="grid grid-cols-6 grid-rows-6 gap-5">
+          {/* UPPER LEFT - FILTER */}
+          <div className="col-span-4 row-span-2 bg-white p-4 rounded-xl shadow-lg">
+            {/* FILTER */}
             <div className="mb-4 sm:mb-6">
-              <h3 className="text-[#9B25A7] font-bold text-lg sm:text-xl mb-3 sm:mb-4">
+              <h3 className="text-[#9B25A7] font-bold text-lg sm:text-xl ">
                 Settings
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <hr className="border-t border-[#9B25A7] my-4" />
+              <div className="flex flex-col gap-4">
                 <div className="w-full">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Avatar Name
@@ -569,7 +531,7 @@ const AvatarManagement = () => {
                     placeholder="Enter Avatar Name"
                     value={avatarName}
                     onChange={handleAvatarNameChange}
-                    className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent focus:outline-none"
+                    className="w-full p-2 sm:p-3 border border-[#9B25A7] rounded-md text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent focus:outline-none"
                   />
                 </div>
                 {/* Dropdown */}
@@ -579,18 +541,18 @@ const AvatarManagement = () => {
                   </label>
                   <div className="relative">
                     <button
-                      className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm text-gray-700 flex justify-between items-center focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent"
-                      onClick={() => setDropdownOpen(!dropdownOpen)}
+                      className="w-full p-2 sm:p-3 border border-[#9B25A7] rounded-md text-sm text-gray-700 flex justify-between items-center focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent"
+                      onClick={() => setFilterDropdownOpen(!filterDropdownOpen)}
                     >
                       <span>{style || "Select an Option"}</span>
                       <ChevronDown
                         size={16}
                         className={`transition-transform ${
-                          dropdownOpen ? "rotate-180" : ""
+                          filterDropdownOpen ? "rotate-180" : ""
                         }`}
                       />
                     </button>
-                    {dropdownOpen && (
+                    {filterDropdownOpen && (
                       <div className="absolute w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-10">
                         {[
                           "All",
@@ -615,15 +577,148 @@ const AvatarManagement = () => {
                 </div>
               </div>
             </div>
-            {/* Avatar Selection - Scrollable area */}
+          </div>
+          {/* WHOLE RIGHT PANEL - AVATAR PREVIEW*/}
+          <div className="col-span-6 row-span-6 col-start-5 bg-white p-4 rounded-xl shadow-lg">
+            <div className="md:col-span-5  flex flex-col h-fit">
+              <h3 className="text-[#9B25A7] font-bold text-lg sm:text-xl">
+                Avatar Preview
+              </h3>
+              <hr className="border-t border-[#9B25A7] my-4" />
+              <div className="flex-1 flex items-center justify-center rounded-lg overflow-auto">
+                {selectedAvatar ? (
+                  <div className="flex flex-row gap-4 bg-white rounded-lg overflow-auto p-4 w-[550px] " >
+                    <div className="relative mb-4 flex justify-center w-[500px] h-[700px]  rounded-md p-3">
+                      <img
+                        src={selectedAvatar.imgSrc}
+                        alt={selectedAvatar.name}
+                        className="rounded-lg w-full h-full object-cover"
+                      />
+                    </div>
+
+                    <div className="flex flex-col justify-between w-full h-[700px]">
+                      <div className="space-y-2 mb-4 w-full shrink-0">
+                        <div className="space-y-2 mb-4 w-full">
+                          <label className="block text-sm font-medium text-gray-700">
+                            Name
+                          </label>
+                          <div className="flex items-center border rounded-lg p-2 w-full">
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                value={editedName}
+                                onChange={(e) => setEditedName(e.target.value)}
+                                className="flex-grow outline-none px-2"
+                                autoFocus
+                              />
+                            ) : (
+                              <span className="flex-grow">
+                                {selectedAvatar.name.charAt(0).toUpperCase() +
+                                  selectedAvatar.name.slice(1)}
+                              </span>
+                            )}
+                            {!isEditing && (
+                              <Pencil
+                                size={20}
+                                className="text-gray-500 cursor-pointer"
+                                onClick={handleNameEdit}
+                              />
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-2 mb-4 w-full">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                              ID
+                            </label>
+                            <div className="bg-gray-100 rounded-lg p-2 w-full">
+                              {selectedAvatar.id}
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                              Style
+                            </label>
+                            <div className="bg-gray-100 rounded-lg p-2 w-full">
+                              {(selectedAvatar.style || "N/A").replace(
+                                /^\w/,
+                                (c) => c.toUpperCase()
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 w-full">
+                        {isEditing ? (
+                          <>
+                            <button
+                              className="w-full bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-[#7A1C86] transition"
+                              onClick={handleNameSave}
+                            >
+                              <Save size={16} /> Save Changes
+                            </button>
+                            <button
+                              className="w-full bg-gray-500 text-white py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-600 transition"
+                              onClick={() => setIsEditing(false)}
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              className="w-full bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] py-2 rounded-lg flex items-center justify-center gap-2 transition"
+                              onClick={() => setIsEditing(true)}
+                            >
+                              <Pencil size={16} /> Edit Avatar
+                            </button>
+                            <button
+                              className="w-full bg-white border border-[#9B25A7] text-[#9B25A7] py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-[#F4E3F8] transition"
+                              onClick={handleDownloadSelectedAvatar}
+                            >
+                              <Download size={16} /> Download Avatar
+                            </button>
+                            <button
+                              className="w-full bg-[#D31515] text-white py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-red-600 transition"
+                              onClick={handleDeleteAvatar}
+                            >
+                              <Trash2 size={16} /> Delete
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center text-gray-500 p-8">
+                    <div className="w-32 h-32 sm:w-40 sm:h-40 mx-auto border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center mb-4">
+                      <Plus size={32} className="text-gray-300" />
+                    </div>
+                    <p className="text-base sm:text-lg">No Avatar Selected</p>
+                    <p className="text-sm mt-2 max-w-md mx-auto">
+                      {myAvatars.length === 0
+                        ? style
+                          ? `No avatars available in ${style} style. Try selecting a different style or create a new avatar.`
+                          : "No avatars exist in your collection. Start by creating your first avatar!"
+                        : "Choose an avatar from the list or create a new one"}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          {/* BOTTOM LEFT - AVATAR SELECTION */}
+          <div className="col-span-4 row-span-4 row-start-3 bg-white p-4 rounded-xl shadow-lg">
             <div className="flex-1 flex flex-col min-h-fit">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <h3 className="text-[#9B25A7] font-bold text-lg sm:text-xl">
                   My Avatars
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   <button
-                    className="w-full sm:w-auto bg-[#9B25A7] text-white text-sm py-2 px-4 rounded-md flex items-center gap-1 hover:bg-[#7A1C86] transition-colors"
+                    className="w-full sm:w-auto bg-[#9B25A7] text-white text-sm py-2 px-4 cursor-pointer rounded-md flex items-center gap-1 hover:bg-[#7A1C86] transition-colors"
                     onClick={() => setIsModalOpen(true)}
                   >
                     <Plus size={16} /> New Avatar
@@ -639,6 +734,7 @@ const AvatarManagement = () => {
                   </label>
                 </div>
               </div>
+              <hr className="border-t border-[#9B25A7] my-4" />
               {/* Scrollable grid container with fixed max-height */}
               <div className="max-h-[600px] overflow-y-auto p-4">
                 {isLoading ? (
@@ -663,7 +759,7 @@ const AvatarManagement = () => {
                             <img
                               src={avatar.imgSrc}
                               alt={avatar.name}
-                              className="w-full h-full object-contain rounded-lg"
+                              className="w-full h-full object-cover rounded-lg"
                               onError={(e) => {
                                 console.error("Image load error:", {
                                   id: avatar.id,
@@ -707,137 +803,24 @@ const AvatarManagement = () => {
               </div>
             </div>
           </div>
-          {/* Right Panel - Avatar Preview */}
-          <div className="md:col-span-5 p-4 sm:p-6 flex flex-col h-fit">
-            <h3 className="text-[#9B25A7] font-bold text-lg sm:text-xl mb-4 sm:mb-6">
-              Avatar Preview
-            </h3>
-            <div className="flex-1 flex items-center justify-center bg-white rounded-lg overflow-auto">
-              {selectedAvatar ? (
-                <div className="flex flex-col items-center bg-white rounded-lg overflow-auto p-4 w-[550px]">
-                  <div className="relative mb-4 flex justify-center w-[200px] h-[355px]">
-                    <img
-                      src={selectedAvatar.imgSrc}
-                      alt={selectedAvatar.name}
-                      className="rounded-lg w-full h-full object-contain"
-                    />
-                  </div>
-
-                  <div className="space-y-2 mb-4 w-full">
-                    <label className="block text-sm font-medium text-gray-700">
-                      Name
-                    </label>
-                    <div className="flex items-center border rounded-lg p-2 w-full">
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          value={editedName}
-                          onChange={(e) => setEditedName(e.target.value)}
-                          className="flex-grow outline-none px-2"
-                          autoFocus
-                        />
-                      ) : (
-                        <span className="flex-grow">
-                          {selectedAvatar.name}
-                        </span>
-                      )}
-                      {!isEditing && (
-                        <Pencil
-                          size={20}
-                          className="text-gray-500 cursor-pointer"
-                          onClick={handleNameEdit}
-                        />
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 mb-4 w-full">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        ID
-                      </label>
-                      <div className="bg-gray-100 rounded-lg p-2 w-full">
-                        {selectedAvatar.id}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Style
-                      </label>
-                      <div className="bg-gray-100 rounded-lg p-2 w-full">
-                        {selectedAvatar.style || "N/A"}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 w-full">
-                    {isEditing ? (
-                      <>
-                        <button
-                          className="w-full bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-[#7A1C86] transition"
-                          onClick={handleNameSave}
-                        >
-                          <Save size={16} /> Save Changes
-                        </button>
-                        <button
-                          className="w-full bg-gray-500 text-white py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-600 transition"
-                          onClick={() => setIsEditing(false)}
-                        >
-                          Cancel
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          className="w-full bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] py-2 rounded-lg flex items-center justify-center gap-2 transition"
-                          onClick={() => setIsEditing(true)}
-                        >
-                          <Pencil size={16} /> Edit Studio
-                        </button>
-                        <button
-                          className="w-full bg-white border border-[#9B25A7] text-[#9B25A7] py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-[#F4E3F8] transition"
-                          onClick={handleDownloadSelectedAvatar}
-                        >
-                          <Download size={16} /> Download Avatar
-                        </button>
-                        <button
-                          className="w-full bg-[#D31515] text-white py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-red-600 transition"
-                          onClick={handleDeleteAvatar}
-                        >
-                          <Trash2 size={16} /> Delete
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center text-gray-500 p-8">
-                  <div className="w-32 h-32 sm:w-40 sm:h-40 mx-auto border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center mb-4">
-                    <Plus size={32} className="text-gray-300" />
-                  </div>
-                  <p className="text-base sm:text-lg">No Avatar Selected</p>
-                  <p className="text-sm mt-2 max-w-md mx-auto">
-                    {myAvatars.length === 0
-                      ? style
-                        ? `No avatars available in ${style} style. Try selecting a different style or create a new avatar.`
-                        : "No avatars exist in your collection. Start by creating your first avatar!"
-                      : "Choose an avatar from the list or create a new one"}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
       </div>
-
-      {/* Modal for New Avatar - Fixed dimensions with internal scrolling */}
+      {/* OTHER CONTENTS */}
+       {/* Modal for New Avatar - Fixed dimensions with internal scrolling */}
       {isModalOpen && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 z-50">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 z-50">
           <div className="relative bg-white p-6 rounded-lg shadow-xl w-full max-w-5xl flex flex-col lg:flex-row max-h-[90vh] gap-4 overflow-hidden">
             {/* Close Button */}
             <button
-              onClick={() => setIsModalOpen(false)}
+              onClick={() => {
+                setIsModalOpen(false);
+                setGenerationStyle("");  // Reset generation style when closing modal
+                setGender("");
+                setSkin("");
+                setReferenceImage(null);
+                setGeneratedAvatar(null);
+                setDownloadFileName("");
+                setGenerationDropdownOpen(false);
+              }}
               className="absolute top-3 right-3 p-2 rounded-full bg-gray-200 hover:bg-gray-300 transition z-10"
               aria-label="Close modal"
             >
@@ -858,26 +841,23 @@ const AvatarManagement = () => {
                   <div className="relative">
                     <button
                       className="w-full p-3 border border-gray-300 rounded-lg text-sm text-gray-700 flex justify-between items-center focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent"
-                      onClick={() => setDropdownOpen(!dropdownOpen)}
+                      onClick={() => setGenerationDropdownOpen(!generationDropdownOpen)}
                     >
-                      <span>{style || "Select Style"}</span>
+                      <span>{generationStyle || "Select Style"}</span>
                       <ChevronDown
                         size={16}
                         className={`transition-transform ${
-                          dropdownOpen ? "rotate-180" : ""
+                          generationDropdownOpen ? "rotate-180" : ""
                         }`}
                       />
                     </button>
-                    {dropdownOpen && (
+                    {generationDropdownOpen && (
                       <div className="absolute w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
                         {StylesOption.map((option) => (
                           <div
                             key={option}
                             className="p-3 hover:bg-[#E3C5F0] text-sm cursor-pointer"
-                            onClick={() => {
-                              setStyle(option);
-                              setDropdownOpen(false);
-                            }}
+                            onClick={() => handleGenerationStyleChange(option)}
                           >
                             {option}
                           </div>
@@ -951,13 +931,35 @@ const AvatarManagement = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Upload Reference Image (Optional)
                   </label>
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/jpg"
-                    onChange={handleReferenceImageUpload}
-                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#9B25A7] file:text-white hover:file:bg-[#7A1C86]"
-                  />
                 </div>
+
+                <div className="flex gap-4 items-center justify-center">
+                  {/* CHOOSE FILE */}
+                  <div>
+                    <label className="flex items-center gap-2 cursor-pointer text-sm text-white bg-[#9B25A7] py-2 px-4 rounded-lg shadow hover:bg-[#7A1C86] transition-all file:bg-none">
+                      <Upload className="w-4 h-4" />
+                      Choose File
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg"
+                        onChange={handleReferenceImageUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+
+                  {/* Take Photo */}
+                  <div>
+                    <button
+                      onClick={handleOpenCameraModal}
+                      className="flex items-center gap-2 text-sm cursor-pointer font-medium text-white bg-[#9B25A7] py-2 px-4 rounded-lg shadow hover:bg-[#7A1C86] transition-all"
+                    >
+                      <Camera className="w-4 h-4" />
+                      Take Photo
+                    </button>
+                  </div>
+                </div>
+
 
                 {/* Reference Image Preview */}
                 {referenceImage && (
@@ -1080,12 +1082,38 @@ const AvatarManagement = () => {
         </div>
       )}
 
+      <CameraModal
+        isOpen={isCameraModalOpen}
+        onClose={() => setIsCameraModalOpen(false)}
+        onCapture={handleCameraCapture}
+      />
+
       <Alert
         message={notification}
         type={notificationType}
         onClose={() => setNotification("")}
       />
-    </div>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored"
+      />
+
+      {isCameraModalOpen && (
+        <CameraModal
+          isOpen={isCameraModalOpen}
+          onClose={() => setIsCameraModalOpen(false)}
+          onCapture={handleCameraCapture}
+        />
+      )}
+    </div> //END CONTAINER
   );
 };
 
