@@ -11,6 +11,7 @@ import ScriptVoiceManagement from "../components/audioManagement/script-voice-ma
 import ContentEffectManagement from "../components/assetContentManagement/content-effect-management";
 import SceneManagerUI from "../components/updated-scene-manager";
 import AvatarGestureEmotionUI from "../components/avatarEmotion/updated-avatar-ui";
+import ProfileManagement from "../components/profile/profile";
 // import Auth from "../page";
 import { Video, Users, Tv, Mic, Music, LogIn, Menu, X } from "lucide-react";
 
@@ -61,6 +62,7 @@ const navigationItems = [
     id: "user",
     label: (localStorage.getItem('userName')),
     icon: localStorage.getItem('userName') ? Users : LogIn,
+    component: <ProfileManagement />
   },
 ];
 
