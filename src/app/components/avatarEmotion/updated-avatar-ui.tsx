@@ -250,6 +250,45 @@ const AvatarGestureEmotionUI = () => {
     fetchGesturesAndEmotions();
   }, []);
 
+  useEffect(() => {
+    const fetchCameraViews = async () => {
+      if (!selectedAvatar) return;
+
+      try {
+        const email = localStorage.getItem("userEmail") || "default@example.com";
+        const response = await axios.get(
+          `http://192.168.1.141:3001/avatarfx/getAvatarBaseCameraViews`,
+          {
+            params: {
+              email,
+              avatarID: selectedAvatar.id,
+            },
+          }
+        );
+
+        const { cameraViews } = response.data || {};
+        setGeneratedImages({
+          front: cameraViews?.front?.src
+            ? `http://192.168.1.141:3001${cameraViews.front.src}`
+            : null,
+          side: cameraViews?.side?.src
+            ? `http://192.168.1.141:3001${cameraViews.side.src}`
+            : null,
+          back: cameraViews?.back?.src
+            ? `http://192.168.1.141:3001${cameraViews.back.src}`
+            : null,
+          close: cameraViews?.close_up?.src
+            ? `http://192.168.1.141:3001${cameraViews.close_up.src}`
+            : null,
+        });
+      } catch (error) {
+        console.error("Error fetching camera views:", error);
+      }
+    };
+
+    fetchCameraViews();
+  }, [selectedAvatar]);
+
   const togglePlay = () => {
     setIsPlaying(!isPlaying);
   };
@@ -418,19 +457,13 @@ const AvatarGestureEmotionUI = () => {
       return;
     }
 
-    // Close the modal
     setIsModalOpen(false);
-
-    // Set generating state to true to disable the button
     setIsGenerating(true);
-
-    // Show loading alert
     toast.info("Generating your avatar. This may take a few seconds...");
 
     try {
       const email = localStorage.getItem("userEmail") || "default@example.com";
 
-      // Send the file path directly to the API
       const formData = new FormData();
       formData.append("file_path", selectedAvatar.imgSrc);
       formData.append(
@@ -446,9 +479,6 @@ const AvatarGestureEmotionUI = () => {
         }
       );
 
-      console.log("Emotion generation response:", response.data);
-
-      // Update state with the generated images
       const { views } = response.data;
       const generatedImages = {
         front: views.front || null,
@@ -458,7 +488,6 @@ const AvatarGestureEmotionUI = () => {
       };
       setGeneratedImages(generatedImages);
 
-      // Prepare payload for API
       const payload = {
         email,
         avatarID: selectedAvatar.id,
@@ -470,13 +499,6 @@ const AvatarGestureEmotionUI = () => {
         },
       };
 
-      // Log payload for debugging
-      console.log(
-        "Payload being sent to API:",
-        JSON.stringify(payload, null, 2)
-      );
-
-      // Send payload to API
       await axios.post(
         "http://192.168.1.141:3001/avatarfx/initializeAvatarFx",
         payload,
@@ -490,163 +512,121 @@ const AvatarGestureEmotionUI = () => {
       console.error("Error generating emotion:", error);
       toast.error(`Failed to generate avatar view. Please try again.`);
     } finally {
-      // Re-enable the button regardless of success or failure
       setIsGenerating(false);
     }
   };
 
- // Modified regenerateView function that handles both emotion and gesture regeneration
-const regenerateView = async (view, typeName = null) => {
-  if (!selectedAvatar) {
-    toast.error(`Please select an avatar before proceeding.`);
-    console.error("No avatar selected");
-    return;
-  }
-
-  // Show loading state for the specific view
-  setGeneratedImages((prev) => ({
-    ...prev,
-    [view]: "loading",
-  }));
-
-  toast.info(`Regenerating ${view} view...`);
-
-  try {
-    const email = localStorage.getItem("userEmail") || "default@example.com";
-
-    // Create the FormData object
-    const formData = new FormData();
-    formData.append("file_path", selectedAvatar.imgSrc);
-    formData.append("views", JSON.stringify([view]));
-
-    // Determine if typeName is an emotion or gesture or default regeneration
-    let endpoint = "http://192.168.1.71:8083/emotions_gen";
-    let typeKey = null;
-    
-    if (typeName) {
-      // Check if this typeName belongs to emotions
-      const isEmotion = emotions.some(
-        e => e.name.toLowerCase() === typeName.toLowerCase()
-      );
-      
-      if (isEmotion) {
-        endpoint = "http://192.168.1.71:8083/emotions_gen/emotions";
-        formData.append("emotion", typeName);
-        typeKey = "emotion";
-      } else {
-        endpoint = "http://192.168.1.71:8083/emotions_gen/gesture";
-        formData.append("gesture", typeName);
-        typeKey = "gesture";
-      }
-      
-      console.log(`Regenerating with ${typeKey}:`, typeName);
-    } else {
-      console.log("Regenerating default view without emotion/gesture");
+  const regenerateView = async (view, typeName = null) => {
+    if (!selectedAvatar) {
+      toast.error(`Please select an avatar before proceeding.`);
+      return;
     }
 
-    // Send the request to the API
-    const response = await axios.post(
-      endpoint,
-      formData,
-      {
-        headers: { "Content-Type": "multipart/form-data" },
+    // Set loading state for the specific view being regenerated
+    setGeneratedImages((prev) => ({ ...prev, [view]: "loading" }));
+    toast.info(`Regenerating ${view} view...`);
+
+    try {
+      const email = localStorage.getItem("userEmail") || "default@example.com";
+
+      const formData = new FormData();
+      formData.append("file_path", selectedAvatar.imgSrc);
+      formData.append("views", JSON.stringify([view]));
+
+      let endpoint = "http://192.168.1.71:8083/emotions_gen";
+      if (typeName) {
+        const isEmotion = emotions.some(
+          (e) => e.name.toLowerCase() === typeName.toLowerCase()
+        );
+        endpoint = isEmotion
+          ? "http://192.168.1.71:8083/emotions_gen/emotions"
+          : "http://192.168.1.71:8083/emotions_gen/gesture";
+        formData.append(isEmotion ? "emotion" : "gesture", typeName);
       }
-    );
 
-    console.log(`${view} view regeneration response:`, response.data);
+      const response = await axios.post(endpoint, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
-    // Handle the response data
-    const { views } = response.data || {};
-    const updatedImage = views?.[view] || null;
+      const { views } = response.data || {};
+      const updatedImage = views?.[view] || null;
 
-    if (updatedImage) {
-      // Update the state with the new image
-      setGeneratedImages((prev) => ({
-        ...prev,
-        [view]: updatedImage,
-      }));
+      if (updatedImage) {
+        // Update only the regenerated view in the state
+        setGeneratedImages((prev) => ({ ...prev, [view]: updatedImage }));
 
-      // Save the updated view to the database
-      const updatedCameraView = {
-        [view]: { base64: updatedImage },
-      };
-
-      await axios.post(
-        "http://192.168.1.141:3001/avatarfx/updateAvatarView",
-        {
+        // Save all four camera views to the database API
+        const payload = {
           email,
           avatarID: selectedAvatar.id,
-          cameraView: updatedCameraView,
-        }
-      );
+          cameraViews: {
+            front: { base64: views.front || generatedImages.front },
+            side: { base64: views.side || generatedImages.side },
+            back: { base64: views.back || generatedImages.back },
+            close_up: { base64: views.close || generatedImages.close },
+          },
+        };
 
-      toast.success(
-        typeKey 
-          ? `${view} view regenerated with ${typeName} ${typeKey} successfully!` 
-          : `${view} view regenerated successfully!`
-      );
-    } else {
-      console.warn("No new image received from the API, but proceeding.");
+        await axios.post(
+          "http://192.168.1.141:3001/avatarfx/initializeAvatarFx",
+          payload,
+          {
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+
+        toast.success(
+          typeName
+            ? `${view} view regenerated with ${typeName} successfully!`
+            : `${view} view regenerated successfully!`
+        );
+      } else {
+        // Revert loading state if no new image was generated
+        setGeneratedImages((prev) => ({ ...prev, [view]: prev[view] }));
+        toast.error("No new image was generated. Please try again.");
+      }
+    } catch (error) {
+      console.error(`Error regenerating ${view} view:`, error);
+      // Revert loading state on error
       setGeneratedImages((prev) => ({
         ...prev,
-        [view]: prev[view],
+        [view]: prev[view] === "loading" ? null : prev[view],
       }));
-      toast.info(
-        `${view} view regenerated successfully, but no new image was returned.`
-      );
+      toast.error(`Failed to regenerate the ${view} view. Please try again.`);
     }
-  } catch (error) {
-    console.error(`Error regenerating ${view} view:`, error);
-
-    // Keep the existing image intact
-    setGeneratedImages((prev) => ({
-      ...prev,
-      [view]: prev[view] !== "loading" ? prev[view] : null,
-    }));
-
-    const errorMessage =
-      error.response?.status === 404
-        ? "The requested endpoint was not found. Please contact support."
-        : error.response?.status === 500
-        ? "Server error occurred. Please try again later."
-        : `Failed to regenerate the ${view} view. Please try again.`;
-
-    toast.error(errorMessage);
-  }
-};
+  };
 
   const handleRegenerateClick = (view) => {
     setRegenerateViewType(view);
     setIsRegenerateModalOpen(true);
   };
 
-  // Change the handleRegenerateOption function to use the active selections properly
-const handleRegenerateOption = async (type) => {
-  setIsRegenerateModalOpen(false);
+  const handleRegenerateOption = async (type) => {
+    setIsRegenerateModalOpen(false);
 
-  if (!regenerateViewType) {
-    toast.error("Please select a camera view to regenerate.");
-    return;
-  }
+    if (!regenerateViewType) {
+      toast.error("Please select a camera view to regenerate.");
+      return;
+    }
 
-  if (type === "camera") {
-    await regenerateView(regenerateViewType); // Regenerate the selected camera view
-  } else if (type === "gesture") {
-    // Use the currently selected gesture for regeneration
-    if (selectedGesture) {
-      await regenerateView(regenerateViewType, selectedGesture.name);
-    } else {
-      toast.error("Please select a gesture to regenerate.");
+    if (type === "camera") {
+      await regenerateView(regenerateViewType); // Regenerate the selected camera view
+    } else if (type === "gesture") {
+      // Use the currently selected gesture for regeneration
+      if (selectedGesture) {
+        await regenerateView(regenerateViewType, selectedGesture.name);
+      } else {
+        toast.error("Please select a gesture to regenerate.");
+      }
+    } else if (type === "emotion") {
+      // Use the currently selected emotion for regeneration
+      if (selectedEmotion) {
+        await regenerateView(regenerateViewType, selectedEmotion.name);
+      } else {
+        toast.error("Please select an emotion to regenerate.");
+      }
     }
-  } else if (type === "emotion") {
-    // Use the currently selected emotion for regeneration
-    if (selectedEmotion) {
-      await regenerateView(regenerateViewType, selectedEmotion.name);
-    } else {
-      toast.error("Please select an emotion to regenerate.");
-    }
-  }
-};
+  };
 
   const fetchGeneratedImages = async () => {
     if (!selectedAvatar) {

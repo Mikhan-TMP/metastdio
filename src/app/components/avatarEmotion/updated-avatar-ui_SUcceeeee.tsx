@@ -38,6 +38,8 @@ const AvatarGestureEmotionUI = () => {
   const [selectedAvatar, setSelectedAvatar] = useState(null);
   const [selectedGesture, setSelectedGesture] = useState(null);
   const [selectedEmotion, setSelectedEmotion] = useState(null);
+  const [recentEmotion, setRecentEmotion] = useState(null); // Track the most recent emotion
+  const [recentGesture, setRecentGesture] = useState(null); // Track the most recent gesture
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [activeTab, setActiveTab] = useState("gestures");
@@ -52,6 +54,8 @@ const AvatarGestureEmotionUI = () => {
   });
   const [isGestureProcessing, setIsGestureProcessing] = useState(false);
   const [isEmotionProcessing, setIsEmotionProcessing] = useState(false);
+  const [isRegenerateModalOpen, setIsRegenerateModalOpen] = useState(false);
+  const [regenerateViewType, setRegenerateViewType] = useState(null);
 
   const [gestures, setGestures] = useState([]);
   const [emotions, setEmotions] = useState([]);
@@ -246,16 +250,57 @@ const AvatarGestureEmotionUI = () => {
     fetchGesturesAndEmotions();
   }, []);
 
+  useEffect(() => {
+    const fetchCameraViews = async () => {
+      if (!selectedAvatar) return;
+
+      try {
+        const email = localStorage.getItem("userEmail") || "default@example.com";
+        const response = await axios.get(
+          `http://192.168.1.141:3001/avatarfx/getAvatarBaseCameraViews`,
+          {
+            params: {
+              email,
+              avatarID: selectedAvatar.id,
+            },
+          }
+        );
+
+        const { cameraViews } = response.data || {};
+        setGeneratedImages({
+          front: cameraViews?.front?.src
+            ? `http://192.168.1.141:3001${cameraViews.front.src}`
+            : null,
+          side: cameraViews?.side?.src
+            ? `http://192.168.1.141:3001${cameraViews.side.src}`
+            : null,
+          back: cameraViews?.back?.src
+            ? `http://192.168.1.141:3001${cameraViews.back.src}`
+            : null,
+          close: cameraViews?.close_up?.src
+            ? `http://192.168.1.141:3001${cameraViews.close_up.src}`
+            : null,
+        });
+      } catch (error) {
+        console.error("Error fetching camera views:", error);
+      }
+    };
+
+    fetchCameraViews();
+  }, [selectedAvatar]);
+
   const togglePlay = () => {
     setIsPlaying(!isPlaying);
   };
 
   const handleGestureSelect = (gesture) => {
     setSelectedGesture(gesture);
+    setRecentGesture(gesture); // Update the most recent gesture
   };
 
   const handleEmotionSelect = (emotion) => {
     setSelectedEmotion(emotion);
+    setRecentEmotion(emotion); // Update the most recent emotion
   };
 
   const handleEmotionClick = async (emotion) => {
@@ -489,7 +534,7 @@ const AvatarGestureEmotionUI = () => {
     }
   };
 
-  const regenerateView = async (view) => {
+  const regenerateView = async (view, typeName = null) => {
     if (!selectedAvatar) {
       toast.error(`Please select an avatar before proceeding.`);
       console.error("No avatar selected");
@@ -507,60 +552,69 @@ const AvatarGestureEmotionUI = () => {
     try {
       const email = localStorage.getItem("userEmail") || "default@example.com";
 
-      // Send the file path directly to the API
+      // Create the FormData object
       const formData = new FormData();
-      formData.append("file_path", selectedAvatar.imgSrc); // Use file path instead of base64
+      formData.append("file_path", selectedAvatar.imgSrc);
       formData.append("views", JSON.stringify([view]));
 
-      // Send the file path and specific view to the API
-      const response = await axios.post(
-        "http://192.168.1.71:8083/emotions_gen",
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
+      // Determine if typeName is an emotion or gesture or default regeneration
+      let endpoint = "http://192.168.1.71:8083/emotions_gen";
+      let typeKey = null;
+
+      if (typeName) {
+        const isEmotion = emotions.some(
+          (e) => e.name.toLowerCase() === typeName.toLowerCase()
+        );
+
+        if (isEmotion) {
+          endpoint = "http://192.168.1.71:8083/emotions_gen/emotions";
+          formData.append("emotion", typeName);
+          typeKey = "emotion";
+        } else {
+          endpoint = "http://192.168.1.71:8083/emotions_gen/gesture";
+          formData.append("gesture", typeName);
+          typeKey = "gesture";
         }
-      );
+      }
 
-      console.log(`${view} view regeneration response:`, response.data);
-
-      // Map API response keys to state keys
-      const apiToStateKeyMap = {
-        front: "front",
-        side: "side",
-        close: "close",
-        back: "back",
-      };
+      const response = await axios.post(endpoint, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
       const { views } = response.data || {};
       const updatedImage = views?.[view] || null;
 
       if (updatedImage) {
-        // Update the state with the new image
         setGeneratedImages((prev) => ({
           ...prev,
-          [apiToStateKeyMap[view]]: updatedImage,
+          [view]: updatedImage,
         }));
 
-        // Save the updated view to the database (overwrite the existing image)
         const updatedCameraView = {
           [view]: { base64: updatedImage },
         };
 
         await axios.post(
-          "http://192.168.1.141:3001/avatarfx/updateAvatarView",
+          "http://192.168.1.141:3001/avatarfx/initializeAvatarFx",
           {
             email,
             avatarID: selectedAvatar.id,
             cameraView: updatedCameraView,
+          },
+          {
+            headers: { "Content-Type": "application/json" },
           }
         );
 
-        toast.success(`${view} view regenerated and updated successfully!`);
+        toast.success(
+          typeKey
+            ? `${view} view regenerated with ${typeName} ${typeKey} successfully!`
+            : `${view} view regenerated successfully!`
+        );
       } else {
-        console.warn("No new image received from the API, but proceeding.");
         setGeneratedImages((prev) => ({
           ...prev,
-          [apiToStateKeyMap[view]]: prev[apiToStateKeyMap[view]],
+          [view]: prev[view],
         }));
         toast.info(
           `${view} view regenerated successfully, but no new image was returned.`
@@ -569,20 +623,46 @@ const AvatarGestureEmotionUI = () => {
     } catch (error) {
       console.error(`Error regenerating ${view} view:`, error);
 
-      // Keep the existing image intact
       setGeneratedImages((prev) => ({
         ...prev,
         [view]: prev[view] !== "loading" ? prev[view] : null,
       }));
 
-      const errorMessage =
-        error.response?.status === 404
-          ? "The requested endpoint was not found. Please contact support."
-          : error.response?.status === 500
-          ? "Server error occurred. Please try again later."
-          : "Failed to regenerate the view. Please try again.";
+      toast.error(
+        `Failed to regenerate the ${view} view. Please try again.`
+      );
+    }
+  };
 
-      toast.error(errorMessage);
+  const handleRegenerateClick = (view) => {
+    setRegenerateViewType(view);
+    setIsRegenerateModalOpen(true);
+  };
+
+  const handleRegenerateOption = async (type) => {
+    setIsRegenerateModalOpen(false);
+
+    if (!regenerateViewType) {
+      toast.error("Please select a camera view to regenerate.");
+      return;
+    }
+
+    if (type === "camera") {
+      await regenerateView(regenerateViewType); // Regenerate the selected camera view
+    } else if (type === "gesture") {
+      // Use the currently selected gesture for regeneration
+      if (selectedGesture) {
+        await regenerateView(regenerateViewType, selectedGesture.name);
+      } else {
+        toast.error("Please select a gesture to regenerate.");
+      }
+    } else if (type === "emotion") {
+      // Use the currently selected emotion for regeneration
+      if (selectedEmotion) {
+        await regenerateView(regenerateViewType, selectedEmotion.name);
+      } else {
+        toast.error("Please select an emotion to regenerate.");
+      }
     }
   };
 
@@ -1059,27 +1139,29 @@ const AvatarGestureEmotionUI = () => {
                       key={view}
                       className="aspect-square bg-gray-100 rounded-lg flex flex-col items-center justify-center text-xs"
                     >
-                      {generatedImages[view] === "loading" ? (
-                        <div className="flex items-center justify-center w-full h-full">
-                          <div className="loader border-t-2 border-[#9B25A7] rounded-full w-6 h-6 animate-spin"></div>
-                        </div>
-                      ) : generatedImages[view] ? (
-                        <>
-                          <img
-                            src={generatedImages[view]}
-                            alt={`${view} View`}
-                            className="w-full h-full object-contain rounded-lg mb-2"
-                          />
-                          <button
-                            className="mt-2 px-2 py-1 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] text-xs"
-                            onClick={() => regenerateView(view)}
-                          >
-                            Regenerate
-                          </button>
-                        </>
-                      ) : (
-                        `${view.charAt(0).toUpperCase() + view.slice(1)} View`
-                      )}
+                      <div className="relative w-full h-full flex items-center justify-center">
+                        {generatedImages[view] === "loading" ? (
+                          <div className="flex items-center justify-center w-full h-full">
+                            <div className="loader border-t-2 border-[#9B25A7] rounded-full w-6 h-6 animate-spin"></div>
+                          </div>
+                        ) : generatedImages[view] ? (
+                          <>
+                            <img
+                              src={generatedImages[view]}
+                              alt={`${view} View`}
+                              className="w-5/6 h-5/6 object-contain rounded-lg mb-2"
+                            />
+                            <button
+                              className="mt-2 px-2 py-1 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] text-xs"
+                              onClick={() => handleRegenerateClick(view)}
+                            >
+                              Regenerate
+                            </button>
+                          </>
+                        ) : (
+                          `${view.charAt(0).toUpperCase() + view.slice(1)} View`
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1224,6 +1306,42 @@ const AvatarGestureEmotionUI = () => {
                   )}
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isRegenerateModalOpen && (
+        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 rounded-lg">
+          <div className="bg-white rounded-lg shadow-lg p-4 w-64">
+            <h3 className="text-lg font-medium text-center mb-4">
+              Choose Regenerate Option
+            </h3>
+            <div className="flex flex-col space-y-3">
+              <button
+                className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
+                onClick={() => handleRegenerateOption("camera")}
+              >
+                Camera View
+              </button>
+              <button
+                className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
+                onClick={() => handleRegenerateOption("gesture")}
+              >
+                Gestures
+              </button>
+              <button
+                className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
+                onClick={() => handleRegenerateOption("emotion")}
+              >
+                Emotions
+              </button>
+              <button
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+                onClick={() => setIsRegenerateModalOpen(false)}
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>
