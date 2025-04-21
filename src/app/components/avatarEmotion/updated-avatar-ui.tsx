@@ -457,13 +457,19 @@ const AvatarGestureEmotionUI = () => {
       return;
     }
 
+    // Close the modal
     setIsModalOpen(false);
+
+    // Set generating state to true to disable the button
     setIsGenerating(true);
+
+    // Show loading alert
     toast.info("Generating your avatar. This may take a few seconds...");
 
     try {
       const email = localStorage.getItem("userEmail") || "default@example.com";
 
+      // Send the file path directly to the API
       const formData = new FormData();
       formData.append("file_path", selectedAvatar.imgSrc);
       formData.append(
@@ -479,6 +485,9 @@ const AvatarGestureEmotionUI = () => {
         }
       );
 
+      console.log("Emotion generation response:", response.data);
+
+      // Update state with the generated images
       const { views } = response.data;
       const generatedImages = {
         front: views.front || null,
@@ -488,6 +497,7 @@ const AvatarGestureEmotionUI = () => {
       };
       setGeneratedImages(generatedImages);
 
+      // Prepare payload for API
       const payload = {
         email,
         avatarID: selectedAvatar.id,
@@ -499,6 +509,13 @@ const AvatarGestureEmotionUI = () => {
         },
       };
 
+      // Log payload for debugging
+      console.log(
+        "Payload being sent to API:",
+        JSON.stringify(payload, null, 2)
+      );
+
+      // Send payload to API
       await axios.post(
         "http://192.168.1.141:3001/avatarfx/initializeAvatarFx",
         payload,
@@ -512,6 +529,7 @@ const AvatarGestureEmotionUI = () => {
       console.error("Error generating emotion:", error);
       toast.error(`Failed to generate avatar view. Please try again.`);
     } finally {
+      // Re-enable the button regardless of success or failure
       setIsGenerating(false);
     }
   };
@@ -519,29 +537,44 @@ const AvatarGestureEmotionUI = () => {
   const regenerateView = async (view, typeName = null) => {
     if (!selectedAvatar) {
       toast.error(`Please select an avatar before proceeding.`);
+      console.error("No avatar selected");
       return;
     }
 
-    // Set loading state for the specific view being regenerated
-    setGeneratedImages((prev) => ({ ...prev, [view]: "loading" }));
+    // Show loading state for the specific view
+    setGeneratedImages((prev) => ({
+      ...prev,
+      [view]: "loading",
+    }));
+
     toast.info(`Regenerating ${view} view...`);
 
     try {
       const email = localStorage.getItem("userEmail") || "default@example.com";
 
+      // Create the FormData object
       const formData = new FormData();
       formData.append("file_path", selectedAvatar.imgSrc);
       formData.append("views", JSON.stringify([view]));
 
+      // Determine if typeName is an emotion or gesture or default regeneration
       let endpoint = "http://192.168.1.71:8083/emotions_gen";
+      let typeKey = null;
+
       if (typeName) {
         const isEmotion = emotions.some(
           (e) => e.name.toLowerCase() === typeName.toLowerCase()
         );
-        endpoint = isEmotion
-          ? "http://192.168.1.71:8083/emotions_gen/emotions"
-          : "http://192.168.1.71:8083/emotions_gen/gesture";
-        formData.append(isEmotion ? "emotion" : "gesture", typeName);
+
+        if (isEmotion) {
+          endpoint = "http://192.168.1.71:8083/emotions_gen/emotions";
+          formData.append("emotion", typeName);
+          typeKey = "emotion";
+        } else {
+          endpoint = "http://192.168.1.71:8083/emotions_gen/gesture";
+          formData.append("gesture", typeName);
+          typeKey = "gesture";
+        }
       }
 
       const response = await axios.post(endpoint, formData, {
@@ -552,47 +585,52 @@ const AvatarGestureEmotionUI = () => {
       const updatedImage = views?.[view] || null;
 
       if (updatedImage) {
-        // Update only the regenerated view in the state
-        setGeneratedImages((prev) => ({ ...prev, [view]: updatedImage }));
+        setGeneratedImages((prev) => ({
+          ...prev,
+          [view]: updatedImage,
+        }));
 
-        // Save all four camera views to the database API
-        const payload = {
-          email,
-          avatarID: selectedAvatar.id,
-          cameraViews: {
-            front: { base64: views.front || generatedImages.front },
-            side: { base64: views.side || generatedImages.side },
-            back: { base64: views.back || generatedImages.back },
-            close_up: { base64: views.close || generatedImages.close },
-          },
+        const updatedCameraView = {
+          [view]: { base64: updatedImage },
         };
 
         await axios.post(
           "http://192.168.1.141:3001/avatarfx/initializeAvatarFx",
-          payload,
+          {
+            email,
+            avatarID: selectedAvatar.id,
+            cameraView: updatedCameraView,
+          },
           {
             headers: { "Content-Type": "application/json" },
           }
         );
 
         toast.success(
-          typeName
-            ? `${view} view regenerated with ${typeName} successfully!`
+          typeKey
+            ? `${view} view regenerated with ${typeName} ${typeKey} successfully!`
             : `${view} view regenerated successfully!`
         );
       } else {
-        // Revert loading state if no new image was generated
-        setGeneratedImages((prev) => ({ ...prev, [view]: prev[view] }));
-        toast.error("No new image was generated. Please try again.");
+        setGeneratedImages((prev) => ({
+          ...prev,
+          [view]: prev[view],
+        }));
+        toast.info(
+          `${view} view regenerated successfully, but no new image was returned.`
+        );
       }
     } catch (error) {
       console.error(`Error regenerating ${view} view:`, error);
-      // Revert loading state on error
+
       setGeneratedImages((prev) => ({
         ...prev,
-        [view]: prev[view] === "loading" ? null : prev[view],
+        [view]: prev[view] !== "loading" ? prev[view] : null,
       }));
-      toast.error(`Failed to regenerate the ${view} view. Please try again.`);
+
+      toast.error(
+        `Failed to regenerate the ${view} view. Please try again.`
+      );
     }
   };
 

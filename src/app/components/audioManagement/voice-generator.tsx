@@ -13,6 +13,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import axios from "axios";
 import Dialog from "@mui/material/Dialog";
 import JSZip from "jszip";
+import { ToastContainer, toast } from "react-toastify";
 
 const Alert = ({ message, type, onClose }) => {
   return (
@@ -95,8 +96,6 @@ const VoiceGenerator = () => {
   const [pitch, setPitch] = useState(0);
   const [audioUrl, setAudioUrl] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [notification, setNotification] = useState("");
-  const [notificationType, setNotificationType] = useState("info");
   const [isPlaying, setIsPlaying] = useState(false);
   const [savedGenerations, setSavedGenerations] = useState([]);
   const [currentDuration, setCurrentDuration] = useState("0:00");
@@ -106,7 +105,6 @@ const VoiceGenerator = () => {
   const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState(null);
   const [newFolderName, setNewFolderName] = useState("");
-  const [alert, setAlert] = useState({ message: "", type: "" });
   const email = localStorage.getItem("userEmail");
   const [zipUrl, setZipUrl] = useState("");
   const [scriptTitle, setScriptTitle] = useState("");
@@ -124,16 +122,6 @@ const VoiceGenerator = () => {
       )}px`;
     }
   }, [textInput]);
-
-  // Clear notification after 5 seconds
-  useEffect(() => {
-    if (notification) {
-      const timer = setTimeout(() => {
-        setNotification("");
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [notification]);
 
   // Monitor audio playback state
   useEffect(() => {
@@ -221,13 +209,18 @@ const VoiceGenerator = () => {
       }
     } catch (error) {
       console.error("Error fetching folders:", error);
-      setAlert({ message: "Failed to load folders.", type: "error" });
+      showNotification("Failed to load folders.", "error");
     }
   };
 
   const showNotification = (message, type = "info") => {
-    setNotification(message);
-    setNotificationType(type);
+    if (type === "success") {
+      toast.success(message);
+    } else if (type === "error") {
+      toast.error(message);
+    } else if (type === "info" || type === "generating") {
+      toast.info(message);
+    }
   };
 
   const handleGenerateVoice = async () => {
@@ -237,28 +230,33 @@ const VoiceGenerator = () => {
     }
 
     setIsGenerating(true);
-    showNotification("Generating audio, please wait...", "generating");
 
     try {
-      // Use the API endpoint
-      const response = await fetch("http://192.168.1.71:8083/voice_gen", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          text: textInput,
-          voice: voiceSelection,
-          rate: speakingRate,
-          pitch: pitch,
+      const response = await toast.promise(
+        fetch("http://192.168.1.71:8083/voice_gen", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            text: textInput,
+            voice: voiceSelection,
+            rate: speakingRate,
+            pitch: pitch,
+          }),
         }),
-      });
+        {
+          pending: "Generating audio, please wait...",
+          success: "Audio generated successfully!",
+          error: {
+            render({ data }) {
+              const err = data.message || "Failed to generate audio.";
+              return `Error: ${err}`;
+            },
+          },
+        }
+      );
 
-      if (!response.ok) {
-        throw new Error(`Server responded with status: ${response.status}`);
-      }
-
-      // Check the content type from the response
       const contentType = response.headers.get("content-type") || "audio/wav";
       if (contentType.includes("application/json")) {
         const errorData = await response.json();
@@ -269,15 +267,12 @@ const VoiceGenerator = () => {
 
       const audioBlob = await response.blob();
 
-      // Verify we have valid audio data
       if (audioBlob.size === 0) {
         throw new Error("Received empty audio data from server");
       }
 
-      // Create a properly typed blob to ensure browser compatibility
       const typedBlob = new Blob([audioBlob], { type: contentType });
 
-      // Clean up previous audio URL
       if (audioUrl) {
         URL.revokeObjectURL(audioUrl);
       }
@@ -286,7 +281,6 @@ const VoiceGenerator = () => {
       setAudioUrl(newAudioUrl);
       setAudioFormat(contentType);
 
-      // Automatically play the new audio
       if (audioRef.current) {
         audioRef.current.src = newAudioUrl;
         const playPromise = audioRef.current.play();
@@ -298,17 +292,14 @@ const VoiceGenerator = () => {
         }
       }
 
-      // Test if the audio format is supported
       const audio = new Audio();
       audio.src = newAudioUrl;
 
-      // Create a promise to check if the audio can be played
       const canPlayPromise = new Promise((resolve, reject) => {
         audio.oncanplay = () => resolve(true);
         audio.onerror = () =>
           reject(new Error(`Format ${contentType} not supported`));
 
-        // Set a timeout in case neither event fires
         setTimeout(() => resolve(false), 2000);
       });
 
@@ -320,7 +311,6 @@ const VoiceGenerator = () => {
         );
       }
 
-      // Create a new saved generation entry
       const newGeneration = {
         id: Date.now(),
         name: getGenerationName(),
@@ -330,10 +320,8 @@ const VoiceGenerator = () => {
       };
 
       setSavedGenerations((prev) => [newGeneration, ...prev].slice(0, 5));
-      showNotification("Audio generated successfully!", "success");
     } catch (error) {
       console.error("Error generating voice:", error);
-      showNotification(`Failed to generate audio: ${error.message}`, "error");
     } finally {
       setIsGenerating(false);
     }
@@ -349,7 +337,6 @@ const VoiceGenerator = () => {
       if (isPlaying) {
         audioRef.current.pause();
       } else {
-        // Handle playback errors more gracefully
         const playPromise = audioRef.current.play();
 
         if (playPromise !== undefined) {
@@ -415,22 +402,18 @@ const VoiceGenerator = () => {
 
   const handleSaveToLibrary = async () => {
     if (!audioUrl) {
-      setAlert({ message: "No audio to save.", type: "error" });
+      showNotification("No audio to save.", "error");
       return;
     }
 
     if (!selectedFolder) {
-      setAlert({
-        message: "Please select a folder to save the audio.",
-        type: "error",
-      });
+      showNotification("Please select a folder to save the audio.", "error");
       return;
     }
 
     try {
-      setAlert({ message: "Saving audio...", type: "generating" });
+      showNotification("Saving audio...", "generating");
 
-      // Convert blob URL to base64
       const audioResponse = await fetch(audioUrl);
       const audioBlob = await audioResponse.blob();
 
@@ -445,7 +428,6 @@ const VoiceGenerator = () => {
         reader.readAsDataURL(audioBlob);
       });
 
-      // Prepare audio data
       const audioData = {
         name: `Audio_${Date.now()}`,
         audioSrc: base64Data,
@@ -459,8 +441,7 @@ const VoiceGenerator = () => {
         noiseReduction: "false",
       };
 
-      // Prepare payload
-      const email = localStorage.getItem("userEmail") || email; // fallback if localStorage fails
+      const email = localStorage.getItem("userEmail") || email;
       const payload = {
         email,
         title: selectedFolder.name,
@@ -479,7 +460,6 @@ const VoiceGenerator = () => {
         )
       );
 
-      // Send to API
       const saveResponse = await axios.post(
         "http://192.168.1.141:3001/audio/addAudio",
         payload,
@@ -494,7 +474,7 @@ const VoiceGenerator = () => {
       console.log("Save to library response:", saveResponse);
 
       if (saveResponse.status === 200 || saveResponse.status === 201) {
-        setAlert({ message: "Audio saved successfully!", type: "success" });
+        showNotification("Audio saved successfully!", "success");
         setIsFolderModalOpen(false);
       } else {
         throw new Error(
@@ -523,26 +503,23 @@ const VoiceGenerator = () => {
         errorMessage = error.response.data.message;
       }
 
-      setAlert({
-        message: errorMessage,
-        type: "error",
-      });
+      showNotification(errorMessage, "error");
     }
   };
 
   const createFolder = async () => {
     if (!newFolderName.trim()) {
-      setAlert({ message: "Folder name cannot be empty.", type: "error" });
+      showNotification("Folder name cannot be empty.", "error");
       return;
     }
 
     if (!email) {
-      setAlert({ message: "User email not found.", type: "error" });
+      showNotification("User email not found.", "error");
       return;
     }
 
     try {
-      setAlert({ message: "Creating folder...", type: "generating" });
+      showNotification("Creating folder...", "generating");
 
       const response = await axios.post(
         "http://192.168.1.141:3001/audio/addAudio",
@@ -573,7 +550,7 @@ const VoiceGenerator = () => {
         setIsFolderModalOpen(false);
         setNewFolderName("");
 
-        setAlert({ message: "Folder created successfully.", type: "success" });
+        showNotification("Folder created successfully.", "success");
 
         setTimeout(() => fetchFolders(), 500);
       } else {
@@ -599,16 +576,13 @@ const VoiceGenerator = () => {
         errorMessage = error.response.data.message;
       }
 
-      setAlert({
-        message: errorMessage,
-        type: "error",
-      });
+      showNotification(errorMessage, "error");
     }
   };
 
   const handleSendAudioToAPI = async () => {
     if (!zipUrl) {
-      alert("No zip file available to process.");
+      showNotification("No zip file available to process.", "error");
       return;
     }
 
@@ -640,7 +614,7 @@ const VoiceGenerator = () => {
 
       const email = localStorage.getItem("userEmail");
       if (!email) {
-        alert("No email found in localStorage.");
+        showNotification("No email found in localStorage.", "error");
         return;
       }
 
@@ -668,9 +642,9 @@ const VoiceGenerator = () => {
         console.log("Full API Response:", apiResponse);
 
         if (apiResponse.status === 200 || apiResponse.status === 201) {
-          alert("Audio files successfully sent to the API.");
+          showNotification("Audio files successfully sent to the API.", "success");
         } else {
-          alert(`API responded with status: ${apiResponse.status}`);
+          showNotification(`API responded with status: ${apiResponse.status}`, "error");
         }
       } catch (apiError) {
         console.error("API Error Details:", {
@@ -681,26 +655,26 @@ const VoiceGenerator = () => {
         });
 
         if (apiError.response) {
-          alert(
+          showNotification(
             `Error sending to API: ${
               apiError.response.status
-            } - ${JSON.stringify(apiError.response.data)}`
+            } - ${JSON.stringify(apiError.response.data)}`,
+            "error"
           );
         } else if (apiError.request) {
-          alert("No response received from the API. Check network connection.");
+          showNotification("No response received from the API. Check network connection.", "error");
         } else {
-          alert(`Error setting up API request: ${apiError.message}`);
+          showNotification(`Error setting up API request: ${apiError.message}`, "error");
         }
       }
     } catch (error) {
       console.error("Zip Processing Error:", error);
-      alert(`Error processing zip file: ${error.message}`);
+      showNotification(`Error processing zip file: ${error.message}`, "error");
     }
   };
 
   const playSavedGeneration = (generation) => {
     if (audioRef.current) {
-      // Clean up previous URL
       if (audioUrl && audioUrl !== generation.url) {
         URL.revokeObjectURL(audioUrl);
       }
@@ -708,7 +682,6 @@ const VoiceGenerator = () => {
       setAudioUrl(generation.url);
       setAudioFormat(generation.format || "audio/wav");
 
-      // The audio source will be updated through the effect when audioUrl changes
       setTimeout(() => {
         if (audioRef.current) {
           const playPromise = audioRef.current.play();
@@ -1098,17 +1071,7 @@ const VoiceGenerator = () => {
         </Dialog>
       )}
 
-      <Alert
-        message={notification}
-        type={notificationType}
-        onClose={() => setNotification("")}
-      />
-
-      <Alert
-        message={alert.message}
-        type={alert.type}
-        onClose={() => setAlert({ message: "", type: "" })}
-      />
+      <ToastContainer />
     </div>
   );
 };

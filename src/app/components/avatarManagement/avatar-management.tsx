@@ -1029,7 +1029,7 @@ const AvatarManagement = () => {
           onCapture={handleCameraCapture}
         />
       )}
-    </div> //END CONTAINER
+    </div> 
   );
 };
 
