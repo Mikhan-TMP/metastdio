@@ -899,35 +899,33 @@ const AvatarGestureEmotionUI = () => {
       setIsRegenerating(false);
     }
   };
-
   const regenerateEmotion = async (view, emotionName) => {
     if (!selectedAvatar) {
       toast.error(`Please select an avatar before proceeding.`);
-      console.error("No avatar selected");
       return;
     }
-
+  
     if (isRegenerating) {
       toast.error("Another regeneration is already in progress.");
       return;
     }
-
+  
     setIsRegenerating(true); // Disable other regenerate buttons
     setGeneratedImages((prev) => ({
       ...prev,
       [view]: "loading",
     }));
-
+  
     toast.info(`Regenerating ${view} view with emotion ${emotionName}...`);
-
+  
     try {
       const email = getUserEmail();
-
+  
       const formData = new FormData();
       formData.append("file_path", selectedAvatar.imgSrc);
       formData.append("views", JSON.stringify([view]));
       formData.append("emotion", emotionName);
-
+  
       const response = await axios.post(
         "http://192.168.1.71:8083/emotions_gen/emotions",
         formData,
@@ -935,42 +933,24 @@ const AvatarGestureEmotionUI = () => {
           headers: { "Content-Type": "multipart/form-data" },
         }
       );
-
+  
       const { views } = response.data || {};
       const updatedImage = views?.[view] || null;
-
+  
       if (updatedImage) {
         // Update only the regenerated view while keeping other views
         const newGeneratedImages = {
           ...generatedImages,
           [view]: updatedImage,
         };
-
+  
         setGeneratedImages(newGeneratedImages);
-
-        // Create payload with ALL camera views, not just the regenerated one
-        const payload = {
-          email,
-          avatarID: selectedAvatar.id,
-          cameraViews: {
-            front: { base64: newGeneratedImages.front },
-            side: { base64: newGeneratedImages.side },
-            back: { base64: newGeneratedImages.back },
-            close_up: { base64: newGeneratedImages.close },
-          },
-        };
-
-        // Send ALL views to API
-        await axios.post(
-          "http://192.168.1.141:3001/avatarfx/initializeAvatarFx",
-          payload,
-          {
-            headers: { "Content-Type": "application/json" },
-          }
-        );
-
+  
+        // Save the updated views to the API
+        await saveGeneratedImagesToAPI(newGeneratedImages);
+  
         toast.success(
-          `${view} view regenerated with emotion ${emotionName} and all views saved successfully!`
+          `${view} view regenerated with emotion ${emotionName} and saved successfully!`
         );
       } else {
         toast.info(
@@ -994,31 +974,30 @@ const AvatarGestureEmotionUI = () => {
   const regenerateGesture = async (view, gestureName) => {
     if (!selectedAvatar) {
       toast.error(`Please select an avatar before proceeding.`);
-      console.error("No avatar selected");
       return;
     }
-
+  
     if (isRegenerating) {
       toast.error("Another regeneration is already in progress.");
       return;
     }
-
+  
     setIsRegenerating(true); // Disable other regenerate buttons
     setGeneratedImages((prev) => ({
       ...prev,
       [view]: "loading",
     }));
-
+  
     toast.info(`Regenerating ${view} view with gesture ${gestureName}...`);
-
+  
     try {
       const email = getUserEmail();
-
+  
       const formData = new FormData();
       formData.append("file_path", selectedAvatar.imgSrc);
       formData.append("views", JSON.stringify([view]));
       formData.append("gesture", gestureName);
-
+  
       const response = await axios.post(
         "http://192.168.1.71:8083/emotions_gen/gesture",
         formData,
@@ -1026,42 +1005,24 @@ const AvatarGestureEmotionUI = () => {
           headers: { "Content-Type": "multipart/form-data" },
         }
       );
-
+  
       const { views } = response.data || {};
       const updatedImage = views?.[view] || null;
-
+  
       if (updatedImage) {
         // Update only the regenerated view while keeping other views
         const newGeneratedImages = {
           ...generatedImages,
           [view]: updatedImage,
         };
-
+  
         setGeneratedImages(newGeneratedImages);
-
-        // Create payload with ALL camera views, not just the regenerated one
-        const payload = {
-          email,
-          avatarID: selectedAvatar.id,
-          cameraViews: {
-            front: { base64: newGeneratedImages.front },
-            side: { base64: newGeneratedImages.side },
-            back: { base64: newGeneratedImages.back },
-            close_up: { base64: newGeneratedImages.close },
-          },
-        };
-
-        // Send ALL views to API
-        await axios.post(
-          "http://192.168.1.141:3001/avatarfx/initializeAvatarFx",
-          payload,
-          {
-            headers: { "Content-Type": "application/json" },
-          }
-        );
-
+  
+        // Save the updated views to the API
+        await saveGeneratedImagesToAPI(newGeneratedImages);
+  
         toast.success(
-          `${view} view regenerated with gesture ${gestureName} and all views saved successfully!`
+          `${view} view regenerated with gesture ${gestureName} and saved successfully!`
         );
       } else {
         toast.info(
@@ -1079,6 +1040,41 @@ const AvatarGestureEmotionUI = () => {
         ...prev,
         [view]: prev[view] !== "loading" ? prev[view] : null,
       }));
+    }
+  };
+
+  const saveGeneratedImagesToAPI = async (updatedViews) => {
+    try {
+      const email = getUserEmail();
+  
+      // Prepare payload for API
+      const payload = {
+        email,
+        avatarID: selectedAvatar.id,
+        cameraViews: {
+          front: { base64: updatedViews.front },
+          side: { base64: updatedViews.side },
+          back: { base64: updatedViews.back },
+          close_up: { base64: updatedViews.close },
+        },
+      };
+  
+      // Log payload for debugging
+      console.log("Payload being sent to API:", JSON.stringify(payload, null, 2));
+  
+      // Send payload to API
+      await axios.post(
+        "http://192.168.1.141:3001/avatarfx/initializeAvatarFx",
+        payload,
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+  
+      toast.success("Generated images saved successfully!");
+    } catch (error) {
+      console.error("Error saving generated images to API:", error);
+      toast.error("Failed to save generated images. Please try again.");
     }
   };
 
@@ -1154,25 +1150,25 @@ const AvatarGestureEmotionUI = () => {
 
   const handleRegenerateOption = async (type) => {
     setIsRegenerateModalOpen(false);
-
+  
     if (!regenerateViewType) {
       toast.error("Please select a camera view to regenerate.");
       return;
     }
-
+  
     if (type === "camera") {
       await regenerateCameraView(regenerateViewType); // Regenerate the selected camera view
     } else if (type === "gesture") {
       // Use the currently selected gesture for regeneration
       if (selectedGesture) {
-        await regenerateGesture(regenerateViewType, selectedGesture.name);
+        await generateGestureView(selectedGesture); // Pass the gesture to regenerate
       } else {
         toast.error("Please select a gesture to regenerate.");
       }
     } else if (type === "emotion") {
       // Use the currently selected emotion for regeneration
       if (selectedEmotion) {
-        await regenerateEmotion(regenerateViewType, selectedEmotion.name);
+        await generateEmotionView(selectedEmotion); // Pass the emotion to regenerate
       } else {
         toast.error("Please select an emotion to regenerate.");
       }
@@ -1575,12 +1571,12 @@ const AvatarGestureEmotionUI = () => {
                   </>
                 )}
               </button>
-              {/* <button className="p-2 border border-gray-300 rounded-md hover:bg-gray-50 flex items-center">
+              <button className="p-2 border border-gray-300 rounded-md hover:bg-gray-50 flex items-center">
                 <Camera size={16} className="mr-1" /> Capture
               </button>
               <button className="p-2 border border-gray-300 rounded-md hover:bg-gray-50 flex items-center">
                 <RefreshCw size={16} className="mr-1" /> Reset
-              </button> */}
+              </button>
             </div>
           </div>
 
@@ -1821,38 +1817,38 @@ const AvatarGestureEmotionUI = () => {
 
       {isRegenerateModalOpen && (
         <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 rounded-lg">
-          <div className="bg-white rounded-lg shadow-lg p-4 w-64">
-            <h3 className="text-lg font-medium text-center mb-4">
-              Choose Regenerate Option
-            </h3>
-            <div className="flex flex-col space-y-3">
-              <button
-                className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
-                onClick={() => handleRegenerateOption("camera")}
-              >
-                Camera View
-              </button>
-              <button
-                className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
-                onClick={() => handleRegenerateOption("gesture")}
-              >
-                Gestures
-              </button>
-              <button
-                className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
-                onClick={() => handleRegenerateOption("emotion")}
-              >
-                Emotions
-              </button>
-              <button
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
-                onClick={() => setIsRegenerateModalOpen(false)}
-              >
-                Cancel
-              </button>
-            </div>
+        <div className="bg-white rounded-lg shadow-lg p-4 w-64">
+          <h3 className="text-lg font-medium text-center mb-4">
+            Choose Regenerate Option
+          </h3>
+          <div className="flex flex-col space-y-3">
+            <button
+              className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
+              onClick={() => handleRegenerateOption("camera")}
+            >
+              Camera View
+            </button>
+            <button
+              className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
+              onClick={() => handleRegenerateOption("gesture")}
+            >
+              Gestures
+            </button>
+            <button
+              className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
+              onClick={() => handleRegenerateOption("emotion")}
+            >
+              Emotions
+            </button>
+            <button
+              className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+              onClick={() => setIsRegenerateModalOpen(false)}
+            >
+              Cancel
+            </button>
           </div>
         </div>
+      </div>
       )}
     </div>
   );
