@@ -293,21 +293,166 @@ const AvatarGestureEmotionUI = () => {
     fetchCameraViews();
   }, [selectedAvatar]);
 
+  const fetchExistingEffects = async (type, name) => {
+    if (!selectedAvatar) return null;
+
+    try {
+      const email = getUserEmail();
+      const response = await axios.get(
+        `http://192.168.1.141:3001/avatar-effects/getAllEffects`,
+        {
+          params: {
+            email,
+            avatarID: selectedAvatar.id,
+          },
+        }
+      );
+
+      const effects = response.data || [];
+      return effects.find(
+        (effect) => effect.type === type && effect.name === name
+      );
+    } catch (error) {
+      console.error("Error fetching existing effects:", error);
+      return null;
+    }
+  };
+  const fetchExistingEmotion = async (emotionName) => {
+    if (!selectedAvatar) return null;
+  
+    try {
+      const email = getUserEmail();
+      const response = await axios.get(
+        `http://192.168.1.141:3001/avatar-effects/getAllEffects`,
+        {
+          params: {
+            email,
+            avatarID: selectedAvatar.id,
+          },
+        }
+      );
+  
+      const effects = response.data || [];
+      // Find the emotion with the required name and all image properties
+      const matchingEmotion = effects.find(
+        (effect) =>
+          effect.Emotions &&
+          effect.Emotions.some(
+            (e) =>
+              e.name === emotionName &&
+              e.front &&
+              e.side &&
+              e.back &&
+              e.close_up
+          )
+      );
+  
+      return matchingEmotion || null;
+    } catch (error) {
+      console.error("Error fetching existing emotion:", error);
+      return null;
+    }
+  };
+
   const togglePlay = () => {
     setIsPlaying(!isPlaying);
   };
 
-  const handleGestureSelect = (gesture) => {
+  const handleGestureSelect = async (gesture) => {
+    if (!selectedAvatar) {
+      toast.error("Please select an avatar before proceeding.");
+      return;
+    }
+  
+    if (isEmotionProcessing || isGestureProcessing) {
+      toast.info("Please wait for the current generation to complete.");
+      return;
+    }
+  
     setSelectedGesture(gesture);
-    setRecentGesture(gesture); // Update the most recent gesture
+  
+    try {
+      const email = getUserEmail();
+      const response = await axios.get(
+        `http://192.168.1.141:3001/avatar-effects/getAllEffects`,
+        {
+          params: {
+            email,
+            avatarID: selectedAvatar.id,
+          },
+        }
+      );
+  
+      const effects = response.data || [];
+      const existingGesture = effects.find(
+        (effect) =>
+          effect.Gestures &&
+          effect.Gestures.some((g) => g.name === gesture.name)
+      );
+  
+      if (existingGesture) {
+        const gestureData = existingGesture.Gestures.find(
+          (g) => g.name === gesture.name && g.front && g.side && g.back && g.close_up
+        );
+  
+        if (gestureData) {
+          setGeneratedImages({
+            front: `http://192.168.1.141:3001${gestureData.front}`,
+            back: `http://192.168.1.141:3001${gestureData.back}`,
+            side: `http://192.168.1.141:3001${gestureData.side}`,
+            close: `http://192.168.1.141:3001${gestureData.close_up}`,
+          });
+          toast.info(`Gesture "${gesture.name}" is displayed.`);
+          return;
+        }
+      }
+  
+      toast.info(`Gesture "${gesture.name}" not found. Click again to generate.`);
+    } catch (error) {
+      console.error("Error fetching existing gesture:", error);
+      toast.error("Failed to check existing gesture. Please try again.");
+    }
   };
 
-  const handleEmotionSelect = (emotion) => {
+  const handleEmotionSelect = async (emotion) => {
+    if (!selectedAvatar) {
+      toast.error("Please select an avatar before proceeding.");
+      return;
+    }
+  
+    if (isEmotionProcessing || isGestureProcessing) {
+      toast.info("Please wait for the current generation to complete.");
+      return;
+    }
+  
     setSelectedEmotion(emotion);
-    setRecentEmotion(emotion); // Update the most recent emotion
+  
+    try {
+      const existingEmotion = await fetchExistingEmotion(emotion.name);
+  
+      if (existingEmotion) {
+        const emotionData = existingEmotion.Emotions.find(
+          (e) => e.name === emotion.name && e.front && e.side && e.back && e.close_up
+        );
+  
+        if (emotionData) {
+          setGeneratedImages({
+            front: `http://192.168.1.141:3001${emotionData.front}`,
+            back: `http://192.168.1.141:3001${emotionData.back}`,
+            side: `http://192.168.1.141:3001${emotionData.side}`,
+            close: `http://192.168.1.141:3001${emotionData.close_up}`,
+          });
+          toast.info(`Emotion "${emotion.name}" is displayed.`);
+          return;
+        }
+      }
+  
+      toast.info(`Emotion "${emotion.name}" not found. Click again to generate.`);
+    } catch (error) {
+      console.error("Error fetching existing emotion:", error);
+      toast.error("Failed to check existing emotion. Please try again.");
+    }
   };
-
-
 
   const fetchAvatars = async (selectedStyle = "", searchName = "") => {
     try {
@@ -452,41 +597,207 @@ const AvatarGestureEmotionUI = () => {
     }
   };
 
+  const base64ToBlob = (base64, mime = "image/jpeg") => {
+    if (!base64) return null;
+    const byteString = atob(base64.split(",").pop());
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) {
+      ia[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([ab], { type: mime });
+  };
+
+  const generateEmotionView = async (emotion) => {
+    if (!selectedAvatar || isEmotionProcessing) {
+      toast.error("Please select an avatar before proceeding.");
+      return;
+    }
+
+    setIsEmotionProcessing(true);
+
+    toast.info(
+      <div className="flex items-center">
+        <RefreshCw className="animate-spin mr-2" />
+        Applying {emotion.name} emotion to the avatar...
+      </div>
+    );
+
+    try {
+      const formData = new FormData();
+      formData.append("file_path", selectedAvatar.imgSrc);
+      formData.append("emotion", emotion.name);
+      formData.append(
+        "views",
+        JSON.stringify(["front", "side", "close", "back"])
+      );
+
+      const response = await axios.post(
+        "http://192.168.1.71:8083/emotions_gen/emotions",
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+
+      const { views } = response.data;
+
+      // Process images before sending to the API
+      const processedImages = {};
+      for (const view of ["front", "back", "side", "close"]) {
+        const base64 = views[view];
+        if (base64) {
+          const blob = base64ToBlob(base64);
+          processedImages[view] = blob;
+        }
+      }
+
+      // Save to API (database)
+      const apiForm = new FormData();
+      apiForm.append("email", getUserEmail());
+      apiForm.append("name", selectedAvatar.name || "");
+      apiForm.append("avatarId", selectedAvatar.id || "");
+      apiForm.append("gestures", JSON.stringify([]));
+      apiForm.append("emotions", JSON.stringify([{ name: emotion.name }]));
+      for (const [view, blob] of Object.entries(processedImages)) {
+        apiForm.append(
+          `emotions_${emotion.name}_${view === "close" ? "close_up" : view}`,
+          blob,
+          `${view}.jpg`
+        );
+      }
+
+      await axios.post(
+        "http://192.168.1.141:3001/avatar-effects",
+        apiForm,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+
+      setGeneratedImages({
+        front: views.front || null,
+        back: views.back || null,
+        side: views.side || null,
+        close: views.close || null,
+      });
+
+      toast.success(`${emotion.name} emotion applied and saved!`);
+    } catch (error) {
+      console.error("Error applying emotion:", error);
+      toast.error(`Failed to apply ${emotion.name} emotion. Please try again.`);
+    } finally {
+      setIsEmotionProcessing(false);
+    }
+  };
+
+  const generateGestureView = async (gesture) => {
+    if (!selectedAvatar || isGestureProcessing) {
+      toast.error("Please select an avatar before proceeding.");
+      return;
+    }
+
+    setIsGestureProcessing(true);
+
+    toast.info(
+      <div className="flex items-center">
+        <RefreshCw className="animate-spin mr-2" />
+        Applying {gesture.name} gesture to the avatar...
+      </div>
+    );
+
+    try {
+      const formData = new FormData();
+      formData.append("file_path", selectedAvatar.imgSrc);
+      formData.append("gesture", gesture.name);
+      formData.append(
+        "views",
+        JSON.stringify(["front", "side", "close", "back"])
+      );
+
+      const response = await axios.post(
+        "http://192.168.1.71:8083/emotions_gen/gesture",
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+
+      const { views } = response.data;
+      setGeneratedImages({
+        front: views.front || null,
+        back: views.back || null,
+        side: views.side || null,
+        close: views.close || null,
+      });
+
+      // Save to API (database)
+      const apiForm = new FormData();
+      apiForm.append("email", getUserEmail());
+      apiForm.append("name", selectedAvatar.name || "");
+      apiForm.append("avatarId", selectedAvatar.id || "");
+      apiForm.append("gestures", JSON.stringify([{ name: gesture.name }]));
+      apiForm.append("emotions", JSON.stringify([]));
+      ["front", "back", "side", "close"].forEach((view) => {
+        const base64 = views[view];
+        if (base64) {
+          const blob = base64ToBlob(base64);
+          apiForm.append(
+            `gestures_${gesture.name}_${view === "close" ? "close_up" : view}`,
+            blob,
+            `${view}.jpg`
+          );
+        }
+      });
+
+      await axios.post(
+        "http://192.168.1.141:3001/avatar-effects",
+        apiForm,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+
+      toast.success(`${gesture.name} gesture applied and saved!`);
+    } catch (error) {
+      console.error("Error applying gesture:", error);
+      toast.error(`Failed to apply ${gesture.name} gesture. Please try again.`);
+    } finally {
+      setIsGestureProcessing(false);
+    }
+  };
+
   const convertToBase64 = async (imageUrl) => {
     if (!imageUrl) return null;
-    
+
     // If already base64, return as is
-    if (imageUrl.startsWith('data:image')) {
+    if (imageUrl.startsWith("data:image")) {
       return imageUrl;
     }
-  
+
     try {
-      const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-      const base64 = Buffer.from(response.data, 'binary').toString('base64');
+      const response = await axios.get(imageUrl, { responseType: "arraybuffer" });
+      const base64 = Buffer.from(response.data, "binary").toString("base64");
       return `data:image/png;base64,${base64}`;
     } catch (error) {
-      console.error('Error converting to base64:', error);
+      console.error("Error converting to base64:", error);
       return null;
     }
   };
-  
+
   const regenerateCameraView = async (view) => {
     if (!selectedAvatar) {
       toast.error("Please select an avatar before proceeding.");
       return;
     }
-  
+
     if (isRegenerating) {
       toast.error("Another regeneration is already in progress.");
       return;
     }
-  
+
     setIsRegenerating(true);
     setGeneratedImages((prev) => ({ ...prev, [view]: "loading" }));
-  
+
     const email = getUserEmail();
     const avatarID = selectedAvatar.id;
-  
+
     try {
       // Step 1: First fetch the current views from the API
       let currentViews;
@@ -497,7 +808,7 @@ const AvatarGestureEmotionUI = () => {
             params: { email, avatarID },
           }
         );
-  
+
         // Extract existing views, ensuring we preserve the base64 data
         currentViews = {
           front: response.data?.cameraViews?.front?.base64 || null,
@@ -505,15 +816,14 @@ const AvatarGestureEmotionUI = () => {
           back: response.data?.cameraViews?.back?.base64 || null,
           close_up: response.data?.cameraViews?.close_up?.base64 || null,
         };
-  
+
         // Convert any non-base64 images to base64
         currentViews = {
           front: await convertToBase64(currentViews.front),
           side: await convertToBase64(currentViews.side),
           back: await convertToBase64(currentViews.back),
-          close_up: await convertToBase64(currentViews.close_up)
+          close_up: await convertToBase64(currentViews.close_up),
         };
-  
       } catch (err) {
         console.warn("Error fetching current views:", err);
         // If we can't fetch current views, use what's in the state and convert to base64
@@ -521,15 +831,15 @@ const AvatarGestureEmotionUI = () => {
           front: await convertToBase64(generatedImages.front),
           side: await convertToBase64(generatedImages.side),
           back: await convertToBase64(generatedImages.back),
-          close_up: await convertToBase64(generatedImages.close)
+          close_up: await convertToBase64(generatedImages.close),
         };
       }
-  
+
       // Step 2: Generate new image for the selected view
       const formData = new FormData();
       formData.append("file_path", selectedAvatar.imgSrc);
       formData.append("views", JSON.stringify([view]));
-  
+
       const regenerateResponse = await axios.post(
         "http://192.168.1.71:8083/emotions_gen",
         formData,
@@ -537,21 +847,21 @@ const AvatarGestureEmotionUI = () => {
           headers: { "Content-Type": "multipart/form-data" },
         }
       );
-  
+
       const newGeneratedImage = regenerateResponse.data?.views?.[view];
       if (!newGeneratedImage) {
         throw new Error(`Failed to generate new image for ${view} view`);
       }
-  
+
       // Convert new generated image to base64 if needed
       const newGeneratedBase64 = await convertToBase64(newGeneratedImage);
-  
+
       // Step 3: Create updated views object with the new image
       const updatedViews = {
         ...currentViews,
         [view === "close" ? "close_up" : view]: newGeneratedBase64,
       };
-  
+
       // Step 4: Send all views back to the API
       const payload = {
         email,
@@ -563,7 +873,7 @@ const AvatarGestureEmotionUI = () => {
           close_up: { base64: updatedViews.close_up },
         },
       };
-  
+
       // Send the complete payload to the API
       await axios.post(
         "http://192.168.1.141:3001/avatarfx/initializeAvatarFx",
@@ -572,7 +882,7 @@ const AvatarGestureEmotionUI = () => {
           headers: { "Content-Type": "application/json" },
         }
       );
-  
+
       // Step 5: Update local state with new images
       setGeneratedImages({
         front: updatedViews.front,
@@ -580,7 +890,7 @@ const AvatarGestureEmotionUI = () => {
         back: updatedViews.back,
         close: updatedViews.close_up, // Note: we map close_up to close in the state
       });
-  
+
       toast.success(`${view} view regenerated and saved successfully!`);
     } catch (err) {
       console.error("Regeneration failed:", err);
@@ -772,114 +1082,6 @@ const AvatarGestureEmotionUI = () => {
     }
   };
 
-  const generateEmotionView = async (emotion) => {
-    if (!selectedAvatar || isEmotionProcessing) {
-      toast.error("Please select an avatar before proceeding.");
-      return;
-    }
-
-    setIsEmotionProcessing(true); // Disable button
-
-    // Show loading alert
-    toast.info(
-      <div className="flex items-center">
-        <RefreshCw className="animate-spin mr-2" />
-        Applying {emotion.name} emotion to the avatar...
-      </div>
-    );
-
-    try {
-      // Send the file path, emotion, and views to the API
-      const formData = new FormData();
-      formData.append("file_path", selectedAvatar.imgSrc); // Use file path instead of base64
-      formData.append("emotion", emotion.name);
-      formData.append(
-        "views",
-        JSON.stringify(["front", "side", "close", "back"])
-      );
-
-      const response = await axios.post(
-        "http://192.168.1.71:8083/emotions_gen/emotions",
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
-      );
-
-      console.log("Emotion application response:", response.data);
-
-      // Update state with the generated images
-      const { views } = response.data;
-      setGeneratedImages({
-        front: views.front || null,
-        back: views.back || null,
-        side: views.side || null,
-        close: views.close || null,
-      });
-
-      toast.success(`${emotion.name} emotion applied successfully!`);
-    } catch (error) {
-      console.error("Error applying emotion:", error);
-      toast.error(`Failed to apply ${emotion.name} emotion. Please try again`);
-    } finally {
-      setIsEmotionProcessing(false); // Re-enable button
-    }
-  };
-
-  const generateGestureView = async (gesture) => {
-    if (!selectedAvatar || isGestureProcessing) {
-      toast.error(`Please select an avatar before proceeding`);
-      return;
-    }
-
-    setIsGestureProcessing(true); // Disable button
-
-    // Show loading alert
-    toast.info(
-      <div className="flex items-center">
-        <RefreshCw className="animate-spin mr-2" />
-        Applying {gesture.name} gesture to the avatar...
-      </div>
-    );
-
-    try {
-      // Send the file path, gesture, and views to the API
-      const formData = new FormData();
-      formData.append("file_path", selectedAvatar.imgSrc); // Use file path instead of base64
-      formData.append("gesture", gesture.name);
-      formData.append(
-        "views",
-        JSON.stringify(["front", "side", "close", "back"])
-      );
-
-      const response = await axios.post(
-        "http://192.168.1.71:8083/emotions_gen/gesture",
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
-      );
-
-      console.log("Gesture application response:", response.data);
-
-      // Update state with the generated images
-      const { views } = response.data;
-      setGeneratedImages({
-        front: views.front || null,
-        back: views.back || null,
-        side: views.side || null,
-        close: views.close || null,
-      });
-
-      toast.success(`${gesture.name} gesture applied successfully!`);
-    } catch (error) {
-      console.error("Error applying gesture:", error);
-      toast.error(`Failed to apply ${gesture.name} gesture. Please try again.`);
-    } finally {
-      setIsGestureProcessing(false); // Re-enable button
-    }
-  };
-
   const debugAvatarStorage = async () => {
     if (!selectedAvatar?.id) return;
 
@@ -1041,6 +1243,39 @@ const AvatarGestureEmotionUI = () => {
       ? emotions
       : emotions.filter((e) => e.category === currentCategory);
 
+  const renderEmotion = (emotion) => (
+    <div
+      key={emotion.id}
+      className={`p-3 rounded-lg cursor-pointer transition-colors border ${
+        selectedEmotion?.id === emotion.id
+          ? "border-[#9B25A7] bg-[#F4E3F8]"
+          : "border-gray-300 hover:border-[#9B25A7] hover:bg-gray-50"
+      }`}
+      onClick={() => handleEmotionSelect(emotion)}
+    >
+      <div className="text-2xl text-center mb-2">
+        {typeof emotion.icon === "string" ? emotion.icon : emotion.icon}
+      </div>
+      <div className="text-xs font-medium text-center truncate">
+        {emotion.name}
+      </div>
+      <div
+        className={`text-xs text-center mt-1 ${
+          selectedEmotion?.id === emotion.id
+            ? "text-[#9B25A7]"
+            : "text-gray-500"
+        }`}
+      >
+        Intensity: {emotion.intensity}%
+      </div>
+      {isEmotionProcessing && selectedEmotion?.id === emotion.id && (
+        <div className="flex justify-center mt-2">
+          <RefreshCw className="animate-spin text-[#9B25A7]" size={16} />
+        </div>
+      )}
+    </div>
+  );
+
   useEffect(() => {
     const loadAvatars = async () => {
       try {
@@ -1183,12 +1418,7 @@ const AvatarGestureEmotionUI = () => {
                         ? "border-[#9B25A7] bg-[#F4E3F8]"
                         : "border-gray-300 hover:border-[#9B25A7] hover:bg-gray-50"
                     }`}
-                    onClick={() => {
-                      if (selectedAvatar && !isGestureProcessing) {
-                        handleGestureSelect(gesture);
-                        generateGestureView(gesture);
-                      }
-                    }}
+                    onClick={() => handleGestureSelect(gesture)}
                   >
                     <div className="text-2xl text-center mb-2">
                       {gesture.thumbnail}
@@ -1221,49 +1451,7 @@ const AvatarGestureEmotionUI = () => {
 
             {activeTab === "emotions" && (
               <div className="grid grid-cols-2 gap-3">
-                {filteredEmotions.map((emotion) => (
-                  <div
-                    key={emotion.id}
-                    className={`p-3 rounded-lg cursor-pointer transition-colors border ${
-                      selectedEmotion?.id === emotion.id
-                        ? "border-[#9B25A7] bg-[#F4E3F8]"
-                        : "border-gray-300 hover:border-[#9B25A7] hover:bg-gray-50"
-                    }`}
-                    onClick={() => {
-                      if (selectedAvatar && !isEmotionProcessing) {
-                        handleEmotionSelect(emotion);
-                        generateEmotionView(emotion);
-                      }
-                    }}
-                  >
-                    <div className="text-2xl text-center mb-2">
-                      {typeof emotion.icon === "string"
-                        ? emotion.icon
-                        : emotion.icon}
-                    </div>
-                    <div className="text-xs font-medium text-center truncate">
-                      {emotion.name}
-                    </div>
-                    <div
-                      className={`text-xs text-center mt-1 ${
-                        selectedEmotion?.id === emotion.id
-                          ? "text-[#9B25A7]"
-                          : "text-gray-500"
-                      }`}
-                    >
-                      Intensity: {emotion.intensity}%
-                    </div>
-                    {isEmotionProcessing &&
-                      selectedEmotion?.id === emotion.id && (
-                        <div className="flex justify-center mt-2">
-                          <RefreshCw
-                            className="animate-spin text-[#9B25A7]"
-                            size={16}
-                          />
-                        </div>
-                      )}
-                  </div>
-                ))}
+                {filteredEmotions.map((emotion) => renderEmotion(emotion))}
               </div>
             )}
 
