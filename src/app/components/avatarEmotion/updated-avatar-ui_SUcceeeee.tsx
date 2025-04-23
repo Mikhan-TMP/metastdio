@@ -293,6 +293,12 @@ const AvatarGestureEmotionUI = () => {
     fetchCameraViews();
   }, [selectedAvatar]);
 
+  useEffect(() => {
+    // Reset selected emotion and gesture when the active tab changes
+    setSelectedEmotion(null);
+    setSelectedGesture(null);
+  }, [activeTab]);
+
   const fetchExistingEffects = async (type, name) => {
     if (!selectedAvatar) return null;
 
@@ -1228,50 +1234,61 @@ const AvatarGestureEmotionUI = () => {
     }
   };
 
-  const resetToDefaultViews = async () => {
-    if (!selectedAvatar) {
-      toast.error("Please select an avatar to reset.");
-      return;
-    }
-  
-    try {
-      const email = getUserEmail();
-  
-      // Fetch the default camera views for the active avatar
-      const response = await axios.get(
-        "http://192.168.1.141:3001/avatarfx/getAvatarBaseCameraViews",
-        {
-          params: {
-            email,
-            avatarID: selectedAvatar.id,
-          },
-        }
-      );
-  
-      const { cameraViews } = response.data || {};
-  
-      // Update the state with the default camera views
-      setGeneratedImages({
-        front: cameraViews?.front?.src
-          ? `http://192.168.1.141:3001${cameraViews.front.src}`
-          : null,
-        side: cameraViews?.side?.src
-          ? `http://192.168.1.141:3001${cameraViews.side.src}`
-          : null,
-        back: cameraViews?.back?.src
-          ? `http://192.168.1.141:3001${cameraViews.back.src}`
-          : null,
-        close: cameraViews?.close_up?.src
-          ? `http://192.168.1.141:3001${cameraViews.close_up.src}`
-          : null,
-      });
-  
-      toast.success("Avatar views have been reset to the default state.");
-    } catch (error) {
-      console.error("Error resetting avatar views:", error);
-      toast.error("Failed to reset avatar views. Please try again.");
-    }
-  };
+// Reset selected gesture and emotion when the active tab changes
+useEffect(() => {
+  setSelectedGesture(null);
+  setSelectedEmotion(null);
+}, [activeTab]);
+
+// Reset selected gesture and emotion when the reset button is clicked
+const resetToDefaultViews = async () => {
+  if (!selectedAvatar) {
+    toast.error("Please select an avatar to reset.");
+    return;
+  }
+
+  try {
+    const email = getUserEmail();
+
+    // Fetch the default camera views for the active avatar
+    const response = await axios.get(
+      "http://192.168.1.141:3001/avatarfx/getAvatarBaseCameraViews",
+      {
+        params: {
+          email,
+          avatarID: selectedAvatar.id,
+        },
+      }
+    );
+
+    const { cameraViews } = response.data || {};
+
+    // Update the state with the default camera views
+    setGeneratedImages({
+      front: cameraViews?.front?.src
+        ? `http://192.168.1.141:3001${cameraViews.front.src}`
+        : null,
+      side: cameraViews?.side?.src
+        ? `http://192.168.1.141:3001${cameraViews.side.src}`
+        : null,
+      back: cameraViews?.back?.src
+        ? `http://192.168.1.141:3001${cameraViews.back.src}`
+        : null,
+      close: cameraViews?.close_up?.src
+        ? `http://192.168.1.141:3001${cameraViews.close_up.src}`
+        : null,
+    });
+
+    // Reset gesture and emotion
+    setSelectedGesture(null);
+    setSelectedEmotion(null);
+
+    toast.success("Avatar views have been reset to the default state.");
+  } catch (error) {
+    console.error("Error resetting avatar views:", error);
+    toast.error("Failed to reset avatar views. Please try again.");
+  }
+};
 
   const filteredGestures =
     currentCategory === "all"
@@ -1448,46 +1465,48 @@ const AvatarGestureEmotionUI = () => {
 
           {/* Library Content */}
           <div className="flex-1 overflow-y-auto p-3">
-            {activeTab === "gestures" && (
-              <div className="grid grid-cols-2 gap-3">
-                {filteredGestures.map((gesture) => (
-                  <div
-                    key={gesture.id}
-                    className={`p-3 rounded-lg cursor-pointer transition-colors border ${
-                      selectedGesture?.id === gesture.id
-                        ? "border-[#9B25A7] bg-[#F4E3F8]"
-                        : "border-gray-300 hover:border-[#9B25A7] hover:bg-gray-50"
-                    }`}
-                    onClick={() => handleGestureSelect(gesture)}
-                  >
-                    <div className="text-2xl text-center mb-2">
-                      {gesture.thumbnail}
-                    </div>
-                    <div className="text-xs font-medium text-center truncate">
-                      {gesture.name}
-                    </div>
-                    <div
-                      className={`text-xs text-center flex items-center justify-center mt-1 ${
-                        selectedGesture?.id === gesture.id
-                          ? "text-[#9B25A7]"
-                          : "text-gray-500"
-                      }`}
-                    >
-                      <Clock size={10} className="mr-0.5" /> {gesture.duration}s
-                    </div>
-                    {isGestureProcessing &&
-                      selectedGesture?.id === gesture.id && (
-                        <div className="flex justify-center mt-2">
-                          <RefreshCw
-                            className="animate-spin text-[#9B25A7]"
-                            size={16}
-                          />
-                        </div>
-                      )}
-                  </div>
-                ))}
-              </div>
-            )}
+          {activeTab === "gestures" && (
+  <div className="grid grid-cols-2 gap-3">
+    {filteredGestures.map((gesture) => (
+      <div
+        key={gesture.id}
+        className={`p-3 rounded-lg cursor-pointer transition-colors border ${
+          selectedGesture?.id === gesture.id
+            ? "border-[#9B25A7] bg-[#F4E3F8]"
+            : "border-gray-300 hover:border-[#9B25A7] hover:bg-gray-50"
+        }`}
+        onClick={() => handleGestureSelect(gesture)}
+      >
+        <div className="text-2xl text-center mb-2">
+          {gesture.thumbnail}
+        </div>
+        {!isGestureProcessing || selectedGesture?.id !== gesture.id ? (
+          <>
+            <div className="text-xs font-medium text-center truncate">
+              {gesture.name}
+            </div>
+            <div
+              className={`text-xs text-center flex items-center justify-center mt-1 ${
+                selectedGesture?.id === gesture.id
+                  ? "text-[#9B25A7]"
+                  : "text-gray-500"
+              }`}
+            >
+              <Clock size={10} className="mr-0.5" /> {gesture.duration}s
+            </div>
+          </>
+        ) : (
+          <div className="flex justify-center mt-2">
+            <RefreshCw
+              className="animate-spin text-[#9B25A7]"
+              size={16}
+            />
+          </div>
+        )}
+      </div>
+    ))}
+  </div>
+)}
 
             {activeTab === "emotions" && (
               <div className="grid grid-cols-2 gap-3">
@@ -1661,19 +1680,19 @@ const AvatarGestureEmotionUI = () => {
 
                     {/* Gesture/Emotion indicators */}
                     {selectedGesture && (
-                      <div className="absolute left-0 right-0 bottom-0 bg-[#9B25A7] text-white text-center py-1 text-sm rounded-b-lg">
-                        {selectedGesture.name}
-                      </div>
-                    )}
-                    {selectedEmotion && (
-                      <div className="absolute left-0 right-0 top-4 text-center">
-                        <div className="text-3xl">
-                          {typeof selectedEmotion.icon === "string"
-                            ? selectedEmotion.icon
-                            : selectedEmotion.icon}
-                        </div>
-                      </div>
-                    )}
+  <div className="absolute left-0 right-0 bottom-0 bg-[#9B25A7] text-white text-center py-1 text-sm rounded-b-lg">
+    {selectedGesture.name}
+  </div>
+)}
+{selectedEmotion && !selectedGesture && ( // Hide emotion icon if a gesture is selected
+  <div className="absolute left-0 right-0 top-4 text-center">
+    <div className="text-3xl">
+      {typeof selectedEmotion.icon === "string"
+        ? selectedEmotion.icon
+        : selectedEmotion.icon}
+    </div>
+  </div>
+)}
                   </div>
                 </div>
               </div>
