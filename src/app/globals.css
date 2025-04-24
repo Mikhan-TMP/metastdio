@@ -29,6 +29,9 @@ body {
   
 }
 
+.clip-triangle {
+  clip-path: polygon(0 100%, 50% 0, 100% 100%);
+}
 
 .dropping-texts {
   display: inline-block;
