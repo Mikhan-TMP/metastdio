@@ -28,81 +28,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-
-// Alert Component
-const Alert = ({ message, type, onClose }) => {
-  return (
-    <AnimatePresence>
-      {message && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8, y: -20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.8, y: -20 }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
-          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 z-50"
-        >
-          <div
-            className={`relative max-w-xs sm:max-w-sm w-full p-3 sm:p-5 rounded-lg shadow-lg flex items-center gap-2 sm:gap-3 border ${
-              type === "success"
-                ? "bg-green-100 text-green-800 border-green-300"
-                : type === "generating" || type === "info"
-                ? "bg-blue-100 text-blue-800 border-blue-300"
-                : "bg-red-100 text-red-800 border-red-300"
-            }`}
-          >
-            {/* Icon */}
-            {type === "success" ? (
-              <svg
-                className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M5 13l4 4L19 7"
-                ></path>
-              </svg>
-            ) : type === "generating" || type === "info" ? (
-              <RefreshCw className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 animate-spin flex-shrink-0" />
-            ) : (
-              <svg
-                className="w-5 h-5 sm:w-6 sm:h-6 text-red-600 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                ></path>
-              </svg>
-            )}
-
-            {/* Message */}
-            <p className="font-semibold text-xs sm:text-sm md:text-base">
-              {message}
-            </p>
-
-            {/* Close Button */}
-            <motion.button
-              whileHover={{ scale: 1.2 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={onClose}
-              className="absolute top-1 right-1 sm:top-2 sm:right-2 text-gray-600 hover:text-gray-900 transition-all"
-            >
-              &times;
-            </motion.button>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-};
+import { ToastContainer, toast } from "react-toastify";
 
 const AvatarGestureEmotionUI = () => {
   const [avatars, setAvatars] = useState([]);
@@ -112,24 +38,35 @@ const AvatarGestureEmotionUI = () => {
   const [selectedAvatar, setSelectedAvatar] = useState(null);
   const [selectedGesture, setSelectedGesture] = useState(null);
   const [selectedEmotion, setSelectedEmotion] = useState(null);
+  const [recentEmotion, setRecentEmotion] = useState(null); // Track the most recent emotion
+  const [recentGesture, setRecentGesture] = useState(null); // Track the most recent gesture
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [activeTab, setActiveTab] = useState("gestures");
   const [currentCategory, setCurrentCategory] = useState("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImages, setGeneratedImages] = useState({
     front: null,
     back: null,
     side: null,
     close: null,
   });
-  const [alert, setAlert] = useState({ message: "", type: "" });
+  const [isGestureProcessing, setIsGestureProcessing] = useState(false);
+  const [isEmotionProcessing, setIsEmotionProcessing] = useState(false);
+  const [isRegenerateModalOpen, setIsRegenerateModalOpen] = useState(false);
+  const [regenerateViewType, setRegenerateViewType] = useState(null);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+
   const [gestures, setGestures] = useState([]);
   const [emotions, setEmotions] = useState([]);
-  const email =
-    typeof window !== "undefined" && localStorage.getItem("userEmail")
-      ? localStorage.getItem("userEmail")
-      : "test@example.com";
+
+  const getUserEmail = () => {
+    if (typeof window !== "undefined" && localStorage.getItem("userEmail")) {
+      return localStorage.getItem("userEmail");
+    }
+    return "default@example.com";
+  };
 
   const emotionCategories = [
     "All",
@@ -317,132 +254,220 @@ const AvatarGestureEmotionUI = () => {
     fetchGesturesAndEmotions();
   }, []);
 
+  useEffect(() => {
+    const fetchCameraViews = async () => {
+      if (!selectedAvatar) return;
+
+      try {
+        const email = getUserEmail();
+        const response = await axios.get(
+          `http://192.168.1.141:3001/avatarfx/getAvatarBaseCameraViews`,
+          {
+            params: {
+              email,
+              avatarID: selectedAvatar.id,
+            },
+          }
+        );
+
+        const { cameraViews } = response.data || {};
+        setGeneratedImages({
+          front: cameraViews?.front?.src
+            ? `http://192.168.1.141:3001${cameraViews.front.src}`
+            : null,
+          side: cameraViews?.side?.src
+            ? `http://192.168.1.141:3001${cameraViews.side.src}`
+            : null,
+          back: cameraViews?.back?.src
+            ? `http://192.168.1.141:3001${cameraViews.back.src}`
+            : null,
+          close: cameraViews?.close_up?.src
+            ? `http://192.168.1.141:3001${cameraViews.close_up.src}`
+            : null,
+        });
+      } catch (error) {
+        console.error("Error fetching camera views:", error);
+      }
+    };
+
+    fetchCameraViews();
+  }, [selectedAvatar]);
+
+  useEffect(() => {
+    // Reset selected emotion and gesture when the active tab changes
+    setSelectedEmotion(null);
+    setSelectedGesture(null);
+  }, [activeTab]);
+
+  const fetchExistingEffects = async (type, name) => {
+    if (!selectedAvatar) return null;
+
+    try {
+      const email = getUserEmail();
+      const response = await axios.get(
+        `http://192.168.1.141:3001/avatar-effects/getAllEffects`,
+        {
+          params: {
+            email,
+            avatarID: selectedAvatar.id,
+          },
+        }
+      );
+
+      const effects = response.data || [];
+      return effects.find(
+        (effect) => effect.type === type && effect.name === name
+      );
+    } catch (error) {
+      console.error("Error fetching existing effects:", error);
+      return null;
+    }
+  };
+  const fetchExistingEmotion = async (emotionName) => {
+    if (!selectedAvatar) return null;
+
+    try {
+      const email = getUserEmail();
+      const response = await axios.get(
+        `http://192.168.1.141:3001/avatar-effects/getAllEffects`,
+        {
+          params: {
+            email,
+            avatarID: selectedAvatar.id,
+          },
+        }
+      );
+
+      const effects = response.data || [];
+      // Find the emotion with the required name and all image properties
+      const matchingEmotion = effects.find(
+        (effect) =>
+          effect.Emotions &&
+          effect.Emotions.some(
+            (e) =>
+              e.name === emotionName &&
+              e.front &&
+              e.side &&
+              e.back &&
+              e.close_up
+          )
+      );
+
+      return matchingEmotion || null;
+    } catch (error) {
+      console.error("Error fetching existing emotion:", error);
+      return null;
+    }
+  };
+
   const togglePlay = () => {
     setIsPlaying(!isPlaying);
   };
 
-  const handleGestureSelect = (gesture) => {
+  const handleGestureSelect = async (gesture) => {
+    if (!selectedAvatar) {
+      toast.error("Please select an avatar before proceeding.");
+      return;
+    }
+
+    if (isEmotionProcessing || isGestureProcessing) {
+      toast.info("Please wait for the current generation to complete.");
+      return;
+    }
+
     setSelectedGesture(gesture);
+
+    try {
+      const email = getUserEmail();
+      const response = await axios.get(
+        `http://192.168.1.141:3001/avatar-effects/getAllEffects`,
+        {
+          params: {
+            email,
+            avatarID: selectedAvatar.id,
+          },
+        }
+      );
+
+      const effects = response.data || [];
+      const existingGesture = effects.find(
+        (effect) =>
+          effect.Gestures &&
+          effect.Gestures.some((g) => g.name === gesture.name)
+      );
+
+      if (existingGesture) {
+        const gestureData = existingGesture.Gestures.find(
+          (g) =>
+            g.name === gesture.name && g.front && g.side && g.back && g.close_up
+        );
+
+        if (gestureData) {
+          setGeneratedImages({
+            front: `http://192.168.1.141:3001${gestureData.front}`,
+            back: `http://192.168.1.141:3001${gestureData.back}`,
+            side: `http://192.168.1.141:3001${gestureData.side}`,
+            close: `http://192.168.1.141:3001${gestureData.close_up}`,
+          });
+          toast.info(`Gesture "${gesture.name}" is displayed.`);
+          return;
+        }
+      }
+
+      // If gesture is not found or double-clicked, generate it
+      await generateGestureView(gesture);
+    } catch (error) {
+      console.error("Error fetching or generating gesture:", error);
+      toast.error("Failed to process gesture. Please try again.");
+    }
   };
 
-  const handleEmotionSelect = (emotion) => {
+  const handleEmotionSelect = async (emotion) => {
+    if (!selectedAvatar) {
+      toast.error("Please select an avatar before proceeding.");
+      return;
+    }
+
+    if (isEmotionProcessing || isGestureProcessing) {
+      toast.info("Please wait for the current generation to complete.");
+      return;
+    }
+
     setSelectedEmotion(emotion);
-  };
-
-  const handleEmotionClick = async (emotion) => {
-    if (!selectedAvatar) {
-      console.error("No avatar selected");
-      return;
-    }
-
-    // Show loading alert
-    setAlert({
-      message: `Applying ${emotion.name} emotion to the avatar...`,
-      type: "generating",
-    });
 
     try {
-      // Send the file path, emotion, and views to the API
-      const formData = new FormData();
-      formData.append("file_path", selectedAvatar.imgSrc); // Use file path instead of base64
-      formData.append("emotion", emotion.name);
-      formData.append(
-        "views",
-        JSON.stringify(["front", "side", "close", "back"])
-      );
+      const existingEmotion = await fetchExistingEmotion(emotion.name);
 
-      const response = await axios.post(
-        "http://192.168.1.71:8083/emotions_gen/emotions",
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
+      if (existingEmotion) {
+        const emotionData = existingEmotion.Emotions.find(
+          (e) =>
+            e.name === emotion.name && e.front && e.side && e.back && e.close_up
+        );
+
+        if (emotionData) {
+          setGeneratedImages({
+            front: `http://192.168.1.141:3001${emotionData.front}`,
+            back: `http://192.168.1.141:3001${emotionData.back}`,
+            side: `http://192.168.1.141:3001${emotionData.side}`,
+            close: `http://192.168.1.141:3001${emotionData.close_up}`,
+          });
+          toast.info(`Emotion "${emotion.name}" is displayed.`);
+          return;
         }
-      );
+      }
 
-      console.log("Emotion application response:", response.data);
-
-      // Update state with the generated images
-      const { views } = response.data;
-      setGeneratedImages({
-        front: views.front || null,
-        back: views.back || null,
-        side: views.side || null,
-        close: views.close || null,
-      });
-
-      setAlert({
-        message: `${emotion.name} emotion applied successfully!`,
-        type: "success",
-      });
+      // If emotion is not found, generate it
+      toast.info(`Emotion "${emotion.name}" not found. Generating now...`);
+      await generateEmotionView(emotion);
     } catch (error) {
-      console.error("Error applying emotion:", error);
-      setAlert({
-        message: `Failed to apply ${emotion.name} emotion. Please try again.`,
-        type: "error",
-      });
-    }
-  };
-
-  const handleGestureClick = async (gesture) => {
-    if (!selectedAvatar) {
-      console.error("No avatar selected");
-      return;
-    }
-
-    // Show loading alert
-    setAlert({
-      message: `Applying ${gesture.name} gesture to the avatar...`,
-      type: "generating",
-    });
-
-    try {
-      // Send the file path, gesture, and views to the API
-      const formData = new FormData();
-      formData.append("file_path", selectedAvatar.imgSrc); // Use file path instead of base64
-      formData.append("gesture", gesture.name);
-      formData.append(
-        "views",
-        JSON.stringify(["front", "side", "close", "back"])
-      );
-
-      const response = await axios.post(
-        "http://192.168.1.71:8083/emotions_gen/gesture",
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
-      );
-
-      console.log("Gesture application response:", response.data);
-
-      // Update state with the generated images
-      const { views } = response.data;
-      setGeneratedImages({
-        front: views.front || null,
-        back: views.back || null,
-        side: views.side || null,
-        close: views.close || null,
-      });
-
-      setAlert({
-        message: `${gesture.name} gesture applied successfully!`,
-        type: "success",
-      });
-    } catch (error) {
-      console.error("Error applying gesture:", error);
-      setAlert({
-        message: `Failed to apply ${gesture.name} gesture. Please try again.`,
-        type: "error",
-      });
+      console.error("Error fetching or generating emotion:", error);
+      toast.error("Failed to process emotion. Please try again.");
     }
   };
 
   const fetchAvatars = async (selectedStyle = "", searchName = "") => {
     try {
-      const email =
-        typeof window !== "undefined" && localStorage.getItem("userEmail")
-          ? localStorage.getItem("userEmail")
-          : "test@example.com";
+      const email = getUserEmail();
 
       // Build params object with all filters
       const params = {
@@ -477,33 +502,66 @@ const AvatarGestureEmotionUI = () => {
     }
   };
 
+  const base64ToBlob = (base64, mime = "image/jpeg") => {
+    if (!base64) return null;
+    const byteString = atob(base64.split(",").pop());
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) {
+      ia[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([ab], { type: mime });
+  };
   const generateAvatarView = async () => {
     if (!selectedAvatar) {
-      console.error("No avatar selected");
+      toast.error(`Please select an avatar before proceeding.`);
       return;
     }
 
     // Close the modal
     setIsModalOpen(false);
 
+    // Set generating state to true to disable the button
+    setIsGenerating(true);
+
     // Show loading alert
-    setAlert({
-      message: "The avatar view is being generated...",
-      type: "generating",
-    });
+    toast.info("Generating your avatar. This may take a few seconds...");
 
     try {
-      const email = localStorage.getItem("userEmail") || "default@example.com";
+      const email = getUserEmail();
 
-      // Send the file path directly to the API
+      // Fetch current views from the API to ensure all views are included
+      let currentViews = { front: null, side: null, back: null, close: null };
+      try {
+        const response = await axios.get(
+          "http://192.168.1.141:3001/avatarfx/getAvatarViews",
+          {
+            params: {
+              email,
+              avatarID: selectedAvatar.id,
+            },
+          }
+        );
+
+        const views = response.data?.cameraViews || {};
+        currentViews = {
+          front: views.front?.base64 || null,
+          side: views.side?.base64 || null,
+          back: views.back?.base64 || null,
+          close: views.close_up?.base64 || null,
+        };
+      } catch (err) {
+        console.warn("No existing views found or error fetching them:", err);
+      }
+
+      // Regenerate all views to ensure consistency
       const formData = new FormData();
-      formData.append("file_path", selectedAvatar.imgSrc); // Use file path instead of base64
+      formData.append("file_path", selectedAvatar.imgSrc);
       formData.append(
         "views",
         JSON.stringify(["front", "side", "close", "back"])
       );
 
-      // Send the file path and views to the API
       const response = await axios.post(
         "http://192.168.1.71:8083/emotions_gen",
         formData,
@@ -512,78 +570,285 @@ const AvatarGestureEmotionUI = () => {
         }
       );
 
-      console.log("Emotion generation response:", response.data);
-
-      // Update state with the generated images
       const { views } = response.data;
-      const generatedImages = {
-        front: views.front || null,
-        back: views.back || null,
-        side: views.side || null,
-        close: views.close || null,
+      const updatedViews = {
+        front: views.front || currentViews.front,
+        back: views.back || currentViews.back,
+        side: views.side || currentViews.side,
+        close: views.close || currentViews.close,
       };
-      setGeneratedImages(generatedImages);
 
       // Prepare payload for API
       const payload = {
         email,
         avatarID: selectedAvatar.id,
         cameraViews: {
-          front: { base64: generatedImages.front },
-          side: { base64: generatedImages.side },
-          back: { base64: generatedImages.back },
-          close_up: { base64: generatedImages.close },
+          front: { base64: updatedViews.front },
+          side: { base64: updatedViews.side },
+          back: { base64: updatedViews.back },
+          close_up: { base64: updatedViews.close },
         },
       };
 
       // Log payload for debugging
-      console.log("Payload being sent to API:", JSON.stringify(payload, null, 2));
+      console.log(
+        "Payload being sent to API:",
+        JSON.stringify(payload, null, 2)
+      );
 
       // Send payload to API
-      await axios.post("http://192.168.1.141:3001/avatarfx/initializeAvatarFx", payload, {
-        headers: { "Content-Type": "application/json" },
-      });
+      await axios.post(
+        "http://192.168.1.141:3001/avatarfx/initializeAvatarFx",
+        payload,
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      );
 
-      setAlert({
-        message: "Emotion generation completed successfully!",
-        type: "success",
-      });
+      // Update state with the generated images
+      setGeneratedImages(updatedViews);
+
+      toast.success(`Emotion generation completed successfully!`);
     } catch (error) {
       console.error("Error generating emotion:", error);
-      setAlert({
-        message: "Failed to generate avatar view. Please try again.",
-        type: "error",
-      });
+      toast.error(`Failed to generate avatar view. Please try again.`);
+    } finally {
+      // Re-enable the button regardless of success or failure
+      setIsGenerating(false);
     }
   };
 
-  const regenerateView = async (view) => {
-    if (!selectedAvatar) {
-      console.error("No avatar selected");
+  const generateEmotionView = async (emotion) => {
+    if (!selectedAvatar || isEmotionProcessing) {
+      toast.error("Please select an avatar before proceeding.");
       return;
     }
 
-    // Show loading state for the specific view
-    setGeneratedImages((prev) => ({
-      ...prev,
-      [view]: "loading",
-    }));
+    setIsEmotionProcessing(true);
 
-    setAlert({
-      message: `Regenerating ${view} view...`,
-      type: "generating",
-    });
+    toast.info(
+      <div className="flex items-center">
+        <RefreshCw className="animate-spin mr-2" />
+        Applying {emotion.name} emotion to the avatar...
+      </div>
+    );
 
     try {
-      const email = localStorage.getItem("userEmail") || "default@example.com";
-
-      // Send the file path directly to the API
       const formData = new FormData();
-      formData.append("file_path", selectedAvatar.imgSrc); // Use file path instead of base64
+      formData.append("file_path", selectedAvatar.imgSrc);
+      formData.append("emotion", emotion.name);
+      formData.append(
+        "views",
+        JSON.stringify(["front", "side", "close", "back"])
+      );
+
+      const response = await axios.post(
+        "http://192.168.1.71:8083/emotions_gen/emotions",
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+
+      const { views } = response.data;
+
+      // Process images before sending to the API
+      const processedImages = {};
+      for (const view of ["front", "back", "side", "close"]) {
+        const base64 = views[view];
+        if (base64) {
+          const blob = base64ToBlob(base64);
+          processedImages[view] = blob;
+        }
+      }
+
+      // Save to API (database)
+      const apiForm = new FormData();
+      apiForm.append("email", getUserEmail());
+      apiForm.append("name", selectedAvatar.name || "");
+      apiForm.append("avatarId", selectedAvatar.id || "");
+      apiForm.append("gestures", JSON.stringify([]));
+      apiForm.append("emotions", JSON.stringify([{ name: emotion.name }]));
+      for (const [view, blob] of Object.entries(processedImages)) {
+        apiForm.append(
+          `emotions_${emotion.name}_${view === "close" ? "close_up" : view}`,
+          blob,
+          `${view}.jpg`
+        );
+      }
+
+      await axios.post("http://192.168.1.141:3001/avatar-effects", apiForm, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      setGeneratedImages({
+        front: views.front || null,
+        back: views.back || null,
+        side: views.side || null,
+        close: views.close || null,
+      });
+
+      toast.success(`${emotion.name} emotion applied and saved!`);
+    } catch (error) {
+      console.error("Error applying emotion:", error);
+      toast.error(`Failed to apply ${emotion.name} emotion. Please try again.`);
+    } finally {
+      setIsEmotionProcessing(false);
+    }
+  };
+
+  const generateGestureView = async (gesture) => {
+    if (!selectedAvatar || isGestureProcessing) {
+      toast.error("Please select an avatar before proceeding.");
+      return;
+    }
+
+    setIsGestureProcessing(true);
+
+    toast.info(
+      <div className="flex items-center">
+        <RefreshCw className="animate-spin mr-2" />
+        Applying {gesture.name} gesture to the avatar...
+      </div>
+    );
+
+    try {
+      const formData = new FormData();
+      formData.append("file_path", selectedAvatar.imgSrc);
+      formData.append("gesture", gesture.name);
+      formData.append(
+        "views",
+        JSON.stringify(["front", "side", "close", "back"])
+      );
+
+      const response = await axios.post(
+        "http://192.168.1.71:8083/emotions_gen/gesture",
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+
+      const { views } = response.data;
+      setGeneratedImages({
+        front: views.front || null,
+        back: views.back || null,
+        side: views.side || null,
+        close: views.close || null,
+      });
+
+      // Save to API (database)
+      const apiForm = new FormData();
+      apiForm.append("email", getUserEmail());
+      apiForm.append("name", selectedAvatar.name || "");
+      apiForm.append("avatarId", selectedAvatar.id || "");
+      apiForm.append("gestures", JSON.stringify([{ name: gesture.name }]));
+      apiForm.append("emotions", JSON.stringify([]));
+      ["front", "back", "side", "close"].forEach((view) => {
+        const base64 = views[view];
+        if (base64) {
+          const blob = base64ToBlob(base64);
+          apiForm.append(
+            `gestures_${gesture.name}_${view === "close" ? "close_up" : view}`,
+            blob,
+            `${view}.jpg`
+          );
+        }
+      });
+
+      await axios.post("http://192.168.1.141:3001/avatar-effects", apiForm, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      toast.success(`${gesture.name} gesture applied and saved!`);
+    } catch (error) {
+      console.error("Error applying gesture:", error);
+      toast.error(`Failed to apply ${gesture.name} gesture. Please try again.`);
+    } finally {
+      setIsGestureProcessing(false);
+    }
+  };
+
+  const convertToBase64 = async (imageUrl) => {
+    if (!imageUrl) return null;
+
+    // If already base64, return as is
+    if (imageUrl.startsWith("data:image")) {
+      return imageUrl;
+    }
+
+    try {
+      const response = await axios.get(imageUrl, {
+        responseType: "arraybuffer",
+      });
+      const base64 = Buffer.from(response.data, "binary").toString("base64");
+      return `data:image/png;base64,${base64}`;
+    } catch (error) {
+      console.error("Error converting to base64:", error);
+      return null;
+    }
+  };
+
+  const regenerateAvatarView = async (view) => {
+    if (!selectedAvatar) {
+      toast.error("Please select an avatar before proceeding.");
+      return;
+    }
+
+    if (isRegenerating) {
+      toast.error("Another regeneration is already in progress.");
+      return;
+    }
+
+    setIsRegenerating(true);
+    setGeneratedImages((prev) => ({ ...prev, [view]: "loading" }));
+
+    const email = getUserEmail();
+    const avatarID = selectedAvatar.id;
+
+    try {
+      // Step 1: First fetch the current views from the API
+      let currentViews;
+      try {
+        const response = await axios.get(
+          "http://192.168.1.141:3001/avatarfx/getAvatarViews",
+          {
+            params: { email, avatarID },
+          }
+        );
+
+        // Extract existing views, ensuring we preserve the base64 data
+        currentViews = {
+          front: response.data?.cameraViews?.front?.base64 || null,
+          side: response.data?.cameraViews?.side?.base64 || null,
+          back: response.data?.cameraViews?.back?.base64 || null,
+          close_up: response.data?.cameraViews?.close_up?.base64 || null,
+        };
+
+        // Convert any non-base64 images to base64
+        currentViews = {
+          front: await convertToBase64(currentViews.front),
+          side: await convertToBase64(currentViews.side),
+          back: await convertToBase64(currentViews.back),
+          close_up: await convertToBase64(currentViews.close_up),
+        };
+      } catch (err) {
+        console.warn("Error fetching current views:", err);
+        // If we can't fetch current views, use what's in the state and convert to base64
+        currentViews = {
+          front: await convertToBase64(generatedImages.front),
+          side: await convertToBase64(generatedImages.side),
+          back: await convertToBase64(generatedImages.back),
+          close_up: await convertToBase64(generatedImages.close),
+        };
+      }
+
+      // Step 2: Generate new image for the selected view
+      const formData = new FormData();
+      formData.append("file_path", selectedAvatar.imgSrc);
       formData.append("views", JSON.stringify([view]));
 
-      // Send the file path and specific view to the API
-      const response = await axios.post(
+      const regenerateResponse = await axios.post(
         "http://192.168.1.71:8083/emotions_gen",
         formData,
         {
@@ -591,59 +856,318 @@ const AvatarGestureEmotionUI = () => {
         }
       );
 
-      console.log(`${view} view regeneration response:`, response.data);
+      const newGeneratedImage = regenerateResponse.data?.views?.[view];
+      if (!newGeneratedImage) {
+        throw new Error(`Failed to generate new image for ${view} view`);
+      }
 
-      // Map API response keys to state keys
-      const apiToStateKeyMap = {
-        "front": "front",
-        "side": "side",
-        "close": "close",
-        "back": "back",
+      // Convert new generated image to base64 if needed
+      const newGeneratedBase64 = await convertToBase64(newGeneratedImage);
+
+      // Step 3: Create updated views object with the new image
+      const updatedViews = {
+        ...currentViews,
+        [view === "close" ? "close_up" : view]: newGeneratedBase64,
       };
 
-      const { views } = response.data;
-      const updatedImage = views[view] || null;
-      console.log("TESTING BOSSING MICHAEL", updatedImage);
-      setGeneratedImages((prev) => ({
-        ...prev,
-        [apiToStateKeyMap[view]]: updatedImage,
-      }));
-
-      // Save updated view to the database
-      await axios.post("http://192.168.1.141:3001/avatarfx/initializeAvatarFx", {
+      // Step 4: Send all views back to the API
+      const payload = {
         email,
-        avatarID: selectedAvatar.id,
+        avatarID,
         cameraViews: {
-          [view]: { base64: updatedImage },
+          front: { base64: updatedViews.front },
+          side: { base64: updatedViews.side },
+          back: { base64: updatedViews.back },
+          close_up: { base64: updatedViews.close_up },
         },
+      };
+
+      // Send the complete payload to the API
+      await axios.post(
+        "http://192.168.1.141:3001/avatarfx/initializeAvatarFx",
+        payload,
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+
+      // Step 5: Update local state with new images
+      setGeneratedImages({
+        front: updatedViews.front,
+        side: updatedViews.side,
+        back: updatedViews.back,
+        close: updatedViews.close_up, // Note: we map close_up to close in the state
       });
 
-      setAlert({
-        message: `${view} view regenerated successfully!`,
-        type: "success",
-      });
+      toast.success(`${view} view regenerated and saved successfully!`);
+    } catch (err) {
+      console.error("Regeneration failed:", err);
+      toast.error(`Error regenerating ${view}: ${err.message}`);
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
+  const regenerateEmotion = async (view, emotionName) => {
+    if (!selectedAvatar) {
+      toast.error("Please select an avatar before proceeding.");
+      console.error("No avatar selected");
+      return;
+    }
+
+    if (isRegenerating) {
+      toast.error("Another regeneration is already in progress.");
+      return;
+    }
+
+    setIsRegenerating(true);
+    setGeneratedImages((prev) => ({
+      ...prev,
+      [view]: "loading",
+    }));
+
+    toast.info(`Regenerating ${view} view with emotion "${emotionName}"...`);
+
+    try {
+      const formData = new FormData();
+      formData.append("file_path", selectedAvatar.imgSrc);
+      formData.append("views", JSON.stringify([view]));
+      formData.append("emotion", emotionName);
+
+      const response = await axios.post(
+        "http://192.168.1.71:8083/emotions_gen/emotions",
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+
+      const { views } = response.data || {};
+      const updatedImage = views?.[view] || null;
+
+      if (updatedImage) {
+        const blob = base64ToBlob(updatedImage);
+
+        // Save to API
+        const apiForm = new FormData();
+        apiForm.append("email", getUserEmail());
+        apiForm.append("name", selectedAvatar.name || "");
+        apiForm.append("avatarId", selectedAvatar.id || "");
+        apiForm.append("gestures", JSON.stringify([]));
+        apiForm.append("emotions", JSON.stringify([{ name: emotionName }]));
+        apiForm.append(
+          `emotions_${emotionName}_${view === "close" ? "close_up" : view}`,
+          blob,
+          `${view}.jpg`
+        );
+
+        await axios.post("http://192.168.1.141:3001/avatar-effects", apiForm, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+
+        setGeneratedImages((prev) => ({
+          ...prev,
+          [view]: updatedImage,
+        }));
+
+        toast.success(
+          `${view} view regenerated with emotion "${emotionName}" and saved successfully!`
+        );
+      } else {
+        toast.info(
+          `${view} view regenerated with emotion "${emotionName}", but no new image returned.`
+        );
+      }
     } catch (error) {
-      console.error(`Error regenerating ${view} view:`, error);
+      console.error(`Error regenerating ${view} view with emotion:`, error);
+      toast.error(
+        `Failed to regenerate ${view} view with emotion "${emotionName}". Please try again.`
+      );
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
 
-      // Handle API error
-      setGeneratedImages((prev) => ({
-        ...prev,
-        [view]: null,
-      }));
+  const regenerateGesture = async (view, gestureName) => {
+    if (!selectedAvatar) {
+      toast.error("Please select an avatar before proceeding.");
+      console.error("No avatar selected");
+      return;
+    }
 
-      setAlert({
-        message: `Failed to regenerate ${view} view. ${
-          error.response?.status === 500
-            ? "Server error occurred. Please try again later."
-            : "Please try again."
-        }`,
-        type: "error",
-      });
+    if (isRegenerating) {
+      toast.error("Another regeneration is already in progress.");
+      return;
+    }
+
+    setIsRegenerating(true);
+    setGeneratedImages((prev) => ({
+      ...prev,
+      [view]: "loading",
+    }));
+
+    toast.info(`Regenerating ${view} view with gesture "${gestureName}"...`);
+
+    try {
+      const formData = new FormData();
+      formData.append("file_path", selectedAvatar.imgSrc);
+      formData.append("views", JSON.stringify([view]));
+      formData.append("gesture", gestureName);
+
+      const response = await axios.post(
+        "http://192.168.1.71:8083/emotions_gen/gesture",
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+
+      const { views } = response.data || {};
+      const updatedImage = views?.[view] || null;
+
+      if (updatedImage) {
+        const blob = base64ToBlob(updatedImage);
+
+        // Save to API
+        const apiForm = new FormData();
+        apiForm.append("email", getUserEmail());
+        apiForm.append("name", selectedAvatar.name || "");
+        apiForm.append("avatarId", selectedAvatar.id || "");
+        apiForm.append("gestures", JSON.stringify([{ name: gestureName }]));
+        apiForm.append("emotions", JSON.stringify([]));
+        apiForm.append(
+          `gestures_${gestureName}_${view === "close" ? "close_up" : view}`,
+          blob,
+          `${view}.jpg`
+        );
+
+        await axios.post("http://192.168.1.141:3001/avatar-effects", apiForm, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+
+        setGeneratedImages((prev) => ({
+          ...prev,
+          [view]: updatedImage,
+        }));
+
+        toast.success(
+          `${view} view regenerated with gesture "${gestureName}" and saved successfully!`
+        );
+      } else {
+        toast.info(
+          `${view} view regenerated with gesture "${gestureName}", but no new image returned.`
+        );
+      }
+    } catch (error) {
+      console.error(`Error regenerating ${view} view with gesture:`, error);
+      toast.error(
+        `Failed to regenerate ${view} view with gesture "${gestureName}". Please try again.`
+      );
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
+  const debugAvatarStorage = async () => {
+    if (!selectedAvatar?.id) return;
+
+    try {
+      const email = getUserEmail();
+
+      // Check what's currently stored in the API
+      const response = await axios.get(
+        `http://192.168.1.141:3001/avatarfx/getAvatarViews`,
+        {
+          params: {
+            email,
+            avatarID: selectedAvatar.id,
+          },
+        }
+      );
+
+      console.log("Currently stored avatar views:", response.data);
+
+      // Check what's in your current state
+      console.log("Current state images:", generatedImages);
+    } catch (error) {
+      console.error("Debug error:", error);
+    }
+  };
+
+  useEffect(() => {
+    const loadInitialViews = async () => {
+      if (!selectedAvatar?.id) return;
+
+      try {
+        const email = getUserEmail();
+
+        const response = await axios.get(
+          `http://192.168.1.141:3001/avatarfx/getAvatarViews`,
+          {
+            params: {
+              email,
+              avatarID: selectedAvatar.id,
+            },
+          }
+        );
+
+        if (response.data?.cameraViews) {
+          const views = {
+            front: response.data.cameraViews.front?.base64 || null,
+            side: response.data.cameraViews.side?.base64 || null,
+            back: response.data.cameraViews.back?.base64 || null,
+            close: response.data.cameraViews.close_up?.base64 || null,
+          };
+
+          setGeneratedImages(views);
+        }
+      } catch (error) {
+        if (error.response?.status === 404) {
+          console.warn("No initial views found for this avatar.");
+        } else {
+          console.error("Error loading initial views:", error);
+        }
+      }
+    };
+
+    loadInitialViews();
+  }, [selectedAvatar?.id]);
+
+  const handleRegenerateClick = (view) => {
+    setRegenerateViewType(view);
+    setIsRegenerateModalOpen(true);
+  };
+
+  const handleRegenerateOption = async (type) => {
+    setIsRegenerateModalOpen(false);
+
+    if (!regenerateViewType) {
+      toast.error("Please select a camera view to regenerate.");
+      return;
+    }
+
+    if (type === "camera") {
+      await regenerateAvatarView(regenerateViewType); // Regenerate the selected camera view
+    } else if (type === "gesture") {
+      // Use the currently selected gesture for regeneration
+      if (selectedGesture) {
+        await regenerateGesture(regenerateViewType, selectedGesture.name);
+      } else {
+        toast.error("Please select a gesture to regenerate.");
+      }
+    } else if (type === "emotion") {
+      // Use the currently selected emotion for regeneration
+      if (selectedEmotion) {
+        await regenerateEmotion(regenerateViewType, selectedEmotion.name);
+      } else {
+        toast.error("Please select an emotion to regenerate.");
+      }
     }
   };
 
   const fetchGeneratedImages = async () => {
     if (!selectedAvatar) {
+      toast.error("Please select an avatar before proceeding.");
       console.error("No avatar selected");
       return;
     }
@@ -687,11 +1211,67 @@ const AvatarGestureEmotionUI = () => {
           close: `${base64Img}`,
         });
       } else {
-        alert("No image generated. Please try again.");
+        toast.error("No image generated. Please try again.");
       }
     } catch (error) {
       console.error("Error fetching generated images:", error);
-      alert("Failed to fetch generated images. Please try again.");
+      toast.error("Failed to fetch generated images. Please try again.");
+    }
+  };
+
+  // Reset selected gesture and emotion when the active tab changes
+  useEffect(() => {
+    setSelectedGesture(null);
+    setSelectedEmotion(null);
+  }, [activeTab]);
+
+  // Reset selected gesture and emotion when the reset button is clicked
+  const resetToDefaultViews = async () => {
+    if (!selectedAvatar) {
+      toast.error("Please select an avatar to reset.");
+      return;
+    }
+
+    try {
+      const email = getUserEmail();
+
+      // Fetch the default camera views for the active avatar
+      const response = await axios.get(
+        "http://192.168.1.141:3001/avatarfx/getAvatarBaseCameraViews",
+        {
+          params: {
+            email,
+            avatarID: selectedAvatar.id,
+          },
+        }
+      );
+
+      const { cameraViews } = response.data || {};
+
+      // Update the state with the default camera views
+      setGeneratedImages({
+        front: cameraViews?.front?.src
+          ? `http://192.168.1.141:3001${cameraViews.front.src}`
+          : null,
+        side: cameraViews?.side?.src
+          ? `http://192.168.1.141:3001${cameraViews.side.src}`
+          : null,
+        back: cameraViews?.back?.src
+          ? `http://192.168.1.141:3001${cameraViews.back.src}`
+          : null,
+        close: cameraViews?.close_up?.src
+          ? `http://192.168.1.141:3001${cameraViews.close_up.src}`
+          : null,
+      });
+
+      // Reset gesture and emotion
+      setSelectedGesture(null);
+      setSelectedEmotion(null);
+
+      toast.success("Avatar views have been reset to the default state.");
+    } catch (error) {
+      console.error("Error resetting avatar views:", error);
+      toast.error("Failed to reset avatar views. Please try again.");
     }
   };
 
@@ -704,6 +1284,39 @@ const AvatarGestureEmotionUI = () => {
     currentCategory === "all"
       ? emotions
       : emotions.filter((e) => e.category === currentCategory);
+
+  const renderEmotion = (emotion) => (
+    <div
+      key={emotion.id}
+      className={`p-3 rounded-lg cursor-pointer transition-colors border ${
+        selectedEmotion?.id === emotion.id
+          ? "border-[#9B25A7] bg-[#F4E3F8]"
+          : "border-gray-300 hover:border-[#9B25A7] hover:bg-gray-50"
+      }`}
+      onClick={() => handleEmotionSelect(emotion)}
+    >
+      <div className="text-2xl text-center mb-2">
+        {typeof emotion.icon === "string" ? emotion.icon : emotion.icon}
+      </div>
+      <div className="text-xs font-medium text-center truncate">
+        {emotion.name}
+      </div>
+      <div
+        className={`text-xs text-center mt-1 ${
+          selectedEmotion?.id === emotion.id
+            ? "text-[#9B25A7]"
+            : "text-gray-500"
+        }`}
+      >
+        Intensity: {emotion.intensity}%
+      </div>
+      {isEmotionProcessing && selectedEmotion?.id === emotion.id && (
+        <div className="flex justify-center mt-2">
+          <RefreshCw className="animate-spin text-[#9B25A7]" size={16} />
+        </div>
+      )}
+    </div>
+  );
 
   useEffect(() => {
     const loadAvatars = async () => {
@@ -724,12 +1337,18 @@ const AvatarGestureEmotionUI = () => {
   return (
     <div className="flex flex-col h-screen bg-gray-100">
       {/* Alert */}
-      <Alert
-        message={alert.message}
-        type={alert.type}
-        onClose={() => setAlert({ message: "", type: "" })}
+      <ToastContainer
+        postion="top-center"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
       />
-
       {/* Top Toolbar - Updated to match modal style */}
       <div className="flex justify-between items-center p-4 bg-white shadow-sm">
         <div className="flex items-center">
@@ -752,7 +1371,7 @@ const AvatarGestureEmotionUI = () => {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex flex-1 overflow-hidden p-4">
+      <div className="flex flex-1 p-4">
         {/* Left Panel - Library - Updated to match modal style */}
         <div className="w-72 bg-white shadow rounded-lg mr-4 flex flex-col">
           {/* Library Tabs */}
@@ -776,16 +1395,6 @@ const AvatarGestureEmotionUI = () => {
               onClick={() => setActiveTab("emotions")}
             >
               Emotions
-            </button>
-            <button
-              className={`flex-1 py-2 ${
-                activeTab === "sequences"
-                  ? "bg-[#F4E3F8] text-[#9B25A7] font-medium"
-                  : "hover:bg-gray-50"
-              }`}
-              onClick={() => setActiveTab("sequences")}
-            >
-              Sequences
             </button>
           </div>
 
@@ -841,28 +1450,36 @@ const AvatarGestureEmotionUI = () => {
                         ? "border-[#9B25A7] bg-[#F4E3F8]"
                         : "border-gray-300 hover:border-[#9B25A7] hover:bg-gray-50"
                     }`}
-                    onClick={() => {
-                      if (selectedAvatar) {
-                        handleGestureSelect(gesture);
-                        handleGestureClick(gesture);
-                      }
-                    }}
+                    onClick={() => handleGestureSelect(gesture)}
                   >
                     <div className="text-2xl text-center mb-2">
                       {gesture.thumbnail}
                     </div>
-                    <div className="text-xs font-medium text-center truncate">
-                      {gesture.name}
-                    </div>
-                    <div
-                      className={`text-xs text-center flex items-center justify-center mt-1 ${
-                        selectedGesture?.id === gesture.id
-                          ? "text-[#9B25A7]"
-                          : "text-gray-500"
-                      }`}
-                    >
-                      <Clock size={10} className="mr-0.5" /> {gesture.duration}s
-                    </div>
+                    {!isGestureProcessing ||
+                    selectedGesture?.id !== gesture.id ? (
+                      <>
+                        <div className="text-xs font-medium text-center truncate">
+                          {gesture.name}
+                        </div>
+                        <div
+                          className={`text-xs text-center flex items-center justify-center mt-1 ${
+                            selectedGesture?.id === gesture.id
+                              ? "text-[#9B25A7]"
+                              : "text-gray-500"
+                          }`}
+                        >
+                          <Clock size={10} className="mr-0.5" />{" "}
+                          {gesture.duration}s
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex justify-center mt-2">
+                        <RefreshCw
+                          className="animate-spin text-[#9B25A7]"
+                          size={16}
+                        />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -870,116 +1487,7 @@ const AvatarGestureEmotionUI = () => {
 
             {activeTab === "emotions" && (
               <div className="grid grid-cols-2 gap-3">
-                {filteredEmotions.map((emotion) => (
-                  <div
-                    key={emotion.id}
-                    className={`p-3 rounded-lg cursor-pointer transition-colors border ${
-                      selectedEmotion?.id === emotion.id
-                        ? "border-[#9B25A7] bg-[#F4E3F8]"
-                        : "border-gray-300 hover:border-[#9B25A7] hover:bg-gray-50"
-                    }`}
-                    onClick={() => {
-                      if (selectedAvatar) {
-                        handleEmotionSelect(emotion);
-                        handleEmotionClick(emotion);
-                      }
-                    }}
-                  >
-                    <div className="text-2xl text-center mb-2">
-                      {typeof emotion.icon === "string"
-                        ? emotion.icon
-                        : emotion.icon}
-                    </div>
-                    <div className="text-xs font-medium text-center truncate">
-                      {emotion.name}
-                    </div>
-                    <div
-                      className={`text-xs text-center mt-1 ${
-                        selectedEmotion?.id === emotion.id
-                          ? "text-[#9B25A7]"
-                          : "text-gray-500"
-                      }`}
-                    >
-                      Intensity: {emotion.intensity}%
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {activeTab === "sequences" && (
-              <div className="space-y-3">
-                <div className="bg-white p-3 rounded-lg border border-gray-300 hover:border-[#9B25A7] hover:bg-gray-50 transition-colors">
-                  <div className="font-medium mb-2 flex items-center justify-between">
-                    <span>Greeting Sequence</span>
-                    <div className="text-xs text-gray-500">4.5s</div>
-                  </div>
-                  <div className="flex mb-2">
-                    <div className="flex space-x-2 text-sm">
-                      <span>👋</span>
-                      <span>→</span>
-                      <span>😃</span>
-                      <span>→</span>
-                      <span>🤝</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-end space-x-2">
-                    <button className="p-1.5 bg-gray-200 rounded-md hover:bg-gray-300">
-                      <Play size={12} />
-                    </button>
-                    <button className="p-1.5 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]">
-                      <Plus size={12} />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="bg-white p-3 rounded-lg border border-gray-300 hover:border-[#9B25A7] hover:bg-gray-50 transition-colors">
-                  <div className="font-medium mb-2 flex items-center justify-between">
-                    <span>Presentation Start</span>
-                    <div className="text-xs text-gray-500">6.2s</div>
-                  </div>
-                  <div className="flex mb-2">
-                    <div className="flex space-x-2 text-sm">
-                      <span>🙌</span>
-                      <span>→</span>
-                      <span>😎</span>
-                      <span>→</span>
-                      <span>👉</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-end space-x-2">
-                    <button className="p-1.5 bg-gray-200 rounded-md hover:bg-gray-300">
-                      <Play size={12} />
-                    </button>
-                    <button className="p-1.5 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]">
-                      <Plus size={12} />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="bg-white p-3 rounded-lg border border-gray-300 hover:border-[#9B25A7] hover:bg-gray-50 transition-colors">
-                  <div className="font-medium mb-2 flex items-center justify-between">
-                    <span>Active Listening</span>
-                    <div className="text-xs text-gray-500">3.8s</div>
-                  </div>
-                  <div className="flex mb-2">
-                    <div className="flex space-x-2 text-sm">
-                      <span>🙂</span>
-                      <span>→</span>
-                      <span>🤔</span>
-                      <span>→</span>
-                      <span>😌</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-end space-x-2">
-                    <button className="p-1.5 bg-gray-200 rounded-md hover:bg-gray-300">
-                      <Play size={12} />
-                    </button>
-                    <button className="p-1.5 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]">
-                      <Plus size={12} />
-                    </button>
-                  </div>
-                </div>
+                {filteredEmotions.map((emotion) => renderEmotion(emotion))}
               </div>
             )}
           </div>
@@ -992,48 +1500,61 @@ const AvatarGestureEmotionUI = () => {
                 ? "New Gesture"
                 : activeTab === "emotions"
                 ? "New Emotion"
-                : "New Sequence"}
+                : ""}
             </button>
           </div>
         </div>
 
         {/* Center - Preview and Timeline */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Avatar Selection - Updated to match modal style */}
-          <div className="p-4 bg-white shadow rounded-lg mb-4 flex items-center justify-between">
-            <div className="flex items-center">
-              <button
-                className="p-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] transition-colors disabled:bg-[#E3C5F0]"
-                onClick={() => setIsModalOpen(true)}
-              >
-                Avatar Preview
-              </button>
-            </div>
-
-            <div className="flex items-center space-x-3">
-              <button
-                className="w-full sm:w-auto bg-[#9B25A7] text-white text-sm py-2 px-4 rounded-md flex items-center gap-1 hover:bg-[#7A1C86] transition-colors"
-                onClick={generateAvatarView}
-              >
-                <Plus size={16} /> Generate Avatar View
-              </button>
-              <button className="p-2 border border-gray-300 rounded-md hover:bg-gray-50 flex items-center">
-                <Camera size={16} className="mr-1" /> Capture
-              </button>
-              <button className="p-2 border border-gray-300 rounded-md hover:bg-gray-50 flex items-center">
-                <RefreshCw size={16} className="mr-1" /> Reset
-              </button>
-            </div>
-          </div>
-
           {/* Preview Area - Updated to match modal style */}
           <div className="flex-1 min-h-0 flex flex-col">
-            <div className="flex-1 flex">
-              {/* 3D Avatar Preview */}
-              <div className="w-2/3 bg-white shadow rounded-lg flex items-center justify-center mr-4">
-                <div className="relative p-4">
-                  {/* Avatar placeholder */}
-                  <div className="w-48 aspect-[9/16] rounded-lg relative flex items-center justify-center">
+            <div className="flex flex-1">
+              {/* Combined Avatar Preview and Camera Views */}
+              <div className="me-4 flex-1 bg-white shadow rounded-lg p-6 flex flex-col">
+                {/* Header */}
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="font-medium text-[#9B25A7] text-lg">
+                    Avatar Preview & Camera Views
+                  </h3>
+                  <div className="flex space-x-3">
+                    <button
+                      className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] transition-colors disabled:bg-[#E3C5F0]"
+                      onClick={() => setIsModalOpen(true)}
+                    >
+                      Avatar Preview
+                    </button>
+                    <button
+                      className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] transition-colors disabled:bg-opacity-50 disabled:cursor-not-allowed flex items-center"
+                      onClick={generateAvatarView}
+                      disabled={isGenerating}
+                    >
+                      {isGenerating ? (
+                        <>
+                          <RefreshCw size={16} className="animate-spin mr-2" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Plus size={16} className="mr-2" />
+                          Generate Avatar View
+                        </>
+                      )}
+                    </button>
+                    <button
+                      className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 flex items-center"
+                      onClick={resetToDefaultViews}
+                    >
+                      <RefreshCw size={16} className="mr-2" />
+                      Reset
+                    </button>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="flex space-x-6">
+                  {/* Avatar Preview */}
+                  <div className="w-1/3 bg-gray-100 rounded-lg flex items-center justify-center">
                     {selectedAvatar ? (
                       <img
                         src={selectedAvatar.imgSrc}
@@ -1041,97 +1562,165 @@ const AvatarGestureEmotionUI = () => {
                         className="w-full h-full object-contain rounded-lg"
                       />
                     ) : (
-                      <div className="w-full min-w-[600px] max-w-4xl text-center text-gray-500 p-16 mx-auto">
-                        <div className="w-56 h-56 sm:w-64 sm:h-64 mx-auto border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center mb-8">
-                          <Plus size={48} className="text-gray-300" />
-                        </div>
-                        <p className="text-xl sm:text-2xl">
-                          No Avatar Selected
-                        </p>
-                        <p className="text-lg mt-4 max-w-2xl mx-auto">
-                          {avatars.length === 0
-                            ? selectedStyle
-                              ? `No avatars available in ${selectedStyle} style. Try selecting a different style or create a new avatar.`
-                              : "No avatars exist in your collection. Start by creating your first avatar!"
-                            : "Choose an avatar from the list or create a new one"}
-                        </p>
+                      <div className="text-gray-500 text-center">
+                        <p>No Avatar Selected</p>
                       </div>
                     )}
+                  </div>
 
-                    {/* Gesture/Emotion indicators */}
-                    {selectedGesture && (
-                      <div className="absolute left-0 right-0 bottom-0 bg-[#9B25A7] text-white text-center py-1 text-sm rounded-b-lg">
-                        {selectedGesture.name}
+                  {/* Camera Views */}
+                  <div className="flex-1 grid grid-cols-2 gap-4">
+                    {["front", "side", "close", "back"].map((view) => (
+                      <div
+                        key={view}
+                        className="aspect-square bg-gray-100 rounded-lg flex flex-col items-center justify-center relative"
+                      >
+                        {generatedImages[view] === "loading" ? (
+                          <div className="loader border-t-2 border-[#9B25A7] rounded-full w-6 h-6 animate-spin"></div>
+                        ) : generatedImages[view] ? (
+                          <>
+                            <img
+                              src={generatedImages[view]}
+                              alt={`${view} View`}
+                              className="w-5/6 h-5/6 object-contain rounded-lg mb-2"
+                            />
+                            <button
+                              className="mt-2 px-3 py-1 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] text-sm"
+                              onClick={() => handleRegenerateClick(view)}
+                              disabled={isRegenerating}
+                            >
+                              Regenerate
+                            </button>
+                          </>
+                        ) : (
+                          <p className="text-gray-500">
+                            {view.charAt(0).toUpperCase() + view.slice(1)} View
+                          </p>
+                        )}
+
+                        {/* Modal confined to this div */}
+                        {isRegenerateModalOpen &&
+                          regenerateViewType === view && (
+                            <div className="absolute top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center rounded-lg">
+                              <div className="bg-white rounded-lg shadow-lg p-4 w-64">
+                                <h3 className="text-lg font-medium text-center mb-4">
+                                  Choose Regenerate Option
+                                </h3>
+                                <div className="flex flex-col space-y-3">
+                                  <button
+                                    className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
+                                    onClick={() =>
+                                      handleRegenerateOption("camera")
+                                    }
+                                  >
+                                    Camera View
+                                  </button>
+                                  <button
+                                    className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
+                                    onClick={() =>
+                                      handleRegenerateOption("gesture")
+                                    }
+                                  >
+                                    Gestures
+                                  </button>
+                                  <button
+                                    className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
+                                    onClick={() =>
+                                      handleRegenerateOption("emotion")
+                                    }
+                                  >
+                                    Emotions
+                                  </button>
+                                  <button
+                                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+                                    onClick={() =>
+                                      setIsRegenerateModalOpen(false)
+                                    }
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                       </div>
-                    )}
-                    {selectedEmotion && (
-                      <div className="absolute left-0 right-0 top-4 text-center">
-                        <div className="text-3xl">
-                          {typeof selectedEmotion.icon === "string"
-                            ? selectedEmotion.icon
-                            : selectedEmotion.icon}
-                        </div>
-                      </div>
-                    )}
+                    ))}
                   </div>
                 </div>
               </div>
 
-              {/* Camera Views */}
-              <div className="w-1/3 p-4 bg-white shadow rounded-lg flex flex-col">
-                <h3 className="font-medium mb-4 text-[#9B25A7]">
-                  Camera Views
+              {/* Video Previews */}
+              <div className="w-1/4 bg-white shadow rounded-lg p-6 flex flex-col">
+                <h3 className="font-medium text-[#9B25A7] text-lg mb-4">
+                  Video Previews
                 </h3>
-                <div className="grid grid-cols-2 gap-3 mb-auto">
-                  {["front", "side", "close", "back"].map((view) => (
+                <div className="grid grid-cols-1 gap-4">
+                  {[1].map((video, index) => (
                     <div
-                      key={view}
-                      className="aspect-square bg-gray-100 rounded-lg flex flex-col items-center justify-center text-xs"
+                      key={index}
+                      className="aspect-video bg-gray-100 rounded-lg flex flex-col items-center justify-center text-sm"
                     >
-                      {generatedImages[view] === "loading" ? (
-                        <div className="flex items-center justify-center w-full h-full">
-                          <div className="loader border-t-2 border-[#9B25A7] rounded-full w-6 h-6 animate-spin"></div>
-                        </div>
-                      ) : generatedImages[view] ? (
-                        <>
-                          <img
-                            src={generatedImages[view]}
-                            alt={`${view} View`}
-                            className="w-full h-full object-contain rounded-lg mb-2"
-                          />
-                          <button
-                            className="mt-2 px-2 py-1 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] text-xs"
-                            onClick={() => regenerateView(view)}
-                          >
-                            Regenerate
-                          </button>
-                        </>
-                      ) : (
-                        `${view.charAt(0).toUpperCase() + view.slice(1)} View`
-                      )}
+                      <div className="relative w-full h-full flex items-center justify-center">
+                        <p className="text-gray-500">Video {index + 1}</p>
+                      </div>
+                      <button
+                        className="mt-2 px-3 py-1 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] text-sm"
+                        onClick={() => console.log(`Play Video ${index + 1}`)}
+                      >
+                        Play Video
+                      </button>
                     </div>
                   ))}
                 </div>
-
-                {/* Playback Controls */}
-                <div className="mt-4 p-3 bg-[#F4E3F8] rounded-lg">
-                  <div className="flex justify-center space-x-4 mb-2">
-                    <button className="p-2 border border-gray-300 rounded-md hover:bg-gray-50">
-                      <ArrowLeft size={16} />
-                    </button>
-                    <button
-                      className="p-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] transition-colors"
-                      onClick={togglePlay}
+                <div className="space-y-4 mt-4">
+                  {[
+                    {
+                      title: "Greeting Sequence",
+                      duration: "4.5s",
+                      emojis: ["👋", "😃", "🤝"],
+                    },
+                    {
+                      title: "Presentation Start",
+                      duration: "6.2s",
+                      emojis: ["🙌", "😎", "👉"],
+                    },
+                    {
+                      title: "Active Listening",
+                      duration: "3.8s",
+                      emojis: ["🙂", "🤔", "😌"],
+                    },
+                  ].map((sequence, index) => (
+                    <div
+                      key={index}
+                      className="bg-white p-4 rounded-lg border border-gray-300 hover:border-[#9B25A7] hover:bg-gray-50 transition-colors"
                     >
-                      {isPlaying ? <Pause size={16} /> : <Play size={16} />}
-                    </button>
-                    <button className="p-2 border border-gray-300 rounded-md hover:bg-gray-50">
-                      <ArrowRight size={16} />
-                    </button>
-                  </div>
-                  <div className="text-center text-sm font-medium text-[#9B25A7]">
-                    00:00:02.500 / 00:00:05.000
-                  </div>
+                      <div className="font-medium mb-2 flex items-center justify-between">
+                        <span>{sequence.title}</span>
+                        <div className="text-xs text-gray-500">
+                          {sequence.duration}
+                        </div>
+                      </div>
+                      <div className="flex mb-2 space-x-2 text-sm">
+                        {sequence.emojis.map((emoji, idx) => (
+                          <span key={idx}>{emoji}</span>
+                        ))}
+                      </div>
+                      <div className="flex justify-end space-x-2">
+                        <button className="p-2 bg-gray-200 rounded-md hover:bg-gray-300">
+                          <Play size={16} />
+                        </button>
+                        <button className="p-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]">
+                          <Plus size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4">
+                  <button className="w-full px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] transition-colors flex items-center justify-center">
+                    <Plus size={16} className="mr-2" />
+                    New Sequence
+                  </button>
                 </div>
               </div>
             </div>
