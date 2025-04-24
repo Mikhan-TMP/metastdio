@@ -325,7 +325,7 @@ const AvatarGestureEmotionUI = () => {
   };
   const fetchExistingEmotion = async (emotionName) => {
     if (!selectedAvatar) return null;
-  
+
     try {
       const email = getUserEmail();
       const response = await axios.get(
@@ -337,7 +337,7 @@ const AvatarGestureEmotionUI = () => {
           },
         }
       );
-  
+
       const effects = response.data || [];
       // Find the emotion with the required name and all image properties
       const matchingEmotion = effects.find(
@@ -352,7 +352,7 @@ const AvatarGestureEmotionUI = () => {
               e.close_up
           )
       );
-  
+
       return matchingEmotion || null;
     } catch (error) {
       console.error("Error fetching existing emotion:", error);
@@ -369,14 +369,14 @@ const AvatarGestureEmotionUI = () => {
       toast.error("Please select an avatar before proceeding.");
       return;
     }
-  
+
     if (isEmotionProcessing || isGestureProcessing) {
       toast.info("Please wait for the current generation to complete.");
       return;
     }
-  
+
     setSelectedGesture(gesture);
-  
+
     try {
       const email = getUserEmail();
       const response = await axios.get(
@@ -388,24 +388,20 @@ const AvatarGestureEmotionUI = () => {
           },
         }
       );
-  
+
       const effects = response.data || [];
       const existingGesture = effects.find(
         (effect) =>
           effect.Gestures &&
           effect.Gestures.some((g) => g.name === gesture.name)
       );
-  
+
       if (existingGesture) {
         const gestureData = existingGesture.Gestures.find(
           (g) =>
-            g.name === gesture.name &&
-            g.front &&
-            g.side &&
-            g.back &&
-            g.close_up
+            g.name === gesture.name && g.front && g.side && g.back && g.close_up
         );
-  
+
         if (gestureData) {
           setGeneratedImages({
             front: `http://192.168.1.141:3001${gestureData.front}`,
@@ -417,7 +413,7 @@ const AvatarGestureEmotionUI = () => {
           return;
         }
       }
-  
+
       // If gesture is not found or double-clicked, generate it
       await generateGestureView(gesture);
     } catch (error) {
@@ -431,27 +427,23 @@ const AvatarGestureEmotionUI = () => {
       toast.error("Please select an avatar before proceeding.");
       return;
     }
-  
+
     if (isEmotionProcessing || isGestureProcessing) {
       toast.info("Please wait for the current generation to complete.");
       return;
     }
-  
+
     setSelectedEmotion(emotion);
-  
+
     try {
       const existingEmotion = await fetchExistingEmotion(emotion.name);
-  
+
       if (existingEmotion) {
         const emotionData = existingEmotion.Emotions.find(
           (e) =>
-            e.name === emotion.name &&
-            e.front &&
-            e.side &&
-            e.back &&
-            e.close_up
+            e.name === emotion.name && e.front && e.side && e.back && e.close_up
         );
-  
+
         if (emotionData) {
           setGeneratedImages({
             front: `http://192.168.1.141:3001${emotionData.front}`,
@@ -463,7 +455,7 @@ const AvatarGestureEmotionUI = () => {
           return;
         }
       }
-  
+
       // If emotion is not found, generate it
       toast.info(`Emotion "${emotion.name}" not found. Generating now...`);
       await generateEmotionView(emotion);
@@ -626,7 +618,6 @@ const AvatarGestureEmotionUI = () => {
     }
   };
 
-
   const generateEmotionView = async (emotion) => {
     if (!selectedAvatar || isEmotionProcessing) {
       toast.error("Please select an avatar before proceeding.");
@@ -686,11 +677,9 @@ const AvatarGestureEmotionUI = () => {
         );
       }
 
-      await axios.post(
-        "http://192.168.1.141:3001/avatar-effects",
-        apiForm,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
+      await axios.post("http://192.168.1.141:3001/avatar-effects", apiForm, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
       setGeneratedImages({
         front: views.front || null,
@@ -767,11 +756,9 @@ const AvatarGestureEmotionUI = () => {
         }
       });
 
-      await axios.post(
-        "http://192.168.1.141:3001/avatar-effects",
-        apiForm,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
+      await axios.post("http://192.168.1.141:3001/avatar-effects", apiForm, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
       toast.success(`${gesture.name} gesture applied and saved!`);
     } catch (error) {
@@ -791,7 +778,9 @@ const AvatarGestureEmotionUI = () => {
     }
 
     try {
-      const response = await axios.get(imageUrl, { responseType: "arraybuffer" });
+      const response = await axios.get(imageUrl, {
+        responseType: "arraybuffer",
+      });
       const base64 = Buffer.from(response.data, "binary").toString("base64");
       return `data:image/png;base64,${base64}`;
     } catch (error) {
@@ -925,26 +914,26 @@ const AvatarGestureEmotionUI = () => {
       console.error("No avatar selected");
       return;
     }
-  
+
     if (isRegenerating) {
       toast.error("Another regeneration is already in progress.");
       return;
     }
-  
+
     setIsRegenerating(true);
     setGeneratedImages((prev) => ({
       ...prev,
       [view]: "loading",
     }));
-  
+
     toast.info(`Regenerating ${view} view with emotion "${emotionName}"...`);
-  
+
     try {
       const formData = new FormData();
       formData.append("file_path", selectedAvatar.imgSrc);
       formData.append("views", JSON.stringify([view]));
       formData.append("emotion", emotionName);
-  
+
       const response = await axios.post(
         "http://192.168.1.71:8083/emotions_gen/emotions",
         formData,
@@ -952,13 +941,13 @@ const AvatarGestureEmotionUI = () => {
           headers: { "Content-Type": "multipart/form-data" },
         }
       );
-  
+
       const { views } = response.data || {};
       const updatedImage = views?.[view] || null;
-  
+
       if (updatedImage) {
         const blob = base64ToBlob(updatedImage);
-  
+
         // Save to API
         const apiForm = new FormData();
         apiForm.append("email", getUserEmail());
@@ -971,18 +960,16 @@ const AvatarGestureEmotionUI = () => {
           blob,
           `${view}.jpg`
         );
-  
-        await axios.post(
-          "http://192.168.1.141:3001/avatar-effects",
-          apiForm,
-          { headers: { "Content-Type": "multipart/form-data" } }
-        );
-  
+
+        await axios.post("http://192.168.1.141:3001/avatar-effects", apiForm, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+
         setGeneratedImages((prev) => ({
           ...prev,
           [view]: updatedImage,
         }));
-  
+
         toast.success(
           `${view} view regenerated with emotion "${emotionName}" and saved successfully!`
         );
@@ -1000,33 +987,33 @@ const AvatarGestureEmotionUI = () => {
       setIsRegenerating(false);
     }
   };
-  
+
   const regenerateGesture = async (view, gestureName) => {
     if (!selectedAvatar) {
       toast.error("Please select an avatar before proceeding.");
       console.error("No avatar selected");
       return;
     }
-  
+
     if (isRegenerating) {
       toast.error("Another regeneration is already in progress.");
       return;
     }
-  
+
     setIsRegenerating(true);
     setGeneratedImages((prev) => ({
       ...prev,
       [view]: "loading",
     }));
-  
+
     toast.info(`Regenerating ${view} view with gesture "${gestureName}"...`);
-  
+
     try {
       const formData = new FormData();
       formData.append("file_path", selectedAvatar.imgSrc);
       formData.append("views", JSON.stringify([view]));
       formData.append("gesture", gestureName);
-  
+
       const response = await axios.post(
         "http://192.168.1.71:8083/emotions_gen/gesture",
         formData,
@@ -1034,13 +1021,13 @@ const AvatarGestureEmotionUI = () => {
           headers: { "Content-Type": "multipart/form-data" },
         }
       );
-  
+
       const { views } = response.data || {};
       const updatedImage = views?.[view] || null;
-  
+
       if (updatedImage) {
         const blob = base64ToBlob(updatedImage);
-  
+
         // Save to API
         const apiForm = new FormData();
         apiForm.append("email", getUserEmail());
@@ -1053,18 +1040,16 @@ const AvatarGestureEmotionUI = () => {
           blob,
           `${view}.jpg`
         );
-  
-        await axios.post(
-          "http://192.168.1.141:3001/avatar-effects",
-          apiForm,
-          { headers: { "Content-Type": "multipart/form-data" } }
-        );
-  
+
+        await axios.post("http://192.168.1.141:3001/avatar-effects", apiForm, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+
         setGeneratedImages((prev) => ({
           ...prev,
           [view]: updatedImage,
         }));
-  
+
         toast.success(
           `${view} view regenerated with gesture "${gestureName}" and saved successfully!`
         );
@@ -1234,61 +1219,61 @@ const AvatarGestureEmotionUI = () => {
     }
   };
 
-// Reset selected gesture and emotion when the active tab changes
-useEffect(() => {
-  setSelectedGesture(null);
-  setSelectedEmotion(null);
-}, [activeTab]);
-
-// Reset selected gesture and emotion when the reset button is clicked
-const resetToDefaultViews = async () => {
-  if (!selectedAvatar) {
-    toast.error("Please select an avatar to reset.");
-    return;
-  }
-
-  try {
-    const email = getUserEmail();
-
-    // Fetch the default camera views for the active avatar
-    const response = await axios.get(
-      "http://192.168.1.141:3001/avatarfx/getAvatarBaseCameraViews",
-      {
-        params: {
-          email,
-          avatarID: selectedAvatar.id,
-        },
-      }
-    );
-
-    const { cameraViews } = response.data || {};
-
-    // Update the state with the default camera views
-    setGeneratedImages({
-      front: cameraViews?.front?.src
-        ? `http://192.168.1.141:3001${cameraViews.front.src}`
-        : null,
-      side: cameraViews?.side?.src
-        ? `http://192.168.1.141:3001${cameraViews.side.src}`
-        : null,
-      back: cameraViews?.back?.src
-        ? `http://192.168.1.141:3001${cameraViews.back.src}`
-        : null,
-      close: cameraViews?.close_up?.src
-        ? `http://192.168.1.141:3001${cameraViews.close_up.src}`
-        : null,
-    });
-
-    // Reset gesture and emotion
+  // Reset selected gesture and emotion when the active tab changes
+  useEffect(() => {
     setSelectedGesture(null);
     setSelectedEmotion(null);
+  }, [activeTab]);
 
-    toast.success("Avatar views have been reset to the default state.");
-  } catch (error) {
-    console.error("Error resetting avatar views:", error);
-    toast.error("Failed to reset avatar views. Please try again.");
-  }
-};
+  // Reset selected gesture and emotion when the reset button is clicked
+  const resetToDefaultViews = async () => {
+    if (!selectedAvatar) {
+      toast.error("Please select an avatar to reset.");
+      return;
+    }
+
+    try {
+      const email = getUserEmail();
+
+      // Fetch the default camera views for the active avatar
+      const response = await axios.get(
+        "http://192.168.1.141:3001/avatarfx/getAvatarBaseCameraViews",
+        {
+          params: {
+            email,
+            avatarID: selectedAvatar.id,
+          },
+        }
+      );
+
+      const { cameraViews } = response.data || {};
+
+      // Update the state with the default camera views
+      setGeneratedImages({
+        front: cameraViews?.front?.src
+          ? `http://192.168.1.141:3001${cameraViews.front.src}`
+          : null,
+        side: cameraViews?.side?.src
+          ? `http://192.168.1.141:3001${cameraViews.side.src}`
+          : null,
+        back: cameraViews?.back?.src
+          ? `http://192.168.1.141:3001${cameraViews.back.src}`
+          : null,
+        close: cameraViews?.close_up?.src
+          ? `http://192.168.1.141:3001${cameraViews.close_up.src}`
+          : null,
+      });
+
+      // Reset gesture and emotion
+      setSelectedGesture(null);
+      setSelectedEmotion(null);
+
+      toast.success("Avatar views have been reset to the default state.");
+    } catch (error) {
+      console.error("Error resetting avatar views:", error);
+      toast.error("Failed to reset avatar views. Please try again.");
+    }
+  };
 
   const filteredGestures =
     currentCategory === "all"
@@ -1386,7 +1371,7 @@ const resetToDefaultViews = async () => {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex flex-1 overflow-hidden p-4">
+      <div className="flex flex-1 p-4">
         {/* Left Panel - Library - Updated to match modal style */}
         <div className="w-72 bg-white shadow rounded-lg mr-4 flex flex-col">
           {/* Library Tabs */}
@@ -1410,16 +1395,6 @@ const resetToDefaultViews = async () => {
               onClick={() => setActiveTab("emotions")}
             >
               Emotions
-            </button>
-            <button
-              className={`flex-1 py-2 ${
-                activeTab === "sequences"
-                  ? "bg-[#F4E3F8] text-[#9B25A7] font-medium"
-                  : "hover:bg-gray-50"
-              }`}
-              onClick={() => setActiveTab("sequences")}
-            >
-              Sequences
             </button>
           </div>
 
@@ -1465,128 +1440,54 @@ const resetToDefaultViews = async () => {
 
           {/* Library Content */}
           <div className="flex-1 overflow-y-auto p-3">
-          {activeTab === "gestures" && (
-  <div className="grid grid-cols-2 gap-3">
-    {filteredGestures.map((gesture) => (
-      <div
-        key={gesture.id}
-        className={`p-3 rounded-lg cursor-pointer transition-colors border ${
-          selectedGesture?.id === gesture.id
-            ? "border-[#9B25A7] bg-[#F4E3F8]"
-            : "border-gray-300 hover:border-[#9B25A7] hover:bg-gray-50"
-        }`}
-        onClick={() => handleGestureSelect(gesture)}
-      >
-        <div className="text-2xl text-center mb-2">
-          {gesture.thumbnail}
-        </div>
-        {!isGestureProcessing || selectedGesture?.id !== gesture.id ? (
-          <>
-            <div className="text-xs font-medium text-center truncate">
-              {gesture.name}
-            </div>
-            <div
-              className={`text-xs text-center flex items-center justify-center mt-1 ${
-                selectedGesture?.id === gesture.id
-                  ? "text-[#9B25A7]"
-                  : "text-gray-500"
-              }`}
-            >
-              <Clock size={10} className="mr-0.5" /> {gesture.duration}s
-            </div>
-          </>
-        ) : (
-          <div className="flex justify-center mt-2">
-            <RefreshCw
-              className="animate-spin text-[#9B25A7]"
-              size={16}
-            />
-          </div>
-        )}
-      </div>
-    ))}
-  </div>
-)}
+            {activeTab === "gestures" && (
+              <div className="grid grid-cols-2 gap-3">
+                {filteredGestures.map((gesture) => (
+                  <div
+                    key={gesture.id}
+                    className={`p-3 rounded-lg cursor-pointer transition-colors border ${
+                      selectedGesture?.id === gesture.id
+                        ? "border-[#9B25A7] bg-[#F4E3F8]"
+                        : "border-gray-300 hover:border-[#9B25A7] hover:bg-gray-50"
+                    }`}
+                    onClick={() => handleGestureSelect(gesture)}
+                  >
+                    <div className="text-2xl text-center mb-2">
+                      {gesture.thumbnail}
+                    </div>
+                    {!isGestureProcessing ||
+                    selectedGesture?.id !== gesture.id ? (
+                      <>
+                        <div className="text-xs font-medium text-center truncate">
+                          {gesture.name}
+                        </div>
+                        <div
+                          className={`text-xs text-center flex items-center justify-center mt-1 ${
+                            selectedGesture?.id === gesture.id
+                              ? "text-[#9B25A7]"
+                              : "text-gray-500"
+                          }`}
+                        >
+                          <Clock size={10} className="mr-0.5" />{" "}
+                          {gesture.duration}s
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex justify-center mt-2">
+                        <RefreshCw
+                          className="animate-spin text-[#9B25A7]"
+                          size={16}
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
 
             {activeTab === "emotions" && (
               <div className="grid grid-cols-2 gap-3">
                 {filteredEmotions.map((emotion) => renderEmotion(emotion))}
-              </div>
-            )}
-
-            {activeTab === "sequences" && (
-              <div className="space-y-3">
-                <div className="bg-white p-3 rounded-lg border border-gray-300 hover:border-[#9B25A7] hover:bg-gray-50 transition-colors">
-                  <div className="font-medium mb-2 flex items-center justify-between">
-                    <span>Greeting Sequence</span>
-                    <div className="text-xs text-gray-500">4.5s</div>
-                  </div>
-                  <div className="flex mb-2">
-                    <div className="flex space-x-2 text-sm">
-                      <span>👋</span>
-                      <span>→</span>
-                      <span>😃</span>
-                      <span>→</span>
-                      <span>🤝</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-end space-x-2">
-                    <button className="p-1.5 bg-gray-200 rounded-md hover:bg-gray-300">
-                      <Play size={12} />
-                    </button>
-                    <button className="p-1.5 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]">
-                      <Plus size={12} />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="bg-white p-3 rounded-lg border border-gray-300 hover:border-[#9B25A7] hover:bg-gray-50 transition-colors">
-                  <div className="font-medium mb-2 flex items-center justify-between">
-                    <span>Presentation Start</span>
-                    <div className="text-xs text-gray-500">6.2s</div>
-                  </div>
-                  <div className="flex mb-2">
-                    <div className="flex space-x-2 text-sm">
-                      <span>🙌</span>
-                      <span>→</span>
-                      <span>😎</span>
-                      <span>→</span>
-                      <span>👉</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-end space-x-2">
-                    <button className="p-1.5 bg-gray-200 rounded-md hover:bg-gray-300">
-                      <Play size={12} />
-                    </button>
-                    <button className="p-1.5 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]">
-                      <Plus size={12} />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="bg-white p-3 rounded-lg border border-gray-300 hover:border-[#9B25A7] hover:bg-gray-50 transition-colors">
-                  <div className="font-medium mb-2 flex items-center justify-between">
-                    <span>Active Listening</span>
-                    <div className="text-xs text-gray-500">3.8s</div>
-                  </div>
-                  <div className="flex mb-2">
-                    <div className="flex space-x-2 text-sm">
-                      <span>🙂</span>
-                      <span>→</span>
-                      <span>🤔</span>
-                      <span>→</span>
-                      <span>😌</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-end space-x-2">
-                    <button className="p-1.5 bg-gray-200 rounded-md hover:bg-gray-300">
-                      <Play size={12} />
-                    </button>
-                    <button className="p-1.5 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]">
-                      <Plus size={12} />
-                    </button>
-                  </div>
-                </div>
               </div>
             )}
           </div>
@@ -1599,61 +1500,61 @@ const resetToDefaultViews = async () => {
                 ? "New Gesture"
                 : activeTab === "emotions"
                 ? "New Emotion"
-                : "New Sequence"}
+                : ""}
             </button>
           </div>
         </div>
 
         {/* Center - Preview and Timeline */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Avatar Selection - Updated to match modal style */}
-          <div className="p-4 bg-white shadow rounded-lg mb-4 flex items-center justify-between">
-            <div className="flex items-center">
-              <button
-                className="p-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] transition-colors disabled:bg-[#E3C5F0]"
-                onClick={() => setIsModalOpen(true)}
-              >
-                Avatar Preview
-              </button>
-            </div>
-
-            <div className="flex items-center space-x-3">
-              <button
-                className="w-full sm:w-auto bg-[#9B25A7] text-white text-sm py-2 px-4 rounded-md flex items-center gap-1 hover:bg-[#7A1C86] transition-colors disabled:bg-opacity-50 disabled:cursor-not-allowed"
-                onClick={generateAvatarView}
-                disabled={isGenerating}
-              >
-                {isGenerating ? (
-                  <>
-                    <RefreshCw size={16} className="animate-spin mr-1" />{" "}
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Plus size={16} /> Generate Avatar View
-                  </>
-                )}
-              </button>
-              {/* <button className="p-2 border border-gray-300 rounded-md hover:bg-gray-50 flex items-center">
-                <Camera size={16} className="mr-1" /> Capture
-              </button> */}
-              <button
-  className="p-2 border border-gray-300 rounded-md hover:bg-gray-50 flex items-center"
-  onClick={resetToDefaultViews}
->
-  <RefreshCw size={16} className="mr-1" /> Reset
-</button>
-            </div>
-          </div>
-
           {/* Preview Area - Updated to match modal style */}
           <div className="flex-1 min-h-0 flex flex-col">
-            <div className="flex-1 flex">
-              {/* 3D Avatar Preview */}
-              <div className="w-2/3 bg-white shadow rounded-lg flex items-center justify-center mr-4">
-                <div className="relative p-4">
-                  {/* Avatar placeholder */}
-                  <div className="w-48 aspect-[9/16] rounded-lg relative flex items-center justify-center">
+            <div className="flex flex-1">
+              {/* Combined Avatar Preview and Camera Views */}
+              <div className="me-4 flex-1 bg-white shadow rounded-lg p-6 flex flex-col">
+                {/* Header */}
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="font-medium text-[#9B25A7] text-lg">
+                    Avatar Preview & Camera Views
+                  </h3>
+                  <div className="flex space-x-3">
+                    <button
+                      className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] transition-colors disabled:bg-[#E3C5F0]"
+                      onClick={() => setIsModalOpen(true)}
+                    >
+                      Avatar Preview
+                    </button>
+                    <button
+                      className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] transition-colors disabled:bg-opacity-50 disabled:cursor-not-allowed flex items-center"
+                      onClick={generateAvatarView}
+                      disabled={isGenerating}
+                    >
+                      {isGenerating ? (
+                        <>
+                          <RefreshCw size={16} className="animate-spin mr-2" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Plus size={16} className="mr-2" />
+                          Generate Avatar View
+                        </>
+                      )}
+                    </button>
+                    <button
+                      className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 flex items-center"
+                      onClick={resetToDefaultViews}
+                    >
+                      <RefreshCw size={16} className="mr-2" />
+                      Reset
+                    </button>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="flex space-x-6">
+                  {/* Avatar Preview */}
+                  <div className="w-1/3 bg-gray-100 rounded-lg flex items-center justify-center">
                     {selectedAvatar ? (
                       <img
                         src={selectedAvatar.imgSrc}
@@ -1661,58 +1562,21 @@ const resetToDefaultViews = async () => {
                         className="w-full h-full object-contain rounded-lg"
                       />
                     ) : (
-                      <div className="w-full min-w-[600px] max-w-4xl text-center text-gray-500 p-16 mx-auto">
-                        <div className="w-56 h-56 sm:w-64 sm:h-64 mx-auto border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center mb-8">
-                          <Plus size={48} className="text-gray-300" />
-                        </div>
-                        <p className="text-xl sm:text-2xl">
-                          No Avatar Selected
-                        </p>
-                        <p className="text-lg mt-4 max-w-2xl mx-auto">
-                          {avatars.length === 0
-                            ? selectedStyle
-                              ? `No avatars available in ${selectedStyle} style. Try selecting a different style or create a new avatar.`
-                              : "No avatars exist in your collection. Start by creating your first avatar!"
-                            : "Choose an avatar from the list or create a new one"}
-                        </p>
+                      <div className="text-gray-500 text-center">
+                        <p>No Avatar Selected</p>
                       </div>
                     )}
-
-                    {/* Gesture/Emotion indicators */}
-                    {selectedGesture && (
-  <div className="absolute left-0 right-0 bottom-0 bg-[#9B25A7] text-white text-center py-1 text-sm rounded-b-lg">
-    {selectedGesture.name}
-  </div>
-)}
-{selectedEmotion && !selectedGesture && ( // Hide emotion icon if a gesture is selected
-  <div className="absolute left-0 right-0 top-4 text-center">
-    <div className="text-3xl">
-      {typeof selectedEmotion.icon === "string"
-        ? selectedEmotion.icon
-        : selectedEmotion.icon}
-    </div>
-  </div>
-)}
                   </div>
-                </div>
-              </div>
 
-              {/* Camera Views */}
-              <div className="w-1/3 p-4 bg-white shadow rounded-lg flex flex-col">
-                <h3 className="font-medium mb-4 text-[#9B25A7]">
-                  Camera Views
-                </h3>
-                <div className="grid grid-cols-2 gap-3 mb-auto">
-                  {["front", "side", "close", "back"].map((view) => (
-                    <div
-                      key={view}
-                      className="aspect-square bg-gray-100 rounded-lg flex flex-col items-center justify-center text-xs"
-                    >
-                      <div className="relative w-full h-full flex items-center justify-center">
+                  {/* Camera Views */}
+                  <div className="flex-1 grid grid-cols-2 gap-4">
+                    {["front", "side", "close", "back"].map((view) => (
+                      <div
+                        key={view}
+                        className="aspect-square bg-gray-100 rounded-lg flex flex-col items-center justify-center relative"
+                      >
                         {generatedImages[view] === "loading" ? (
-                          <div className="flex items-center justify-center w-full h-full">
-                            <div className="loader border-t-2 border-[#9B25A7] rounded-full w-6 h-6 animate-spin"></div>
-                          </div>
+                          <div className="loader border-t-2 border-[#9B25A7] rounded-full w-6 h-6 animate-spin"></div>
                         ) : generatedImages[view] ? (
                           <>
                             <img
@@ -1721,40 +1585,142 @@ const resetToDefaultViews = async () => {
                               className="w-5/6 h-5/6 object-contain rounded-lg mb-2"
                             />
                             <button
-                              className="mt-2 px-2 py-1 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] text-xs"
+                              className="mt-2 px-3 py-1 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] text-sm"
                               onClick={() => handleRegenerateClick(view)}
-                              disabled={isRegenerating} // Disable button if regeneration is in progress
+                              disabled={isRegenerating}
                             >
                               Regenerate
                             </button>
                           </>
                         ) : (
-                          `${view.charAt(0).toUpperCase() + view.slice(1)} View`
+                          <p className="text-gray-500">
+                            {view.charAt(0).toUpperCase() + view.slice(1)} View
+                          </p>
                         )}
+
+                        {/* Modal confined to this div */}
+                        {isRegenerateModalOpen &&
+                          regenerateViewType === view && (
+                            <div className="absolute top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center rounded-lg">
+                              <div className="bg-white rounded-lg shadow-lg p-4 w-64">
+                                <h3 className="text-lg font-medium text-center mb-4">
+                                  Choose Regenerate Option
+                                </h3>
+                                <div className="flex flex-col space-y-3">
+                                  <button
+                                    className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
+                                    onClick={() =>
+                                      handleRegenerateOption("camera")
+                                    }
+                                  >
+                                    Camera View
+                                  </button>
+                                  <button
+                                    className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
+                                    onClick={() =>
+                                      handleRegenerateOption("gesture")
+                                    }
+                                  >
+                                    Gestures
+                                  </button>
+                                  <button
+                                    className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
+                                    onClick={() =>
+                                      handleRegenerateOption("emotion")
+                                    }
+                                  >
+                                    Emotions
+                                  </button>
+                                  <button
+                                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+                                    onClick={() =>
+                                      setIsRegenerateModalOpen(false)
+                                    }
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Video Previews */}
+              <div className="w-1/4 bg-white shadow rounded-lg p-6 flex flex-col">
+                <h3 className="font-medium text-[#9B25A7] text-lg mb-4">
+                  Video Previews
+                </h3>
+                <div className="grid grid-cols-1 gap-4">
+                  {[1].map((video, index) => (
+                    <div
+                      key={index}
+                      className="aspect-video bg-gray-100 rounded-lg flex flex-col items-center justify-center text-sm"
+                    >
+                      <div className="relative w-full h-full flex items-center justify-center">
+                        <p className="text-gray-500">Video {index + 1}</p>
+                      </div>
+                      <button
+                        className="mt-2 px-3 py-1 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] text-sm"
+                        onClick={() => console.log(`Play Video ${index + 1}`)}
+                      >
+                        Play Video
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-4 mt-4">
+                  {[
+                    {
+                      title: "Greeting Sequence",
+                      duration: "4.5s",
+                      emojis: ["👋", "😃", "🤝"],
+                    },
+                    {
+                      title: "Presentation Start",
+                      duration: "6.2s",
+                      emojis: ["🙌", "😎", "👉"],
+                    },
+                    {
+                      title: "Active Listening",
+                      duration: "3.8s",
+                      emojis: ["🙂", "🤔", "😌"],
+                    },
+                  ].map((sequence, index) => (
+                    <div
+                      key={index}
+                      className="bg-white p-4 rounded-lg border border-gray-300 hover:border-[#9B25A7] hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="font-medium mb-2 flex items-center justify-between">
+                        <span>{sequence.title}</span>
+                        <div className="text-xs text-gray-500">
+                          {sequence.duration}
+                        </div>
+                      </div>
+                      <div className="flex mb-2 space-x-2 text-sm">
+                        {sequence.emojis.map((emoji, idx) => (
+                          <span key={idx}>{emoji}</span>
+                        ))}
+                      </div>
+                      <div className="flex justify-end space-x-2">
+                        <button className="p-2 bg-gray-200 rounded-md hover:bg-gray-300">
+                          <Play size={16} />
+                        </button>
+                        <button className="p-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]">
+                          <Plus size={16} />
+                        </button>
                       </div>
                     </div>
                   ))}
                 </div>
-
-                {/* Playback Controls */}
-                <div className="mt-4 p-3 bg-[#F4E3F8] rounded-lg">
-                  <div className="flex justify-center space-x-4 mb-2">
-                    <button className="p-2 border border-gray-300 rounded-md hover:bg-gray-50">
-                      <ArrowLeft size={16} />
-                    </button>
-                    <button
-                      className="p-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] transition-colors"
-                      onClick={togglePlay}
-                    >
-                      {isPlaying ? <Pause size={16} /> : <Play size={16} />}
-                    </button>
-                    <button className="p-2 border border-gray-300 rounded-md hover:bg-gray-50">
-                      <ArrowRight size={16} />
-                    </button>
-                  </div>
-                  <div className="text-center text-sm font-medium text-[#9B25A7]">
-                    00:00:02.500 / 00:00:05.000
-                  </div>
+                <div className="mt-4">
+                  <button className="w-full px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] transition-colors flex items-center justify-center">
+                    <Plus size={16} className="mr-2" />
+                    New Sequence
+                  </button>
                 </div>
               </div>
             </div>
@@ -1876,42 +1842,6 @@ const resetToDefaultViews = async () => {
                   )}
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isRegenerateModalOpen && (
-        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 rounded-lg">
-          <div className="bg-white rounded-lg shadow-lg p-4 w-64">
-            <h3 className="text-lg font-medium text-center mb-4">
-              Choose Regenerate Option
-            </h3>
-            <div className="flex flex-col space-y-3">
-              <button
-                className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
-                onClick={() => handleRegenerateOption("camera")}
-              >
-                Camera View
-              </button>
-              <button
-                className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
-                onClick={() => handleRegenerateOption("gesture")}
-              >
-                Gestures
-              </button>
-              <button
-                className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
-                onClick={() => handleRegenerateOption("emotion")}
-              >
-                Emotions
-              </button>
-              <button
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
-                onClick={() => setIsRegenerateModalOpen(false)}
-              >
-                Cancel
-              </button>
             </div>
           </div>
         </div>
