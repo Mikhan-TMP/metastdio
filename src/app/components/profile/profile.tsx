@@ -34,7 +34,7 @@ const ProfileManagement = () => {
 
             // Delay navigation to show the toast
             setTimeout(() => {
-                router.push('/');
+                router.push('/Auth');
             }, 1000);
         } catch (error) {
             toast.error('Failed to logout. Please try again.', {
