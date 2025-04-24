@@ -17,7 +17,7 @@
     "@types/nodemailer": "^6.4.17",
     "axios": "^1.8.3",
     "dotenv": "^16.4.7",
-    "framer-motion": "^12.5.0",
+    "framer-motion": "^12.7.4",
     "jszip": "^3.10.1",
     "lucide-react": "^0.483.0",
     "mongoose": "^8.12.1",

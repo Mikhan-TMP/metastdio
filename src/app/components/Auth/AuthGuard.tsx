@@ -8,8 +8,10 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) {
-      router.push('/');
+    const email = localStorage.getItem('userEmail');
+    const username = localStorage.getItem('userName');
+    if (!token && !email && !username) {
+      router.push('/Auth');
     }
   }, [router]);
 

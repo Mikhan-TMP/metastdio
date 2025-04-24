@@ -12,7 +12,8 @@ import ContentEffectManagement from "../components/assetContentManagement/conten
 import SceneManagerUI from "../components/updated-scene-manager";
 import AvatarGestureEmotionUI from "../components/avatarEmotion/updated-avatar-ui";
 import ProfileManagement from "../components/profile/profile";
-import LandingPage from "./landingpage/landingpage";
+import HomePage from "./Home/homepage";
+import { motion } from "framer-motion";
 // import Auth from "../page";
 import { Home, Video, Users, Tv, Mic, Music, LogIn, Menu, X , SmilePlus, Sparkles  } from "lucide-react";
 // import { common } from '@mui/material/colors';
@@ -22,7 +23,7 @@ const navigationItems = [
     id: "home",
     label: "Home",
     icon: Home,
-    component: <LandingPage />,
+    component: <HomePage />,
   },
   {
     id: "avatar",
@@ -68,18 +69,23 @@ const navigationItems = [
   },
   {
     id: "user",
-    label: (localStorage.getItem('userName')),
+    label: localStorage.getItem('userName') ? localStorage.getItem('userName') : "Login/Signup",
     icon: localStorage.getItem('userName') ? Users : LogIn,
     component: <ProfileManagement />
   },
 ];
 
     const Page = () => {
-    const [currentView, setCurrentView] = useState("project");
+    const [currentView, setCurrentView] = useState("home");
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     return (
-        <AuthGuard>
+      <AuthGuard>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 2, ease: 'easeInOut' }}
+            >
             <div className="min-h-screen bg-gray-100">
                 <style jsx global>{`body {color: black;}`}</style>
                     {/* Navigation */}
@@ -158,8 +164,10 @@ const navigationItems = [
         <main className="max-w-8xl mx-auto pt-4 px-2 pb-4 rounded-2xl w-full min-h-[120vh]">
           {navigationItems.find((item) => item.id === currentView)?.component}
         </main>
-      </div>
-    </AuthGuard>
+            </div>
+          </motion.div>
+      </AuthGuard>
+      
   );
 };
 
