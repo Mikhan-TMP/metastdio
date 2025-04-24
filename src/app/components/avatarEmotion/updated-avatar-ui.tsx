@@ -505,7 +505,6 @@ const AvatarGestureEmotionUI = () => {
     }
   };
 
-
   const generateAvatarView = async () => {
     if (!selectedAvatar) {
       toast.error(`Please select an avatar before proceeding.`);
@@ -773,13 +772,13 @@ const AvatarGestureEmotionUI = () => {
       return null;
     }
   };
-  
+
   const base64ToBlob = (base64, mime = "image/jpeg") => {
     if (!base64 || !base64.includes(",")) {
       console.error("Invalid Base64 string:", base64);
       return null;
     }
-  
+
     try {
       const byteString = atob(base64.split(",")[1]); // Extract Base64 data after the comma
       const ab = new ArrayBuffer(byteString.length);
@@ -938,24 +937,24 @@ const AvatarGestureEmotionUI = () => {
       toast.error("Please select an avatar before proceeding.");
       return;
     }
-  
+
     if (isRegenerating) {
       toast.error("Another regeneration is already in progress.");
       return;
     }
-  
+
     setIsRegenerating(true);
     setGeneratedImages((prev) => ({
       ...prev,
       [view]: "loading",
     }));
-  
+
     toast.info(`Regenerating ${view} view with emotion "${emotionName}"...`);
-  
+
     try {
       const email = getUserEmail();
       const avatarID = selectedAvatar.id;
-  
+
       // Step 1: Fetch the current views
       let currentViews = {
         front: generatedImages.front,
@@ -963,20 +962,20 @@ const AvatarGestureEmotionUI = () => {
         back: generatedImages.back,
         close_up: generatedImages.close,
       };
-  
+
       // Convert URLs to Base64 if needed
       for (const key of Object.keys(currentViews)) {
         if (currentViews[key] && !currentViews[key].startsWith("data:image")) {
           currentViews[key] = await fetchImageAsBase64(currentViews[key]);
         }
       }
-  
+
       // Step 2: Regenerate the selected view
       const formData = new FormData();
       formData.append("file_path", selectedAvatar.imgSrc);
       formData.append("views", JSON.stringify([view]));
       formData.append("emotion", emotionName);
-  
+
       const response = await axios.post(
         "http://192.168.1.71:8083/emotions_gen/emotions",
         formData,
@@ -984,18 +983,18 @@ const AvatarGestureEmotionUI = () => {
           headers: { "Content-Type": "multipart/form-data" },
         }
       );
-  
+
       const newGeneratedImage = response.data?.views?.[view];
       if (!newGeneratedImage) {
         throw new Error(`Failed to generate new image for ${view} view`);
       }
-  
+
       // Step 3: Update the views object with the newly regenerated image
       const updatedViews = {
         ...currentViews,
         [view === "close" ? "close_up" : view]: newGeneratedImage,
       };
-  
+
       // Step 4: Send all views back to the API
       const apiForm = new FormData();
       apiForm.append("email", email);
@@ -1003,24 +1002,26 @@ const AvatarGestureEmotionUI = () => {
       apiForm.append("avatarId", avatarID);
       apiForm.append("gestures", JSON.stringify([]));
       apiForm.append("emotions", JSON.stringify([{ name: emotionName }]));
-  
+
       for (const [key, value] of Object.entries(updatedViews)) {
         if (value) {
           const blob = base64ToBlob(value);
           if (blob) {
             apiForm.append(
-              `emotions_${emotionName}_${key === "close_up" ? "close_up" : key}`,
+              `emotions_${emotionName}_${
+                key === "close_up" ? "close_up" : key
+              }`,
               blob,
               `${key}.jpg`
             );
           }
         }
       }
-  
+
       await axios.post("http://192.168.1.141:3001/avatar-effects", apiForm, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-  
+
       // Step 5: Update the local state with the new images
       setGeneratedImages({
         front: updatedViews.front,
@@ -1028,7 +1029,7 @@ const AvatarGestureEmotionUI = () => {
         back: updatedViews.back,
         close: updatedViews.close_up,
       });
-  
+
       toast.success(
         `${view} view regenerated with emotion "${emotionName}" and saved successfully!`
       );
@@ -1047,24 +1048,24 @@ const AvatarGestureEmotionUI = () => {
       toast.error("Please select an avatar before proceeding.");
       return;
     }
-  
+
     if (isRegenerating) {
       toast.error("Another regeneration is already in progress.");
       return;
     }
-  
+
     setIsRegenerating(true);
     setGeneratedImages((prev) => ({
       ...prev,
       [view]: "loading",
     }));
-  
+
     toast.info(`Regenerating ${view} view with gesture "${gestureName}"...`);
-  
+
     try {
       const email = getUserEmail();
       const avatarID = selectedAvatar.id;
-  
+
       // Step 1: Fetch the current views
       let currentViews = {
         front: generatedImages.front,
@@ -1072,20 +1073,20 @@ const AvatarGestureEmotionUI = () => {
         back: generatedImages.back,
         close_up: generatedImages.close,
       };
-  
+
       // Convert URLs to Base64 if needed
       for (const key of Object.keys(currentViews)) {
         if (currentViews[key] && !currentViews[key].startsWith("data:image")) {
           currentViews[key] = await fetchImageAsBase64(currentViews[key]);
         }
       }
-  
+
       // Step 2: Regenerate the selected view
       const formData = new FormData();
       formData.append("file_path", selectedAvatar.imgSrc);
       formData.append("views", JSON.stringify([view]));
       formData.append("gesture", gestureName);
-  
+
       const response = await axios.post(
         "http://192.168.1.71:8083/emotions_gen/gesture",
         formData,
@@ -1093,18 +1094,18 @@ const AvatarGestureEmotionUI = () => {
           headers: { "Content-Type": "multipart/form-data" },
         }
       );
-  
+
       const newGeneratedImage = response.data?.views?.[view];
       if (!newGeneratedImage) {
         throw new Error(`Failed to generate new image for ${view} view`);
       }
-  
+
       // Step 3: Update the views object with the newly regenerated image
       const updatedViews = {
         ...currentViews,
         [view === "close" ? "close_up" : view]: newGeneratedImage,
       };
-  
+
       // Step 4: Send all views back to the API
       const apiForm = new FormData();
       apiForm.append("email", email);
@@ -1112,24 +1113,26 @@ const AvatarGestureEmotionUI = () => {
       apiForm.append("avatarId", avatarID);
       apiForm.append("gestures", JSON.stringify([{ name: gestureName }]));
       apiForm.append("emotions", JSON.stringify([]));
-  
+
       for (const [key, value] of Object.entries(updatedViews)) {
         if (value) {
           const blob = base64ToBlob(value);
           if (blob) {
             apiForm.append(
-              `gestures_${gestureName}_${key === "close_up" ? "close_up" : key}`,
+              `gestures_${gestureName}_${
+                key === "close_up" ? "close_up" : key
+              }`,
               blob,
               `${key}.jpg`
             );
           }
         }
       }
-  
+
       await axios.post("http://192.168.1.141:3001/avatar-effects", apiForm, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-  
+
       // Step 5: Update the local state with the new images
       setGeneratedImages({
         front: updatedViews.front,
@@ -1137,7 +1140,7 @@ const AvatarGestureEmotionUI = () => {
         back: updatedViews.back,
         close: updatedViews.close_up,
       });
-  
+
       toast.success(
         `${view} view regenerated with gesture "${gestureName}" and saved successfully!`
       );
@@ -1416,7 +1419,6 @@ const AvatarGestureEmotionUI = () => {
 
     loadAvatars();
   }, [selectedStyle, searchName]);
-
 
   const fetchEffects = async () => {
     if (!selectedAvatar) {
@@ -1836,170 +1838,182 @@ const AvatarGestureEmotionUI = () => {
                   ))}
                 </div>
                 <div className="mt-4">
-                <div>
-
-
-      {/* New Sequence Button */}
-      <button
-        className="w-full px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] transition-colors flex items-center justify-center"
-        onClick={openSequenceModal}
-      >
-        <Plus size={16} className="mr-2" />
-        New Sequence
-      </button>
-
-      {/* Sequence Modal */}
-      {isSequenceModalOpen && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div className="bg-white rounded-lg shadow-lg w-full max-w-7xl p-6 relative">
-      {/* Close Button */}
-      <button
-        className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
-        onClick={closeSequenceModal}
-      >
-        ✕
-      </button>
-
-      {/* Modal Header */}
-      <h3 className="text-[#9B25A7] font-bold text-xl mb-6 text-center">
-        Avatar Effects
-      </h3>
-
-      {/* Search Bar */}
-      <div className="mb-6 flex items-center">
-        <input
-          type="text"
-          placeholder="Search emotions or gestures..."
-          className="flex-1 p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#9B25A7] focus:outline-none"
-          onChange={(e) => {
-            const searchTerm = e.target.value.toLowerCase();
-            setEffectsData((prevEffects) =>
-              prevEffects.filter(
-                (effect) =>
-                  effect.Emotions.some((emotion) =>
-                    emotion.name.toLowerCase().includes(searchTerm)
-                  ) ||
-                  effect.Gestures.some((gesture) =>
-                    gesture.name.toLowerCase().includes(searchTerm)
-                  )
-              )
-            );
-          }}
-        />
-      </div>
-
-      {/* Loading State */}
-      {isLoadingEffects ? (
-        <div className="flex items-center justify-center h-64">
-          <RefreshCw className="w-8 h-8 text-[#9B25A7] animate-spin" />
-        </div>
-      ) : (
-        <div className="overflow-y-auto max-h-[80vh]">
-       
-            {effectsData.map((effect) => (
-              <div
-                key={effect._id}
-                className="border border-gray-300 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
-              >
-                {/* Effect Type */}
-                <h4 className="text-sm font-medium text-center mb-4 text-[#9B25A7]">
-                  {effect.Emotions.length > 0
-                    ? "Emotions"
-                    : effect.Gestures.length > 0
-                    ? "Gestures"
-                    : "Unknown"}
-                </h4>
-
-                {/* Display Emotions */}
-                {effect.Emotions.length > 0 && (
-                  <div className="mb-4">
-                    <h5 className="text-sm font-semibold text-[#9B25A7] mb-2">
-                      Emotions
-                    </h5>
-                    {effect.Emotions.map((emotion) => (
-                 <div
-                 key={emotion.name}
-                 className="border border-gray-300 rounded-lg p-2 mb-3 bg-gray-50 hover:bg-gray-100 transition-colors"
-               >
-                 <h6 className="text-xs font-medium text-center mb-2">
-                   {emotion.name}
-                 </h6>
-                 <div className="grid grid-cols-3 gap-1.5">
-                   {["front", "side", "back", "close_up"].map((view) => {
-                     const imageUrl = emotion[view];
-                     return imageUrl ? (
-                       <div
-                         key={`${emotion.name}_${view}`}
-                         className="border border-gray-200 rounded-lg p-1.5 bg-white"
-                       >
-                         <h6 className="text-[10px] font-medium text-center mb-1 capitalize">
-                           {view.replace('_', ' ')}
-                         </h6>
-                         <div className="aspect-square overflow-hidden rounded-md w-[80%] mx-auto">
-                           <img
-                             src={`http://192.168.1.141:3001${imageUrl}`}
-                             alt={`${emotion.name} - ${view}`}
-                             className="w-full h-full object-cover"
-                           />
-                         </div>
-                       </div>
-                     ) : null;
-                   })}
-                 </div>
-               </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Display Gestures */}
-                {effect.Gestures.length > 0 && (
                   <div>
-                    <h5 className="text-sm font-semibold text-[#9B25A7] mb-2">
-                      Gestures
-                    </h5>
-                    {effect.Gestures.map((gesture) => (
-                    <div
-                    key={gesture.name}
-                    className="border border-gray-300 rounded-lg p-2 mb-3 bg-gray-50 hover:bg-gray-100 transition-colors"
-                  >
-                    <h6 className="text-xs font-medium text-center mb-2">
-                      {gesture.name}
-                    </h6>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {["front", "side", "back", "close_up"].map((view) => {
-                        const imageUrl = gesture[view];
-                        return imageUrl ? (
-                          <div
-                            key={`${gesture.name}_${view}`}
-                            className="border border-gray-200 rounded-lg p-1.5 bg-white"
+                    {/* New Sequence Button */}
+                    <button
+                      className="w-full px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] transition-colors flex items-center justify-center"
+                      onClick={openSequenceModal}
+                    >
+                      <Plus size={16} className="mr-2" />
+                      New Sequence
+                    </button>
+
+                    {/* Sequence Modal */}
+                    {isSequenceModalOpen && (
+                      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg shadow-lg w-[95%] max-w-6xl max-h-[90vh] overflow-hidden p-6 relative flex flex-col">
+                          {/* Close Button */}
+                          <button
+                            className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
+                            onClick={closeSequenceModal}
                           >
-                            <h6 className="text-[10px] font-medium text-center mb-1 capitalize">
-                              {view.replace('_', ' ')}
-                            </h6>
-                            <div className="aspect-square overflow-hidden rounded-md w-[80%] mx-auto">
-                              <img
-                                src={`http://192.168.1.141:3001${imageUrl}`}
-                                alt={`${gesture.name} - ${view}`}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
+                            ✕
+                          </button>
+
+                          {/* Modal Header */}
+                          <h3 className="text-[#9B25A7] font-bold text-xl mb-4 text-center">
+                            Avatar Effects
+                          </h3>
+
+                          {/* Search Bar */}
+                          <div className="mb-4">
+                            <input
+                              type="text"
+                              placeholder="Search emotions or gestures..."
+                              className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#9B25A7] focus:outline-none"
+                              onChange={(e) => {
+                                const searchTerm = e.target.value.toLowerCase();
+                                setEffectsData((prevEffects) =>
+                                  prevEffects.filter(
+                                    (effect) =>
+                                      effect.Emotions.some((emotion) =>
+                                        emotion.name
+                                          .toLowerCase()
+                                          .includes(searchTerm)
+                                      ) ||
+                                      effect.Gestures.some((gesture) =>
+                                        gesture.name
+                                          .toLowerCase()
+                                          .includes(searchTerm)
+                                      )
+                                  )
+                                );
+                              }}
+                            />
                           </div>
-                        ) : null;
-                      })}
-                    </div>
+
+                          {/* Content Scroll Area */}
+                          <div className="flex-1 overflow-y-auto pr-1">
+                            {isLoadingEffects ? (
+                              <div className="flex items-center justify-center h-full">
+                                <RefreshCw className="w-8 h-8 text-[#9B25A7] animate-spin" />
+                              </div>
+                            ) : (
+                              <div className="space-y-6">
+                                {effectsData.map((effect) => (
+                                  <div
+                                    key={effect._id}
+                                    className="border border-gray-300 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
+                                  >
+                                    {/* Effect Type */}
+                                    <h4 className="text-sm font-medium text-center mb-4 text-[#9B25A7]">
+                                      {effect.Emotions.length > 0
+                                        ? "Emotions"
+                                        : effect.Gestures.length > 0
+                                        ? "Gestures"
+                                        : "Unknown"}
+                                    </h4>
+
+                                    {/* Emotions */}
+                                    {effect.Emotions.length > 0 && (
+                                      <div className="mb-4">
+                                        <h5 className="text-sm font-semibold text-[#9B25A7] mb-2">
+                                          Emotions
+                                        </h5>
+                                        {effect.Emotions.map((emotion) => (
+                                          <div
+                                            key={emotion.name}
+                                            className="border border-gray-300 rounded-lg p-2 mb-3 bg-gray-50 hover:bg-gray-100 transition-colors"
+                                          >
+                                            <h6 className="text-xs font-medium text-center mb-2">
+                                              {emotion.name}
+                                            </h6>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                              {[
+                                                "front",
+                                                "side",
+                                                "back",
+                                                "close_up",
+                                              ].map((view) => {
+                                                const imageUrl = emotion[view];
+                                                return imageUrl ? (
+                                                  <div
+                                                    key={`${emotion.name}_${view}`}
+                                                    className="border border-gray-200 rounded-lg p-1.5 bg-white"
+                                                  >
+                                                    <h6 className="text-[10px] font-medium text-center mb-1 capitalize">
+                                                      {view.replace("_", " ")}
+                                                    </h6>
+                                                    <div className="aspect-square overflow-hidden rounded-md w-[80%] mx-auto">
+                                                      <img
+                                                        src={`http://192.168.1.141:3001${imageUrl}`}
+                                                        alt={`${emotion.name} - ${view}`}
+                                                        className="w-full h-full object-cover"
+                                                      />
+                                                    </div>
+                                                  </div>
+                                                ) : null;
+                                              })}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {/* Gestures */}
+                                    {effect.Gestures.length > 0 && (
+                                      <div>
+                                        <h5 className="text-sm font-semibold text-[#9B25A7] mb-2">
+                                          Gestures
+                                        </h5>
+                                        {effect.Gestures.map((gesture) => (
+                                          <div
+                                            key={gesture.name}
+                                            className="border border-gray-300 rounded-lg p-2 mb-3 bg-gray-50 hover:bg-gray-100 transition-colors"
+                                          >
+                                            <h6 className="text-xs font-medium text-center mb-2">
+                                              {gesture.name}
+                                            </h6>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                              {[
+                                                "front",
+                                                "side",
+                                                "back",
+                                                "close_up",
+                                              ].map((view) => {
+                                                const imageUrl = gesture[view];
+                                                return imageUrl ? (
+                                                  <div
+                                                    key={`${gesture.name}_${view}`}
+                                                    className="border border-gray-200 rounded-lg p-1.5 bg-white"
+                                                  >
+                                                    <h6 className="text-[10px] font-medium text-center mb-1 capitalize">
+                                                      {view.replace("_", " ")}
+                                                    </h6>
+                                                    <div className="aspect-square overflow-hidden rounded-md w-[80%] mx-auto">
+                                                      <img
+                                                        src={`http://192.168.1.141:3001${imageUrl}`}
+                                                        alt={`${gesture.name} - ${view}`}
+                                                        className="w-full h-full object-cover"
+                                                      />
+                                                    </div>
+                                                  </div>
+                                                ) : null;
+                                              })}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
- 
-        </div>
-      )}
-    </div>
-  </div>
-)}
-    </div>
                 </div>
               </div>
             </div>
