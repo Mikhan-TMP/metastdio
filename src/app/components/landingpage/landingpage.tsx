@@ -160,10 +160,19 @@ const LandingPage = () => {
                     }].map(({ imageX, textX, opacity, title, image, text }, i) => (
                         <div key={i} className="w-full min-h-[500px] flex items-end relative my-10">
                             <motion.img style={{ x: imageX, opacity }} src={image} className={`absolute ${i % 2 === 0 ? '' : 'right-0'}`} />
-                            <motion.div style={{ x: textX, opacity }} className={`desc-holder flex items-${i % 2 === 0 ? 'end' : 'start'} flex-col w-full -z-1`}>
+                            <motion.div 
+                                style={{ x: textX, opacity }} 
+                                className={`desc-holder flex items-${i % 2 === 0 ? 'end' : 'start'} flex-col w-full -z-1 ${
+                                    i % 2 === 0 ? 'pl-[100px]' : 'pr-[100px]'
+                                }`}
+                            >
                                 <h2 className="text-right text-4xl font-semibold mb-4">{title}</h2>
-                                <div className="description1 bg-[#A9DFFF] rounded-xl shadow-lg p-10 w-[75%] h-[300px] flex items-center justify-center">
-                                    <p className="text-xl text-[#444444] text-justify">{text}</p>
+                                <div className={`description1 ${
+                                    i % 2 === 0 ? 'bg-[#A9DFFF]' : 'bg-[#9B25A7]'
+                                } rounded-xl shadow-lg p-10 w-[75%] h-[300px] flex items-center justify-center`}>
+                                    <p className={`text-xl ${
+                                        i % 2 === 0 ? 'text-[#444444] pl-[100px]' : 'text-[#FFFFFFFF] pr-[100px]'
+                                    } text-justify`}>{text || ''}</p>
                                 </div>
                             </motion.div>
                         </div>
