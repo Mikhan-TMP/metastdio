@@ -3,7 +3,7 @@ import { Inter, Dancing_Script } from 'next/font/google';
 import { useEffect, useRef, useState } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useRouter } from "next/navigation";
-import { Plus } from 'lucide-react';
+import { Plus, ArrowUp } from 'lucide-react';
 
 // Fonts
 const dancingScript = Dancing_Script({ subsets: ['latin'], weight: '400' });
@@ -18,6 +18,7 @@ const LandingPage = () => {
     const [isContentVisible2, setIsContentVisible2] = useState(false);
     const [isContentVisible3, setIsContentVisible3] = useState(false);
     const [isContentVisible4, setIsContentVisible4] = useState(false);
+    const [showScrollTop, setShowScrollTop] = useState(false);
     const router = useRouter();
 
     // Refs for the sections
@@ -63,43 +64,68 @@ const LandingPage = () => {
             setBorderRadius(`${radius}px`);
         };
 
+        const handleScrollVisibility = () => {
+            if (window.pageYOffset > 300) {
+                setShowScrollTop(true);
+            } else {
+                setShowScrollTop(false);
+            }
+        };
+
         window.addEventListener('scroll', handleScroll);
+        window.addEventListener('scroll', handleScrollVisibility);
         handleScroll();
 
-        return () => window.removeEventListener('scroll', handleScroll);
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            window.removeEventListener('scroll', handleScrollVisibility);
+        };
     }, []);
 
-
+    const scrollToTop = () => {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    };
 
     return (
-        <div className="relative ">
-                <nav className="sticky top-0 z-99 w-full bg-white/10 backdrop-blur-sm shadow-lg">
-                    <div className="max-w-[] mx-auto px-6 py-4 flex justify-between items-center">
-                        <img src="http://www.meta-town.io/Metacity/assets/Flexor/assets/img/metatown.png" className="h-8 w-auto pe-10" />
-                        <div className="flex gap-6 items-center">
-                            <a href="#" className="text-[#444444] hover:text-[#FEFEFEFF] transition">Home</a>
-                            <a href="#" className="text-[#444444] hover:text-[#FEFEFEFF] transition">Features</a>
-                            <a href="#" className="text-[#444444] hover:text-[#FEFEFEFF] transition">How it Works</a>
-                            <a href="#" className="text-[#444444] hover:text-[#FEFEFEFF] transition">About</a>
-                            {typeof window !== 'undefined' && localStorage.getItem('userName') && localStorage.getItem('token') ? (
-                                <button className="cursor-pointer px-4 py-2 rounded-md bg-[#9B25A7] text-white" onClick={() => router.push('/Dashboard')}>
-                                    {localStorage.getItem('userName')}
+        <div className="relative scroll-smooth">
+            <nav className="sticky top-0 z-99 w-full bg-white shadow-lg">
+                <div className="max-w-[] mx-auto px-6 py-4 flex justify-between items-center">
+                    <img src="http://www.meta-town.io/Metacity/assets/Flexor/assets/img/metatown.png" className="h-8 w-auto pe-10" />
+                    <div className="flex gap-6 items-center">
+                        <a href="#home" className=" bg-white hover:bg-[#9B25A7] hover:text-white transition duration-300 rounded-md px-4 py-2">
+                            Home
+                        </a>
+                        <a href="#features" className="bg-white hover:bg-[#9B25A7] hover:text-white transition duration-300 rounded-md px-4 py-2">
+                            Features
+                        </a>
+                        <a href="#how-it-works" className="bg-white hover:bg-[#9B25A7] hover:text-white transition duration-300 rounded-md px-4 py-2">
+                            How it Works
+                        </a>
+                        <a href="#about" className="bg-white hover:bg-[#9B25A7] hover:text-white transition duration-300 rounded-md px-4 py-2">
+                            About
+                        </a>
+                        {typeof window !== 'undefined' && localStorage.getItem('userName') && localStorage.getItem('token') ? (
+                            <button className="cursor-pointer px-4 py-2 rounded-md bg-[#9B25A7] text-white" onClick={() => router.push('/Dashboard')}>
+                                {localStorage.getItem('userName')}
+                            </button>
+                        ) : (
+                            <>
+                                <button className="px-4 py-2 rounded-md border border-[#9B25A7] text-black hover:bg-[#9B25A7] hover:text-white cursor-pointer" onClick={() => router.push('/Auth')}>
+                                    Login
                                 </button>
-                            ) : (
-                                <>
-                                    <button className="px-4 py-2 rounded-md border border-[#9B25A7] text-black hover:bg-[#9B25A7] hover:text-white" onClick={() => router.push('/Auth')}>
-                                        Login
-                                    </button>
-                                    <button className="px-4 py-2 rounded-md bg-[#9B25A7] text-white hover:bg-[#7A1C86]" onClick={() => router.push('/Auth')}>
-                                        Signup
-                                    </button>
-                                </>
-                            )}
-                        </div>
+                                <button className="px-4 py-2 rounded-md bg-[#9B25A7] text-white hover:bg-[#7A1C86] cursor-pointer" onClick={() => router.push('/Auth')}>
+                                    Signup
+                                </button>
+                            </>
+                        )}
                     </div>
-                </nav>
+                </div>
+            </nav>
             {/* FIRST SECTION */}
-            <div ref={firstSectionRef} className={`relative top-0 h-screen w-full bg-gradient-to-br from-[#5DD6EC] via-[#A29BED] via-[#B491EC] via-[#C585EE] to-[#DF5DEC]  ${inter.className}`}>
+            <div id="home" ref={firstSectionRef} className={`relative top-0 h-screen w-full bg-gradient-to-br from-[#5DD6EC] via-[#A29BED] via-[#B491EC] via-[#C585EE] to-[#DF5DEC]  ${inter.className}`}>
                 <img src="/landingpage/landingpage_bg.svg" className="absolute top-0 left-0 w-full h-full object-cover z-0 animate-float" />
                 <div className="relative z-20 flex flex-col items-center justify-center h-full text-white  overflow-hidden ">
                     <h1 className="text-5xl font-semibold mb-4 text-[#444444] w-[625px] select-none">
@@ -125,6 +151,7 @@ const LandingPage = () => {
 
             {/* SECOND SECTION */}
             <div
+                id='features'
                 ref={secondSectionRef}
                 className="relative w-full bg-white min-h-screen  z-10 mt-[-140px] overflow-hidden"
                 style={{
@@ -165,19 +192,16 @@ const LandingPage = () => {
                     }].map(({ imageX, textX, opacity, title, image, text }, i) => (
                         <div key={i} className="w-full min-h-[500px] flex items-end relative my-10">
                             <motion.img style={{ x: imageX, opacity }} src={image} className={`absolute ${i % 2 === 0 ? '' : 'right-0'}`} />
-                            <motion.div 
-                                style={{ x: textX, opacity }} 
-                                className={`desc-holder flex items-${i % 2 === 0 ? 'end' : 'start'} flex-col w-full -z-1 ${
-                                    i % 2 === 0 ? 'pl-[100px]' : 'pr-[100px]'
-                                }`}
+                            <motion.div
+                                style={{ x: textX, opacity }}
+                                className={`desc-holder flex items-${i % 2 === 0 ? 'end' : 'start'} flex-col w-full -z-1 ${i % 2 === 0 ? 'pl-[100px]' : 'pr-[100px]'
+                                    }`}
                             >
                                 <h2 className="text-right text-4xl font-semibold mb-4">{title}</h2>
-                                <div className={`description1 ${
-                                    i % 2 === 0 ? 'bg-[#A9DFFF]' : 'bg-[#9B25A7]'
-                                } rounded-xl shadow-lg p-10 w-[75%] h-[300px] flex items-center justify-center`}>
-                                    <p className={`text-xl ${
-                                        i % 2 === 0 ? 'text-[#444444] pl-[100px]' : 'text-[#FFFFFFFF] pr-[100px]'
-                                    } text-justify`}>{text || ''}</p>
+                                <div className={`description1 ${i % 2 === 0 ? 'bg-[#A9DFFF]' : 'bg-[#9B25A7]'
+                                    } rounded-xl shadow-lg p-10 w-[75%] h-[300px] flex items-center justify-center`}>
+                                    <p className={`text-xl ${i % 2 === 0 ? 'text-[#444444] pl-[100px]' : 'text-[#FFFFFFFF] pr-[100px]'
+                                        } text-justify`}>{text || ''}</p>
                                 </div>
                             </motion.div>
                         </div>
@@ -186,15 +210,16 @@ const LandingPage = () => {
             </div>
 
             {/* THIRD SECTION */}
-            <motion.div 
+            <motion.div
                 initial={{ y: 50, opacity: 0 }}
                 whileInView={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.6, ease: "easeOut" }}
                 className="h-auto bottom-[60px] relative z-21"
+                id='how-it-works'
             >
                 <div className="w-full flex flex-col items-end">
                     {/* Gradient triangle with same background as the box */}
-                    <motion.div 
+                    <motion.div
                         initial={{ y: 50, opacity: 0 }}
                         whileInView={{ y: 0, opacity: 1 }}
                         transition={{ duration: 0.6, delay: 0.2 }}
@@ -239,7 +264,7 @@ const LandingPage = () => {
                         </motion.h1>
                         <div className="contents text-white flex justify-between px-15 items-center">
                             <p className="text-6xl">01 <span>Create Avatars</span></p>
-                            <div 
+                            <div
                                 className="rounded-full bg-transparent border-[3px] border-white p-2 flex items-center justify-center cursor-pointer transition-transform duration-300"
                                 onClick={() => setIsContentVisible(!isContentVisible)}
                                 style={{ transform: isContentVisible ? 'rotate(45deg)' : 'rotate(0deg)' }}
@@ -266,13 +291,13 @@ const LandingPage = () => {
                             </div>
                         </motion.div>
                         <div className="divider px-15 mt-3">
-                            <hr className='w-full border-white border-[1.5px]'/>
+                            <hr className='w-full border-white border-[1.5px]' />
                         </div>
 
                         {/* 02 Generate voiceovers */}
                         <div className="contents text-white flex justify-between px-15 items-center mt-8">
                             <p className="text-6xl">02 <span>Generate voiceovers</span></p>
-                            <div 
+                            <div
                                 className="rounded-full bg-transparent border-[3px] border-white p-2 flex items-center justify-center cursor-pointer transition-transform duration-300"
                                 onClick={() => setIsContentVisible2(!isContentVisible2)}
                                 style={{ transform: isContentVisible2 ? 'rotate(45deg)' : 'rotate(0deg)' }}
@@ -299,13 +324,13 @@ const LandingPage = () => {
                             </div>
                         </motion.div>
                         <div className="divider px-15 mt-3">
-                            <hr className='w-full border-white border-[1.5px]'/>
+                            <hr className='w-full border-white border-[1.5px]' />
                         </div>
 
                         {/* 03 Choose Background */}
                         <div className="contents text-white flex justify-between px-15 items-center mt-8">
                             <p className="text-6xl">03 <span>Choose Background</span></p>
-                            <div 
+                            <div
                                 className="rounded-full bg-transparent border-[3px] border-white p-2 flex items-center justify-center cursor-pointer transition-transform duration-300"
                                 onClick={() => setIsContentVisible3(!isContentVisible3)}
                                 style={{ transform: isContentVisible3 ? 'rotate(45deg)' : 'rotate(0deg)' }}
@@ -332,13 +357,13 @@ const LandingPage = () => {
                             </div>
                         </motion.div>
                         <div className="divider px-15 mt-3">
-                            <hr className='w-full border-white border-[1.5px]'/>
+                            <hr className='w-full border-white border-[1.5px]' />
                         </div>
 
                         {/* 04 Edit Your Video */}
                         <div className="contents text-white flex justify-between px-15 items-center mt-8">
                             <p className="text-6xl">04 <span>Edit Your Video</span></p>
-                            <div 
+                            <div
                                 className="rounded-full bg-transparent border-[3px] border-white p-2 flex items-center justify-center cursor-pointer transition-transform duration-300"
                                 onClick={() => setIsContentVisible4(!isContentVisible4)}
                                 style={{ transform: isContentVisible4 ? 'rotate(45deg)' : 'rotate(0deg)' }}
@@ -365,12 +390,25 @@ const LandingPage = () => {
                             </div>
                         </motion.div>
                         <div className="divider px-15 mt-3">
-                            <hr className='w-full border-white border-[1.5px]'/>
+                            <hr className='w-full border-white border-[1.5px]' />
                         </div>
                     </motion.div>
                 </div>
 
             </motion.div>
+            {showScrollTop && (
+                <motion.button
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 20 }}
+                    transition={{ duration: 0.3, ease: "easeOut" }}
+                    onClick={scrollToTop}
+                    className="fixed bottom-8 right-8 p-3 rounded-full bg-[#9B25A7] text-white shadow-lg hover:bg-[#7A1C86] transition-all duration-300 z-50 ease-in-out hover:scale-110 cursor-pointer"
+                    aria-label="Scroll to top"
+                >
+                    <ArrowUp size={24} />
+                </motion.button>
+            )}
         </div>
     );
 };
