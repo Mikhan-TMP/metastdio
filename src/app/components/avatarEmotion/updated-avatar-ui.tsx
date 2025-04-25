@@ -63,6 +63,17 @@ const AvatarGestureEmotionUI = () => {
   const [isSequenceModalOpen, setIsSequenceModalOpen] = useState(false);
   const [effectsData, setEffectsData] = useState([]);
   const [isLoadingEffects, setIsLoadingEffects] = useState(false);
+  const [selectedSequenceItems, setSelectedSequenceItems] = useState([]);
+  const [sequenceName, setSequenceName] = useState("");
+  const [selectedViews, setSelectedViews] = useState({});
+  const [sequences, setSequences] = useState([]);
+  const [sequenceSearch, setSequenceSearch] = useState("");
+  const [filteredEffectsData, setFilteredEffectsData] = useState([]); // Add this state
+
+  // Add this function to filter sequences
+  const filteredSequences = sequences.filter((sequence) =>
+    sequence.sequenceName.toLowerCase().includes(sequenceSearch.toLowerCase())
+  );
 
   const getUserEmail = () => {
     if (typeof window !== "undefined" && localStorage.getItem("userEmail")) {
@@ -1455,6 +1466,133 @@ const AvatarGestureEmotionUI = () => {
   const closeSequenceModal = () => {
     setIsSequenceModalOpen(false);
   };
+
+  // Add these functions inside your component
+  const isItemSelected = (id) => {
+    return selectedSequenceItems.some((item) => item.id === id);
+  };
+
+  const handleItemSelection = (item, type) => {
+    if (isItemSelected(item._id)) {
+      // Remove item if already selected
+      setSelectedSequenceItems((prev) => prev.filter((i) => i.id !== item._id));
+      // Remove view selection for this item
+      setSelectedViews((prev) => {
+        const newViews = { ...prev };
+        delete newViews[item._id];
+        return newViews;
+      });
+    } else if (selectedSequenceItems.length < 3) {
+      // Add item if limit not reached
+      setSelectedSequenceItems((prev) => [
+        ...prev,
+        {
+          id: item._id,
+          actionName: item.name,
+          type: type,
+        },
+      ]);
+    }
+  };
+
+  const handleViewSelection = (itemId, view) => {
+    setSelectedViews((prev) => ({
+      ...prev,
+      [itemId]: view,
+    }));
+  };
+
+  const removeFromSequence = (itemId) => {
+    setSelectedSequenceItems((prev) =>
+      prev.filter((item) => item.id !== itemId)
+    );
+    setSelectedViews((prev) => {
+      const newViews = { ...prev };
+      delete newViews[itemId];
+      return newViews;
+    });
+  };
+
+  const handleSaveSequence = async () => {
+    if (!selectedAvatar || !sequenceName || selectedSequenceItems.length < 2) {
+      toast.error(
+        "Please select an avatar, enter a sequence name, and select at least 2 items"
+      );
+      return;
+    }
+
+    try {
+      const payload = {
+        email: getUserEmail(),
+        avatarID: selectedAvatar.id,
+        sequenceName: sequenceName,
+        actions: selectedSequenceItems.map((item) => ({
+          id: item.id,
+          actionName: item.actionName,
+          view: selectedViews[item.id] || "front",
+        })),
+      };
+
+      await axios.post(
+        "http://192.168.1.141:3001/sequences/addSequence",
+        payload
+      );
+
+      toast.success("Sequence saved successfully!");
+      setSequenceName("");
+      setSelectedSequenceItems([]);
+      setSelectedViews({});
+      closeSequenceModal();
+
+      // Refresh sequences after saving
+      fetchSequences();
+    } catch (error) {
+      console.error("Error saving sequence:", error);
+      toast.error("Failed to save sequence. Please try again.");
+    }
+  };
+
+  const fetchSequences = async () => {
+    if (!selectedAvatar) {
+      return;
+    }
+
+    try {
+      const email = getUserEmail();
+      const response = await axios.get(
+        `http://192.168.1.141:3001/sequences/getAllSequences`,
+        {
+          params: {
+            email,
+            avatarID: selectedAvatar.id,
+          },
+        }
+      );
+
+      // Combine all sequences from different objects
+      const allSequences = response.data.reduce((acc, item) => {
+        if (item.avatarSequence && Array.isArray(item.avatarSequence)) {
+          return [...acc, ...item.avatarSequence];
+        }
+        return acc;
+      }, []);
+
+      setSequences(allSequences);
+    } catch (error) {
+      console.error("Error fetching sequences:", error);
+      toast.error("Failed to load sequences");
+    }
+  };
+  useEffect(() => {
+    if (selectedAvatar) {
+      fetchSequences();
+    }
+  }, [selectedAvatar]);
+
+  useEffect(() => {
+    setFilteredEffectsData(effectsData); // Initialize filtered data when effectsData changes
+  }, [effectsData]);
+
   return (
     <div className="flex flex-col h-screen bg-gray-100">
       {/* Alert */}
@@ -1473,9 +1611,6 @@ const AvatarGestureEmotionUI = () => {
       {/* Top Toolbar - Updated to match modal style */}
       <div className="flex justify-between items-center p-4 bg-white shadow-sm">
         <div className="flex items-center">
-          <button className="p-2 border rounded-md hover:bg-gray-50 mr-2">
-            <ArrowLeft size={16} />
-          </button>
           <h1 className="text-lg font-semibold text-[#9B25A7]">
             Avatar Gesture & Emotion Editor
           </h1>
@@ -1793,49 +1928,85 @@ const AvatarGestureEmotionUI = () => {
                     </div>
                   ))}
                 </div>
+
                 <div className="space-y-4 mt-4">
-                  {[
-                    {
-                      title: "Greeting Sequence",
-                      duration: "4.5s",
-                      emojis: ["👋", "😃", "🤝"],
-                    },
-                    {
-                      title: "Presentation Start",
-                      duration: "6.2s",
-                      emojis: ["🙌", "😎", "👉"],
-                    },
-                    {
-                      title: "Active Listening",
-                      duration: "3.8s",
-                      emojis: ["🙂", "🤔", "😌"],
-                    },
-                  ].map((sequence, index) => (
-                    <div
-                      key={index}
-                      className="bg-white p-4 rounded-lg border border-gray-300 hover:border-[#9B25A7] hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="font-medium mb-2 flex items-center justify-between">
-                        <span>{sequence.title}</span>
-                        <div className="text-xs text-gray-500">
-                          {sequence.duration}
+                  {/* Search bar */}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Search sequences..."
+                      className="w-full p-2 pl-8 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#9B25A7] focus:outline-none"
+                      value={sequenceSearch}
+                      onChange={(e) => setSequenceSearch(e.target.value)}
+                    />
+                    <Search
+                      size={16}
+                      className="absolute left-2.5 top-2.5 text-gray-400"
+                    />
+                  </div>
+
+                  {/* Scrollable sequence list */}
+                  <div className="max-h-[500px] overflow-y-auto pr-1 space-y-4">
+                    {filteredSequences.map((sequence) => (
+                      <div
+                        key={sequence.id}
+                        className="bg-white p-4 rounded-lg border border-gray-300 hover:border-[#9B25A7] hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="font-medium mb-2 flex items-center justify-between">
+                          <span>{sequence.sequenceName}</span>
+                          <div className="text-xs text-gray-500">
+                            {sequence.actions.length} actions
+                          </div>
+                        </div>
+                        <div className="flex mb-2 space-x-2 text-sm overflow-x-auto pb-2">
+                          {sequence.actions.map((action, idx) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-1 bg-gray-100 rounded-md text-xs whitespace-nowrap"
+                            >
+                              {action.actionName}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="flex justify-end space-x-2">
+                          <button
+                            className="p-2 bg-gray-200 rounded-md hover:bg-gray-300"
+                            onClick={() =>
+                              console.log(
+                                `Play sequence ${sequence.sequenceName}`
+                              )
+                            }
+                          >
+                            <Play size={16} />
+                          </button>
+                          <button
+                            className="p-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
+                            onClick={() =>
+                              console.log(
+                                `Edit sequence ${sequence.sequenceName}`
+                              )
+                            }
+                          >
+                            <Plus size={16} />
+                          </button>
                         </div>
                       </div>
-                      <div className="flex mb-2 space-x-2 text-sm">
-                        {sequence.emojis.map((emoji, idx) => (
-                          <span key={idx}>{emoji}</span>
-                        ))}
+                    ))}
+                    {filteredSequences.length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        {sequences.length === 0 ? (
+                          <>
+                            <p>No sequences created yet</p>
+                            <p className="text-sm mt-2">
+                              Create a new sequence to get started
+                            </p>
+                          </>
+                        ) : (
+                          <p>No sequences match your search</p>
+                        )}
                       </div>
-                      <div className="flex justify-end space-x-2">
-                        <button className="p-2 bg-gray-200 rounded-md hover:bg-gray-300">
-                          <Play size={16} />
-                        </button>
-                        <button className="p-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]">
-                          <Plus size={16} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    )}
+                  </div>
                 </div>
                 <div className="mt-4">
                   <div>
@@ -1847,8 +2018,8 @@ const AvatarGestureEmotionUI = () => {
                       <Plus size={16} className="mr-2" />
                       New Sequence
                     </button>
-
                     {/* Sequence Modal */}
+
                     {isSequenceModalOpen && (
                       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                         <div className="bg-white rounded-lg shadow-lg w-[95%] max-w-6xl max-h-[90vh] overflow-hidden p-6 relative flex flex-col">
@@ -1861,11 +2032,72 @@ const AvatarGestureEmotionUI = () => {
                           </button>
 
                           {/* Modal Header */}
-                          <h3 className="text-[#9B25A7] font-bold text-xl mb-4 text-center">
-                            Avatar Effects
-                          </h3>
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-[#9B25A7] font-bold text-xl">
+                              Create New Sequence
+                            </h3>
+                            <div className="flex items-center space-x-4">
+                              <input
+                                type="text"
+                                placeholder="Enter sequence name"
+                                className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#9B25A7] focus:outline-none"
+                                value={sequenceName}
+                                onChange={(e) =>
+                                  setSequenceName(e.target.value)
+                                }
+                              />
+                              <button
+                                className={`px-4 py-2 rounded-md ${
+                                  selectedSequenceItems.length >= 2 &&
+                                  sequenceName
+                                    ? "bg-[#9B25A7] text-white hover:bg-[#7A1C86]"
+                                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                }`}
+                                onClick={handleSaveSequence}
+                                disabled={
+                                  selectedSequenceItems.length < 2 ||
+                                  !sequenceName
+                                }
+                              >
+                                Save Sequence
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Selected Items Preview */}
+                          <div className="mb-4">
+                            <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                              Selected Items ({selectedSequenceItems.length}/3)
+                            </h4>
+                            <div className="flex gap-4">
+                              {selectedSequenceItems.map((item, index) => (
+                                <div key={index} className="relative">
+                                  <div className="border border-[#9B25A7] rounded-md p-2 bg-[#F4E3F8]">
+                                    <div className="text-sm font-medium">
+                                      {item.actionName}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      {item.type === "emotion" ? "😊" : "👋"}{" "}
+                                      {item.type}
+                                    </div>
+                                    <div className="text-xs text-[#9B25A7] mt-1">
+                                      Selected view:{" "}
+                                      {selectedViews[item.id] || "None"}
+                                    </div>
+                                  </div>
+                                  <button
+                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                                    onClick={() => removeFromSequence(item.id)}
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
 
                           {/* Search Bar */}
+
                           <div className="mb-4">
                             <input
                               type="text"
@@ -1873,21 +2105,32 @@ const AvatarGestureEmotionUI = () => {
                               className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#9B25A7] focus:outline-none"
                               onChange={(e) => {
                                 const searchTerm = e.target.value.toLowerCase();
-                                setEffectsData((prevEffects) =>
-                                  prevEffects.filter(
-                                    (effect) =>
+                                if (!searchTerm) {
+                                  setFilteredEffectsData(effectsData); // Reset to original data when search is cleared
+                                  return;
+                                }
+                                const filteredData = effectsData.filter(
+                                  (effect) => {
+                                    const hasMatchingEmotion =
+                                      effect.Emotions &&
                                       effect.Emotions.some((emotion) =>
                                         emotion.name
                                           .toLowerCase()
                                           .includes(searchTerm)
-                                      ) ||
+                                      );
+                                    const hasMatchingGesture =
+                                      effect.Gestures &&
                                       effect.Gestures.some((gesture) =>
                                         gesture.name
                                           .toLowerCase()
                                           .includes(searchTerm)
-                                      )
-                                  )
+                                      );
+                                    return (
+                                      hasMatchingEmotion || hasMatchingGesture
+                                    );
+                                  }
                                 );
+                                setFilteredEffectsData(filteredData); // Update the filtered data
                               }}
                             />
                           </div>
@@ -1900,109 +2143,221 @@ const AvatarGestureEmotionUI = () => {
                               </div>
                             ) : (
                               <div className="space-y-6">
-                                {effectsData.map((effect) => (
+                                {filteredEffectsData.map((effect) => (
                                   <div
                                     key={effect._id}
                                     className="border border-gray-300 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
                                   >
-                                    {/* Effect Type */}
-                                    <h4 className="text-sm font-medium text-center mb-4 text-[#9B25A7]">
-                                      {effect.Emotions.length > 0
-                                        ? "Emotions"
-                                        : effect.Gestures.length > 0
-                                        ? "Gestures"
-                                        : "Unknown"}
-                                    </h4>
-
-                                    {/* Emotions */}
                                     {effect.Emotions.length > 0 && (
                                       <div className="mb-4">
                                         <h5 className="text-sm font-semibold text-[#9B25A7] mb-2">
                                           Emotions
                                         </h5>
-                                        {effect.Emotions.map((emotion) => (
-                                          <div
-                                            key={emotion.name}
-                                            className="border border-gray-300 rounded-lg p-2 mb-3 bg-gray-50 hover:bg-gray-100 transition-colors"
-                                          >
-                                            <h6 className="text-xs font-medium text-center mb-2">
-                                              {emotion.name}
-                                            </h6>
-                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                              {[
-                                                "front",
-                                                "side",
-                                                "back",
-                                                "close_up",
-                                              ].map((view) => {
-                                                const imageUrl = emotion[view];
-                                                return imageUrl ? (
-                                                  <div
-                                                    key={`${emotion.name}_${view}`}
-                                                    className="border border-gray-200 rounded-lg p-1.5 bg-white"
-                                                  >
-                                                    <h6 className="text-[10px] font-medium text-center mb-1 capitalize">
-                                                      {view.replace("_", " ")}
-                                                    </h6>
-                                                    <div className="aspect-square overflow-hidden rounded-md w-[80%] mx-auto">
-                                                      <img
-                                                        src={`http://192.168.1.141:3001${imageUrl}`}
-                                                        alt={`${emotion.name} - ${view}`}
-                                                        className="w-full h-full object-cover"
-                                                      />
-                                                    </div>
-                                                  </div>
-                                                ) : null;
-                                              })}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                          {effect.Emotions.map((emotion) => (
+                                            <div
+                                              key={emotion.name}
+                                              className={`border rounded-md p-2 ${
+                                                isItemSelected(emotion._id)
+                                                  ? "border-[#9B25A7] bg-[#F4E3F8]"
+                                                  : "border-gray-300 hover:border-[#9B25A7] bg-gray-50"
+                                              }`}
+                                            >
+                                              <div className="flex justify-between items-center mb-2">
+                                                <h6 className="text-sm font-medium">
+                                                  {emotion.name}
+                                                </h6>
+                                                <button
+                                                  className={`px-2 py-1 rounded-md text-xs ${
+                                                    isItemSelected(emotion._id)
+                                                      ? "bg-[#9B25A7] text-white"
+                                                      : "bg-gray-200 hover:bg-gray-300"
+                                                  }`}
+                                                  onClick={() =>
+                                                    handleItemSelection(
+                                                      emotion,
+                                                      "emotion"
+                                                    )
+                                                  }
+                                                  disabled={
+                                                    selectedSequenceItems.length >=
+                                                      3 &&
+                                                    !isItemSelected(emotion._id)
+                                                  }
+                                                >
+                                                  {isItemSelected(emotion._id)
+                                                    ? "Selected"
+                                                    : "Select"}
+                                                </button>
+                                              </div>
+                                              {/* Image Grid */}
+                                              <div className="grid grid-cols-2 gap-2">
+                                                {[
+                                                  "front",
+                                                  "side",
+                                                  "back",
+                                                  "close_up",
+                                                ].map(
+                                                  (view) =>
+                                                    emotion[view] && (
+                                                      <div
+                                                        key={view}
+                                                        className="relative"
+                                                      >
+                                                        <div className="aspect-square w-full overflow-hidden rounded-md">
+                                                          <img
+                                                            src={`http://192.168.1.141:3001${emotion[view]}`}
+                                                            alt={`${emotion.name} ${view}`}
+                                                            className="w-full h-full object-cover"
+                                                          />
+                                                        </div>
+                                                        {isItemSelected(
+                                                          emotion._id
+                                                        ) && (
+                                                          <button
+                                                            className={`absolute top-2 right-2 p-1 rounded-full ${
+                                                              selectedViews[
+                                                                emotion._id
+                                                              ] === view
+                                                                ? "bg-[#9B25A7] text-white"
+                                                                : "bg-gray-200 bg-opacity-75"
+                                                            }`}
+                                                            onClick={() =>
+                                                              handleViewSelection(
+                                                                emotion._id,
+                                                                view
+                                                              )
+                                                            }
+                                                          >
+                                                            <div className="w-4 h-4 flex items-center justify-center">
+                                                              {selectedViews[
+                                                                emotion._id
+                                                              ] === view
+                                                                ? "✓"
+                                                                : ""}
+                                                            </div>
+                                                          </button>
+                                                        )}
+                                                        <div className="text-[10px] text-center mt-1 text-gray-600">
+                                                          {view.replace(
+                                                            "_",
+                                                            " "
+                                                          )}
+                                                        </div>
+                                                      </div>
+                                                    )
+                                                )}
+                                              </div>
                                             </div>
-                                          </div>
-                                        ))}
+                                          ))}
+                                        </div>
                                       </div>
                                     )}
 
-                                    {/* Gestures */}
                                     {effect.Gestures.length > 0 && (
                                       <div>
                                         <h5 className="text-sm font-semibold text-[#9B25A7] mb-2">
                                           Gestures
                                         </h5>
-                                        {effect.Gestures.map((gesture) => (
-                                          <div
-                                            key={gesture.name}
-                                            className="border border-gray-300 rounded-lg p-2 mb-3 bg-gray-50 hover:bg-gray-100 transition-colors"
-                                          >
-                                            <h6 className="text-xs font-medium text-center mb-2">
-                                              {gesture.name}
-                                            </h6>
-                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                              {[
-                                                "front",
-                                                "side",
-                                                "back",
-                                                "close_up",
-                                              ].map((view) => {
-                                                const imageUrl = gesture[view];
-                                                return imageUrl ? (
-                                                  <div
-                                                    key={`${gesture.name}_${view}`}
-                                                    className="border border-gray-200 rounded-lg p-1.5 bg-white"
-                                                  >
-                                                    <h6 className="text-[10px] font-medium text-center mb-1 capitalize">
-                                                      {view.replace("_", " ")}
-                                                    </h6>
-                                                    <div className="aspect-square overflow-hidden rounded-md w-[80%] mx-auto">
-                                                      <img
-                                                        src={`http://192.168.1.141:3001${imageUrl}`}
-                                                        alt={`${gesture.name} - ${view}`}
-                                                        className="w-full h-full object-cover"
-                                                      />
-                                                    </div>
-                                                  </div>
-                                                ) : null;
-                                              })}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                          {effect.Gestures.map((gesture) => (
+                                            <div
+                                              key={gesture.name}
+                                              className={`border rounded-md p-2 ${
+                                                isItemSelected(gesture._id)
+                                                  ? "border-[#9B25A7] bg-[#F4E3F8]"
+                                                  : "border-gray-300 hover:border-[#9B25A7] bg-gray-50"
+                                              }`}
+                                            >
+                                              <div className="flex justify-between items-center mb-2">
+                                                <h6 className="text-sm font-medium">
+                                                  {gesture.name}
+                                                </h6>
+                                                <button
+                                                  className={`px-2 py-1 rounded-md text-xs ${
+                                                    isItemSelected(gesture._id)
+                                                      ? "bg-[#9B25A7] text-white"
+                                                      : "bg-gray-200 hover:bg-gray-300"
+                                                  }`}
+                                                  onClick={() =>
+                                                    handleItemSelection(
+                                                      gesture,
+                                                      "gesture"
+                                                    )
+                                                  }
+                                                  disabled={
+                                                    selectedSequenceItems.length >=
+                                                      3 &&
+                                                    !isItemSelected(gesture._id)
+                                                  }
+                                                >
+                                                  {isItemSelected(gesture._id)
+                                                    ? "Selected"
+                                                    : "Select"}
+                                                </button>
+                                              </div>
+
+                                              {/* Image Grid */}
+                                              <div className="grid grid-cols-2 gap-2">
+                                                {[
+                                                  "front",
+                                                  "side",
+                                                  "back",
+                                                  "close_up",
+                                                ].map(
+                                                  (view) =>
+                                                    gesture[view] && (
+                                                      <div
+                                                        key={view}
+                                                        className="relative"
+                                                      >
+                                                        <div className="aspect-square w-full overflow-hidden rounded-md">
+                                                          <img
+                                                            src={`http://192.168.1.141:3001${gesture[view]}`}
+                                                            alt={`${gesture.name} ${view}`}
+                                                            className="w-full h-full object-cover"
+                                                          />
+                                                        </div>
+                                                        {isItemSelected(
+                                                          gesture._id
+                                                        ) && (
+                                                          <button
+                                                            className={`absolute top-2 right-2 p-1 rounded-full ${
+                                                              selectedViews[
+                                                                gesture._id
+                                                              ] === view
+                                                                ? "bg-[#9B25A7] text-white"
+                                                                : "bg-gray-200 bg-opacity-75"
+                                                            }`}
+                                                            onClick={() =>
+                                                              handleViewSelection(
+                                                                gesture._id,
+                                                                view
+                                                              )
+                                                            }
+                                                          >
+                                                            <div className="w-4 h-4 flex items-center justify-center">
+                                                              {selectedViews[
+                                                                gesture._id
+                                                              ] === view
+                                                                ? "✓"
+                                                                : ""}
+                                                            </div>
+                                                          </button>
+                                                        )}
+                                                        <div className="text-[10px] text-center mt-1 text-gray-600">
+                                                          {view.replace(
+                                                            "_",
+                                                            " "
+                                                          )}
+                                                        </div>
+                                                      </div>
+                                                    )
+                                                )}
+                                              </div>
                                             </div>
-                                          </div>
-                                        ))}
+                                          ))}
+                                        </div>
                                       </div>
                                     )}
                                   </div>
