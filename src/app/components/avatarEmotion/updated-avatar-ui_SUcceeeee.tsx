@@ -68,6 +68,7 @@ const AvatarGestureEmotionUI = () => {
   const [selectedViews, setSelectedViews] = useState({});
   const [sequences, setSequences] = useState([]);
   const [sequenceSearch, setSequenceSearch] = useState("");
+  const [filteredEffectsData, setFilteredEffectsData] = useState([]); // Add this state
 
   // Add this function to filter sequences
   const filteredSequences = sequences.filter((sequence) =>
@@ -1588,6 +1589,10 @@ const AvatarGestureEmotionUI = () => {
     }
   }, [selectedAvatar]);
 
+  useEffect(() => {
+    setFilteredEffectsData(effectsData); // Initialize filtered data when effectsData changes
+  }, [effectsData]);
+
   return (
     <div className="flex flex-col h-screen bg-gray-100">
       {/* Alert */}
@@ -1606,9 +1611,6 @@ const AvatarGestureEmotionUI = () => {
       {/* Top Toolbar - Updated to match modal style */}
       <div className="flex justify-between items-center p-4 bg-white shadow-sm">
         <div className="flex items-center">
-          <button className="p-2 border rounded-md hover:bg-gray-50 mr-2">
-            <ArrowLeft size={16} />
-          </button>
           <h1 className="text-lg font-semibold text-[#9B25A7]">
             Avatar Gesture & Emotion Editor
           </h1>
@@ -2095,6 +2097,7 @@ const AvatarGestureEmotionUI = () => {
                           </div>
 
                           {/* Search Bar */}
+
                           <div className="mb-4">
                             <input
                               type="text"
@@ -2102,21 +2105,32 @@ const AvatarGestureEmotionUI = () => {
                               className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#9B25A7] focus:outline-none"
                               onChange={(e) => {
                                 const searchTerm = e.target.value.toLowerCase();
-                                setEffectsData((prevEffects) =>
-                                  prevEffects.filter(
-                                    (effect) =>
+                                if (!searchTerm) {
+                                  setFilteredEffectsData(effectsData); // Reset to original data when search is cleared
+                                  return;
+                                }
+                                const filteredData = effectsData.filter(
+                                  (effect) => {
+                                    const hasMatchingEmotion =
+                                      effect.Emotions &&
                                       effect.Emotions.some((emotion) =>
                                         emotion.name
                                           .toLowerCase()
                                           .includes(searchTerm)
-                                      ) ||
+                                      );
+                                    const hasMatchingGesture =
+                                      effect.Gestures &&
                                       effect.Gestures.some((gesture) =>
                                         gesture.name
                                           .toLowerCase()
                                           .includes(searchTerm)
-                                      )
-                                  )
+                                      );
+                                    return (
+                                      hasMatchingEmotion || hasMatchingGesture
+                                    );
+                                  }
                                 );
+                                setFilteredEffectsData(filteredData); // Update the filtered data
                               }}
                             />
                           </div>
@@ -2129,7 +2143,7 @@ const AvatarGestureEmotionUI = () => {
                               </div>
                             ) : (
                               <div className="space-y-6">
-                                {effectsData.map((effect) => (
+                                {filteredEffectsData.map((effect) => (
                                   <div
                                     key={effect._id}
                                     className="border border-gray-300 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
@@ -2176,7 +2190,6 @@ const AvatarGestureEmotionUI = () => {
                                                     : "Select"}
                                                 </button>
                                               </div>
-
                                               {/* Image Grid */}
                                               <div className="grid grid-cols-2 gap-2">
                                                 {[
