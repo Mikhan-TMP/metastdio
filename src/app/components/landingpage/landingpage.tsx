@@ -134,8 +134,8 @@ const LandingPage = () => {
                 }}
             >
                 <div className="pt-20 px-40 flex flex-col items-center">
-                    <motion.h1 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="text-4xl">
-                        <span className={`${dancingScript.className} text-[#9B25A7] text-8xl`}>F</span>eatures
+                    <motion.h1 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="text-6xl">
+                        <span className={`${dancingScript.className} text-[#9B25A7] text-8xl`}>f</span>eatures
                     </motion.h1>
 
                     {/* Features with animated scroll */}
@@ -219,7 +219,7 @@ const LandingPage = () => {
                         initial={{ y: 50, opacity: 0 }}
                         whileInView={{ y: 0, opacity: 1 }}
                         transition={{ duration: 0.6, delay: 0.2 }}
-                        className="triangle-box w-full min-h-screen pb-20 rounded-[50px]"
+                        className="triangle-box w-full min-h-screen pb-20 rounded-[50px] flex flex-col gap-5"
                         style={{
                             backgroundImage: `linear-gradient(to bottom right, 
                                 #DF5DEC 0%, 
@@ -233,9 +233,9 @@ const LandingPage = () => {
                             initial={{ opacity: 0, y: 50 }}
                             whileInView={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.6, delay: 0.6 }}
-                            className="text-[#444444] text-4xl font-bold text-center mt-[150px] mb-[50px] "
+                            className="text-[#444444] text-6xl font-bold text-center mt-[150px] mb-[50px] "
                         >
-                            How it <span className={`${dancingScript.className} text-[#FFFFFF] text-6xl`}>works</span>
+                            How it <span className={`${dancingScript.className} text-[#FFFFFF] text-8xl`}>works</span>
                         </motion.h1>
                         <div className="contents text-white flex justify-between px-15 items-center">
                             <p className="text-6xl">01 <span>Create Avatars</span></p>
