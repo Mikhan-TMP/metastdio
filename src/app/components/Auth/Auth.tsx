@@ -57,13 +57,13 @@ const token = searchParams.get('token');
 const email = searchParams.get('email');
 const [emailReset, setEmailReset] = useState('');
 const isReset = searchParams.get('isReset');
-const isVerify = searchParams.get('isVerify') === 'true';
+const isVerify = searchParams.get('isVerify') == 'true';
 
 const [newPassword, setNewPassword] = useState('');
 const [confirmNewPassword, setConfirmNewPassword] = useState('');
 const [showNewPassword, setShowNewPassword] = useState(false);
 const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
+console.log("VERIFY:",isVerify);
 useEffect(() => {
     setMounted(true);
 }, []);
@@ -75,10 +75,14 @@ const resetFormFields = () => {
     setErrorMessage('');
 };
 useEffect(() => {
+    const verify = searchParams.get('isVerify');
+    console.log("Raw isVerify param:", verify);
+    console.log("Processed isVerify value:", isVerify);
+    
     if (isVerify) {
-    handleVerifyEmail();
+        handleVerifyEmail();
     }
-    }, [isVerify]);
+}, [isVerify, searchParams]);
     
 const handleVerifyEmail = async () => {
     const token = searchParams.get('token');
@@ -169,6 +173,8 @@ const handleSubmit = async (e: React.FormEvent) => {
     if (isLogin) {
         const { data } = await AuthAPI.post('/login', formData);
         localStorage.setItem('token', data.token);
+        console.log("Processed isVerify value:", isVerify);
+        console.log(data.user.email);
         localStorage.setItem('userEmail', data.user.email);
         localStorage.setItem('userName', data.user.username);
         toast.success('Login successful!');
