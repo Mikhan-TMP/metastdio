@@ -1,74 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Upload, RefreshCw, ChevronDown, Plus } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
-
-// Alert component
-const Alert = ({ message, type, onClose }) => {
-  return (
-    <AnimatePresence>
-      {message && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8, y: -20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.8, y: -20 }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
-          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 z-50"
-        >
-          <div
-            className={`relative max-w-sm w-full p-5 rounded-lg shadow-lg flex items-center gap-3 border ${
-              type === "success"
-                ? "bg-green-100 text-green-800 border-green-300"
-                : type === "generating"
-                ? "bg-blue-100 text-blue-800 border-blue-300"
-                : "bg-red-100 text-red-800 border-red-300"
-            }`}
-          >
-            {type === "success" ? (
-              <svg
-                className="w-6 h-6 text-green-600"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M5 13l4 4L19 7"
-                ></path>
-              </svg>
-            ) : type === "generating" ? (
-              <RefreshCw className="w-6 h-6 text-blue-600 animate-spin" />
-            ) : (
-              <svg
-                className="w-6 h-6 text-red-600"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                ></path>
-              </svg>
-            )}
-            <p className="font-semibold text-sm md:text-base">{message}</p>
-            <motion.button
-              whileHover={{ scale: 1.2 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={onClose}
-              className="absolute top-2 right-2 text-black-600 hover:text-black-900 transition-all"
-            >
-              &times;
-            </motion.button>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-};
+import { motion } from "framer-motion";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const RenderNewStudio = () => {
   const [promptText, setPromptText] = useState("");
@@ -77,10 +11,8 @@ const RenderNewStudio = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [generatedImageUrl, setGeneratedImageUrl] = useState("");
-  const [notification, setNotification] = useState("");
-  const [notificationType, setNotificationType] = useState("");
-  const [dropdownOpen, setDropdownOpen] = useState(false); // Define dropdownOpen state
-  const [style, setStyle] = useState(""); // Define style state
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [style, setStyle] = useState("");
 
   // Cleanup previous object URLs
   useEffect(() => {
@@ -108,14 +40,16 @@ const RenderNewStudio = () => {
 
   const handleSubmit = async () => {
     if (!promptText.trim()) {
-      setError("Please enter a prompt.");
+      toast.error("Please enter a prompt.");
       return;
     }
 
     setIsLoading(true);
     setError("");
-    setNotification("Generating your studio...", "generating");
-    setNotificationType("generating");
+    toast.info("Generating your studio...", {
+      autoClose: false,
+      toastId: 'generating'
+    });
 
     try {
       const formData = new FormData();
@@ -152,13 +86,12 @@ const RenderNewStudio = () => {
         localStorage.setItem("lastGeneratedImage", imageUrl); // Example usage of localStorage
       }
 
-      setNotification("Studio generated successfully!", "success");
-      setNotificationType("success");
+      toast.dismiss('generating');
+      toast.success("Studio generated successfully!");
     } catch (err) {
       console.error("Fetch Error:", err);
-      setError(`Failed to generate: ${err.message}`);
-      setNotification(`Failed to generate: ${err.message}`, "error");
-      setNotificationType("error");
+      toast.dismiss('generating');
+      toast.error(`Failed to generate: ${err.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -177,12 +110,12 @@ const RenderNewStudio = () => {
 
   const handleSaveToLibrary = async () => {
     if (!promptText.trim() || !style.trim()) {
-      setError("Both name and type are required.");
+      toast.error("Both name and type are required.");
       return;
     }
 
     if (!generatedImageUrl) {
-      setError("No generated image to save.");
+      toast.error("No generated image to save.");
       return;
     }
 
@@ -221,16 +154,13 @@ const RenderNewStudio = () => {
 
         const result = await response.json();
         console.log("Studio saved successfully:", result);
-        setNotification("Studio saved successfully!", "success");
-        setNotificationType("success");
+        toast.success("Studio saved successfully!");
       };
 
       reader.readAsDataURL(blob); // Read the blob as a base64 string
     } catch (err) {
       console.error("Save Error:", err);
-      setError(`Failed to save: ${err.message}`);
-      setNotification(`Failed to save: ${err.message}`, "error");
-      setNotificationType("error");
+      toast.error(`Failed to save: ${err.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -395,13 +325,17 @@ const RenderNewStudio = () => {
         </div>
       </div>
 
-      
-
-      {/* Alert Component */}
-      <Alert
-        message={notification}
-        type={notificationType}
-        onClose={() => setNotification("")}
+      <ToastContainer
+        position="top-center"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
       />
     </div>
   );

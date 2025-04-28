@@ -334,7 +334,6 @@ const AvatarManagement = () => {
       toast.error("No Avatar to save. Please try again.");
     }
   };
-
   const handleNameSave = async () => {
     if (!selectedAvatar) {
       // showNotification("No avatar selected to update.", "error");

@@ -68,7 +68,8 @@ const AvatarGestureEmotionUI = () => {
   const [selectedViews, setSelectedViews] = useState({});
   const [sequences, setSequences] = useState([]);
   const [sequenceSearch, setSequenceSearch] = useState("");
-  const [filteredEffectsData, setFilteredEffectsData] = useState([]); // Add this state
+  const [filteredEffectsData, setFilteredEffectsData] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Add this function to filter sequences
   const filteredSequences = sequences.filter((sequence) =>
@@ -1593,6 +1594,50 @@ const AvatarGestureEmotionUI = () => {
     setFilteredEffectsData(effectsData); // Initialize filtered data when effectsData changes
   }, [effectsData]);
 
+  useEffect(() => {
+    if (searchTerm) {
+      const filtered = effectsData.filter((item) =>
+        item.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredEffectsData(filtered);
+    } else {
+      setFilteredEffectsData(effectsData); // Reset to original data if search term is empty
+    }
+  }, [searchTerm, effectsData]);
+
+  useEffect(() => {
+    setFilteredEffectsData(effectsData);
+  }, [effectsData]);
+
+  useEffect(() => {
+    if (!searchTerm) {
+      setFilteredEffectsData(effectsData);
+      return;
+    }
+
+    const term = searchTerm.toLowerCase();
+
+    const filteredData = effectsData
+      .map((effect) => ({
+        ...effect,
+        Emotions:
+          effect.Emotions?.filter((emotion) =>
+            emotion.name.toLowerCase().includes(term)
+          ) || [],
+        Gestures:
+          effect.Gestures?.filter((gesture) =>
+            gesture.name.toLowerCase().includes(term)
+          ) || [],
+      }))
+      .filter(
+        (effect) =>
+          (effect.Emotions && effect.Emotions.length > 0) ||
+          (effect.Gestures && effect.Gestures.length > 0)
+      );
+
+    setFilteredEffectsData(filteredData);
+  }, [searchTerm, effectsData]);
+
   return (
     <div className="flex flex-col h-screen bg-gray-100">
       {/* Alert */}
@@ -1637,8 +1682,17 @@ const AvatarGestureEmotionUI = () => {
                 activeTab === "gestures"
                   ? "bg-[#F4E3F8] text-[#9B25A7] font-medium"
                   : "hover:bg-gray-50"
+              } ${
+                isEmotionProcessing || isGestureProcessing
+                  ? "opacity-50 cursor-not-allowed"
+                  : ""
               }`}
-              onClick={() => setActiveTab("gestures")}
+              onClick={() =>
+                !isEmotionProcessing &&
+                !isGestureProcessing &&
+                setActiveTab("gestures")
+              }
+              disabled={isEmotionProcessing || isGestureProcessing}
             >
               Gestures
             </button>
@@ -1647,8 +1701,17 @@ const AvatarGestureEmotionUI = () => {
                 activeTab === "emotions"
                   ? "bg-[#F4E3F8] text-[#9B25A7] font-medium"
                   : "hover:bg-gray-50"
+              } ${
+                isEmotionProcessing || isGestureProcessing
+                  ? "opacity-50 cursor-not-allowed"
+                  : ""
               }`}
-              onClick={() => setActiveTab("emotions")}
+              onClick={() =>
+                !isEmotionProcessing &&
+                !isGestureProcessing &&
+                setActiveTab("emotions")
+              }
+              disabled={isEmotionProcessing || isGestureProcessing}
             >
               Emotions
             </button>
@@ -1781,21 +1844,25 @@ const AvatarGestureEmotionUI = () => {
                       Avatar Preview
                     </button>
                     <button
-                      className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] transition-colors disabled:bg-opacity-50 disabled:cursor-not-allowed flex items-center"
-                      onClick={generateAvatarView}
-                      disabled={isGenerating}
+                      className={`px-4 py-2 rounded-md transition-colors flex items-center ${
+                        isGenerating
+                          ? "bg-[#920707] text-white cursor-pointer"
+                          : "bg-[#9B25A7] text-white hover:bg-[#7A1C86]"
+                      }`}
+                      onClick={() => {
+                        if (isGenerating) {
+                          setIsGenerating(false);
+                          toast.info("Avatar generation cancelled.");
+                        } else generateAvatarView();
+                      }}
+                      disabled={false}
                     >
                       {isGenerating ? (
-                        <>
-                          <RefreshCw size={16} className="animate-spin mr-2" />
-                          Generating...
-                        </>
+                        <RefreshCw className="animate-spin mr-2" size={16} />
                       ) : (
-                        <>
-                          <Plus size={16} className="mr-2" />
-                          Generate Avatar View
-                        </>
+                        <Plus size={16} className="mr-2" />
                       )}
+                      {isGenerating ? "Cancel Generation" : "Generate Avatar"}
                     </button>
                     <button
                       className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 flex items-center"
@@ -2103,35 +2170,12 @@ const AvatarGestureEmotionUI = () => {
                               type="text"
                               placeholder="Search emotions or gestures..."
                               className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#9B25A7] focus:outline-none"
-                              onChange={(e) => {
-                                const searchTerm = e.target.value.toLowerCase();
-                                if (!searchTerm) {
-                                  setFilteredEffectsData(effectsData); // Reset to original data when search is cleared
-                                  return;
-                                }
-                                const filteredData = effectsData.filter(
-                                  (effect) => {
-                                    const hasMatchingEmotion =
-                                      effect.Emotions &&
-                                      effect.Emotions.some((emotion) =>
-                                        emotion.name
-                                          .toLowerCase()
-                                          .includes(searchTerm)
-                                      );
-                                    const hasMatchingGesture =
-                                      effect.Gestures &&
-                                      effect.Gestures.some((gesture) =>
-                                        gesture.name
-                                          .toLowerCase()
-                                          .includes(searchTerm)
-                                      );
-                                    return (
-                                      hasMatchingEmotion || hasMatchingGesture
-                                    );
-                                  }
-                                );
-                                setFilteredEffectsData(filteredData); // Update the filtered data
-                              }}
+                              value={searchTerm}
+                              onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                            <Search
+                              size={16}
+                              className="absolute left-2.5 top-2.5 text-gray-400"
                             />
                           </div>
 
@@ -2148,7 +2192,7 @@ const AvatarGestureEmotionUI = () => {
                                     key={effect._id}
                                     className="border border-gray-300 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
                                   >
-                                    {effect.Emotions.length > 0 && (
+                                    {effect.Emotions?.length > 0 && (
                                       <div className="mb-4">
                                         <h5 className="text-sm font-semibold text-[#9B25A7] mb-2">
                                           Emotions
@@ -2156,7 +2200,7 @@ const AvatarGestureEmotionUI = () => {
                                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                                           {effect.Emotions.map((emotion) => (
                                             <div
-                                              key={emotion.name}
+                                              key={emotion._id}
                                               className={`border rounded-md p-2 ${
                                                 isItemSelected(emotion._id)
                                                   ? "border-[#9B25A7] bg-[#F4E3F8]"
@@ -2190,7 +2234,6 @@ const AvatarGestureEmotionUI = () => {
                                                     : "Select"}
                                                 </button>
                                               </div>
-                                              {/* Image Grid */}
                                               <div className="grid grid-cols-2 gap-2">
                                                 {[
                                                   "front",
@@ -2208,7 +2251,7 @@ const AvatarGestureEmotionUI = () => {
                                                           <img
                                                             src={`http://192.168.1.141:3001${emotion[view]}`}
                                                             alt={`${emotion.name} ${view}`}
-                                                            className="w-full h-full object-cover"
+                                                            className="w-full h-full object-contain"
                                                           />
                                                         </div>
                                                         {isItemSelected(
@@ -2254,7 +2297,7 @@ const AvatarGestureEmotionUI = () => {
                                       </div>
                                     )}
 
-                                    {effect.Gestures.length > 0 && (
+                                    {effect.Gestures?.length > 0 && (
                                       <div>
                                         <h5 className="text-sm font-semibold text-[#9B25A7] mb-2">
                                           Gestures
@@ -2262,7 +2305,7 @@ const AvatarGestureEmotionUI = () => {
                                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                                           {effect.Gestures.map((gesture) => (
                                             <div
-                                              key={gesture.name}
+                                              key={gesture._id}
                                               className={`border rounded-md p-2 ${
                                                 isItemSelected(gesture._id)
                                                   ? "border-[#9B25A7] bg-[#F4E3F8]"
@@ -2296,8 +2339,6 @@ const AvatarGestureEmotionUI = () => {
                                                     : "Select"}
                                                 </button>
                                               </div>
-
-                                              {/* Image Grid */}
                                               <div className="grid grid-cols-2 gap-2">
                                                 {[
                                                   "front",
@@ -2315,7 +2356,7 @@ const AvatarGestureEmotionUI = () => {
                                                           <img
                                                             src={`http://192.168.1.141:3001${gesture[view]}`}
                                                             alt={`${gesture.name} ${view}`}
-                                                            className="w-full h-full object-cover"
+                                                            className="w-full h-full object-contain"
                                                           />
                                                         </div>
                                                         {isItemSelected(
@@ -2362,6 +2403,15 @@ const AvatarGestureEmotionUI = () => {
                                     )}
                                   </div>
                                 ))}
+
+                                {filteredEffectsData.length === 0 && (
+                                  <div className="text-center py-8 text-gray-500">
+                                    <p>
+                                      No emotions or gestures found matching "
+                                      {searchTerm}"
+                                    </p>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>

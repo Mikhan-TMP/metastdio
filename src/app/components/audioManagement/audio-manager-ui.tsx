@@ -42,6 +42,8 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { Dialog } from "@headlessui/react"; // Example: Using Headless UI for modal
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const Alert = ({ message, type, onClose }) => {
   return (
@@ -169,7 +171,7 @@ const AudioManagerUI = () => {
 
   const deleteFolder = async (folderId) => {
     if (!email || !folderId) {
-      setAlert({ message: "Missing required parameters.", type: "error" });
+      toast.error("Missing required parameters.");
       return;
     }
 
@@ -194,24 +196,21 @@ const AudioManagerUI = () => {
         );
         setSelectedFolder(null);
         setAudios([]);
-        setAlert({ message: response.data.message, type: "success" });
+        toast.success(response.data.message);
       } else {
         throw new Error(response.data.message || "Failed to delete folder.");
       }
     } catch (error) {
       console.error("Delete Folder Error:", error);
-      setAlert({
-        message: error.response?.data?.message || "Failed to delete folder.",
-        type: "error",
-      });
-    } finally {
-      setTimeout(() => setAlert({ message: "", type: "" }), 3000);
+      toast.error(
+        error.response?.data?.message || "Failed to delete folder."
+      );
     }
   };
 
   const deleteAudio = async (audioId) => {
     if (!email || !selectedFolder?.id || !audioId) {
-      setAlert({ message: "Missing required parameters.", type: "error" });
+      toast.error("Missing required parameters.");
       return;
     }
 
@@ -235,18 +234,15 @@ const AudioManagerUI = () => {
         setAudios((prevAudios) =>
           prevAudios.filter((audio) => audio.id !== audioId)
         );
-        setAlert({ message: response.data.message, type: "success" });
+        toast.success(response.data.message);
       } else {
         throw new Error(response.data.message || "Failed to delete audio.");
       }
     } catch (error) {
       console.error("Delete Audio Error:", error);
-      setAlert({
-        message: error.response?.data?.message || "Failed to delete audio.",
-        type: "error",
-      });
-    } finally {
-      setTimeout(() => setAlert({ message: "", type: "" }), 3000);
+      toast.error(
+        error.response?.data?.message || "Failed to delete audio."
+      );
     }
   };
 
@@ -259,7 +255,7 @@ const AudioManagerUI = () => {
 
     if (!audio.path) {
       console.error("No valid audio path provided");
-      alert("Unable to play audio: Invalid file path");
+      toast.error("Unable to play audio: Invalid file path");
       return;
     }
 
@@ -276,9 +272,7 @@ const AudioManagerUI = () => {
           networkState: audioRef.current.networkState,
           readyState: audioRef.current.readyState,
         });
-        alert(
-          `Failed to load audio: ${audio.name}. Please check the file path.`
-        );
+        toast.error(`Failed to load audio: ${audio.name}. Please check the file path.`);
       };
 
       const playPromise = audioRef.current.play();
@@ -298,13 +292,11 @@ const AudioManagerUI = () => {
             });
 
             if (error.name === "NotSupportedError") {
-              alert("Audio format not supported. Please check the file type.");
+              toast.error("Audio format not supported. Please check the file type.");
             } else if (error.name === "NotAllowedError") {
-              alert(
-                "Audio playback was prevented. Check browser autoplay settings."
-              );
+              toast.error("Audio playback was prevented. Check browser autoplay settings.");
             } else {
-              alert(`Unable to play audio: ${error.message}`);
+              toast.error(`Unable to play audio: ${error.message}`);
             }
 
             setIsPlaying(false);
@@ -315,7 +307,7 @@ const AudioManagerUI = () => {
         name: error.name,
         message: error.message,
       });
-      alert(`Error setting up audio playback: ${error.message}`);
+      toast.error(`Error setting up audio playback: ${error.message}`);
     }
   };
 
@@ -418,82 +410,56 @@ const AudioManagerUI = () => {
     }
   };
 
+  const createFolder = async () => {
+    if (!newFolderName.trim()) {
+      toast.error("Folder name cannot be empty.");
+      return;
+    }
 
-const createFolder = async () => {
-  if (!newFolderName.trim()) {
-    setAlert({ message: "Folder name cannot be empty.", type: "error" });
-    return;
-  }
+    if (!email) {
+      toast.error("User email not found.");
+      return;
+    }
 
-  if (!email) {
-    setAlert({ message: "User email not found.", type: "error" });
-    return;
-  }
-
-  try {
-    setAlert({ message: "Creating folder...", type: "generating" });
-    
-    const response = await axios.post(
-      "http://192.168.1.141:3001/audio/addAudio",
-      {
-        email,
-        title: newFolderName.trim(),
-        audio: [],
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
+    try {
+      toast.info("Creating folder...");
+      const response = await axios.post(
+        "http://192.168.1.141:3001/audio/addAudio",
+        {
+          email,
+          title: newFolderName.trim(),
+          audio: [],
         },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const folderId = response.data.id || response.data._id || response.data.titleId;
+
+      if (response.data.status === "success" || folderId) {
+        const newFolder = {
+          id: folderId || `temp-${Date.now()}`,
+          name: newFolderName.trim(),
+        };
+
+        setFolders((prevFolders) => [...prevFolders, newFolder]);
+        setIsModalOpen(false);
+        setNewFolderName("");
+        toast.success("Folder created successfully.");
+        setTimeout(() => fetchFolders(), 500);
+      } else {
+        throw new Error(response.data.message || "Failed to create folder.");
       }
-    );
-
-    console.log("Create folder response:", response.data);
-
-    // Check for any id in the response - it might be in a different field
-    const folderId = response.data.id || response.data._id || response.data.titleId;
-    
-    if (response.data.status === "success" || folderId) {
-      const newFolder = { 
-        id: folderId || `temp-${Date.now()}`, 
-        name: newFolderName.trim() 
-      };
-
-      // Update folders state immediately
-      setFolders(prevFolders => [...prevFolders, newFolder]);
-      
-      // Close modal and clear the input
-      setIsModalOpen(false);
-      setNewFolderName("");
-      
-      setAlert({ message: "Folder created successfully.", type: "success" });
-      
-      // Wait a moment before fetching folders to give the server time to complete
-      setTimeout(() => fetchFolders(), 500);
-    } else {
-      throw new Error(response.data.message || "Failed to create folder.");
+    } catch (error) {
+      console.error("Create Folder Error:", error);
+      toast.error(
+        error.response?.data?.message || "Failed to create folder. Please try again."
+      );
     }
-  } catch (error) {
-    console.error("Create Folder Error:", error);
-    console.error("Error details:", {
-      message: error.message,
-      response: error.response?.data,
-      status: error.response?.status
-    });
-
-    let errorMessage = "Failed to create folder. Please try again.";
-    
-    if (error.code === "ERR_NETWORK") {
-      errorMessage = "Network error. Please check your connection.";
-    } else if (error.response && error.response.data && error.response.data.message) {
-      errorMessage = error.response.data.message;
-    }
-
-    setAlert({
-      message: errorMessage,
-      type: "error",
-    });
-  }
-};
+  };
 
   useEffect(() => {
     fetchFolders();
@@ -579,38 +545,19 @@ const createFolder = async () => {
 
   const saveAudioProperties = async () => {
     try {
-      // Debugging logs
-      console.log("Debugging selectedAudio:", selectedAudio);
-      console.log("selectedAudio.id:", selectedAudio?.id);
-      console.log("Type of selectedAudio.id:", typeof selectedAudio?.id);
-
-      // Validate required inputs
       if (!selectedAudio || !selectedAudio.id) {
-        setAlert({
-          message: "Invalid audio selected. Please try again.",
-          type: "error",
-        });
-        console.error("Error: Invalid selectedAudio object:", selectedAudio);
+        toast.error("Invalid audio selected. Please try again.");
         return;
       }
       if (!selectedFolder || !selectedFolder.id) {
-        setAlert({ message: "No folder selected.", type: "error" });
+        toast.error("No folder selected.");
         return;
       }
       if (!email) {
-        setAlert({ message: "User email not found.", type: "error" });
+        toast.error("User email not found.");
         return;
       }
 
-      const formattedAudioId = String(selectedAudio.id); // Ensure it's a string
-
-      // Debugging logs for API request
-      console.log("Sending API Request with:");
-      console.log("audioId:", formattedAudioId);
-      console.log("titleId:", selectedFolder?.id);
-      console.log("email:", email);
-
-      // Prepare payload
       const payload = {
         name: audioProperties.name.trim(),
         category: audioProperties.category,
@@ -623,27 +570,20 @@ const createFolder = async () => {
         noiseReduction: audioProperties.noiseReduction,
       };
 
-      // API request
-      const apiUrl = `http://192.168.1.141:3001/audio/updateAudio`;
-
-      console.log("Sending request to:", apiUrl);
-      console.log("Payload:", payload);
-
-      const response = await axios.patch(apiUrl, payload, {
-        params: {
-          email,
-          titleId: selectedFolder.id,
-          audioId: formattedAudioId,
-        },
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        timeout: 10000, // 10 seconds timeout
-      });
-
-      // Handle response
-      console.log("API Response:", response);
+      const response = await axios.patch(
+        `http://192.168.1.141:3001/audio/updateAudio`,
+        payload,
+        {
+          params: {
+            email,
+            titleId: selectedFolder.id,
+            audioId: String(selectedAudio.id),
+          },
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (response.data.status === "success") {
         setSelectedAudio({ ...selectedAudio, ...payload });
@@ -652,35 +592,17 @@ const createFolder = async () => {
             audio.id === selectedAudio.id ? { ...audio, ...payload } : audio
           )
         );
-        setAlert({ message: response.data.message, type: "success" });
-      } else if (response.data.status === "info") {
-        setAlert({ message: response.data.message, type: "info" });
+        toast.success(response.data.message);
       } else {
         throw new Error(response.data.message || "Unexpected server response.");
       }
     } catch (error) {
       console.error("Audio Update Error:", error);
-
-      let errorMessage = "Update failed. Please try again.";
-      if (error.response) {
-        console.error("Server Response:", error.response);
-        errorMessage = `Error ${error.response.status}: ${
-          error.response.data?.message || "Server error."
-        }`;
-      } else if (error.request) {
-        console.error("No response received:", error.request);
-        errorMessage = "No response from server. Check your connection.";
-      } else {
-        console.error("Request Error:", error.message);
-        errorMessage = `Error: ${error.message}`;
-      }
-
-      setAlert({ message: errorMessage, type: "error" });
-    } finally {
-      setTimeout(() => setAlert({ message: "", type: "" }), 3000);
+      toast.error(
+        error.response?.data?.message || "Update failed. Please try again."
+      );
     }
   };
-
 
   const getCategories = () => {
     const audioData = getAudioData();
@@ -703,7 +625,7 @@ const createFolder = async () => {
   const handleSelectAudio = (audio) => {
     if (!audio || !audio.id) {
       console.error("Invalid audio selected:", audio);
-      alert("Invalid audio selected. Please try again.");
+      toast.error("Invalid audio selected. Please try again.");
       return;
     }
     setSelectedAudio(audio);
@@ -760,6 +682,7 @@ const createFolder = async () => {
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
+      <ToastContainer />
       {/* Alert Component */}
       <Alert
         message={alert.message}
