@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Authentication API
 const AuthAPI = axios.create({
-  baseURL: "http://192.168.1.141:3001/auth",
+  baseURL: "http://192.168.1.141:3001/auth/",
 });
 
 const AvatarAPI = axios.create({
