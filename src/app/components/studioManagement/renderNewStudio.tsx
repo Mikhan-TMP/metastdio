@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Upload, RefreshCw, ChevronDown, Plus } from "lucide-react";
 import { motion } from "framer-motion";
-import { ToastContainer, toast } from 'react-toastify';
+import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 const RenderNewStudio = () => {
@@ -46,10 +46,8 @@ const RenderNewStudio = () => {
 
     setIsLoading(true);
     setError("");
-    toast.info("Generating your studio...", {
-      autoClose: false,
-      toastId: 'generating'
-    });
+    
+    const toastId = toast.loading("Generating your studio...");
 
     try {
       const formData = new FormData();
@@ -86,12 +84,20 @@ const RenderNewStudio = () => {
         localStorage.setItem("lastGeneratedImage", imageUrl); // Example usage of localStorage
       }
 
-      toast.dismiss('generating');
-      toast.success("Studio generated successfully!");
+      toast.update(toastId, {
+        render: "Studio generated successfully!",
+        type: "success",
+        isLoading: false,
+        autoClose: 3000
+      });
     } catch (err) {
       console.error("Fetch Error:", err);
-      toast.dismiss('generating');
-      toast.error(`Failed to generate: ${err.message}`);
+      toast.update(toastId, {
+        render: `Failed to generate: ${err.message}`,
+        type: "error",
+        isLoading: false,
+        autoClose: 3000
+      });
     } finally {
       setIsLoading(false);
     }
@@ -121,6 +127,8 @@ const RenderNewStudio = () => {
 
     setError("");
     setIsLoading(true);
+
+    const toastId = toast.loading("Saving to library...");
 
     try {
       // Convert the image to base64
@@ -154,13 +162,23 @@ const RenderNewStudio = () => {
 
         const result = await response.json();
         console.log("Studio saved successfully:", result);
-        toast.success("Studio saved successfully!");
+        toast.update(toastId, {
+          render: "Studio saved successfully!",
+          type: "success",
+          isLoading: false,
+          autoClose: 3000
+        });
       };
 
       reader.readAsDataURL(blob); // Read the blob as a base64 string
     } catch (err) {
       console.error("Save Error:", err);
-      toast.error(`Failed to save: ${err.message}`);
+      toast.update(toastId, {
+        render: `Failed to save: ${err.message}`,
+        type: "error",
+        isLoading: false,
+        autoClose: 3000
+      });
     } finally {
       setIsLoading(false);
     }
@@ -326,8 +344,8 @@ const RenderNewStudio = () => {
       </div>
 
       <ToastContainer
-        position="top-center"
-        autoClose={5000}
+        position="top-right"
+        autoClose={3000}
         hideProgressBar={false}
         newestOnTop={false}
         closeOnClick
@@ -335,7 +353,7 @@ const RenderNewStudio = () => {
         pauseOnFocusLoss
         draggable
         pauseOnHover
-        theme="light"
+        theme="colored"
       />
     </div>
   );
