@@ -38,10 +38,7 @@ const AvatarGestureEmotionUI = () => {
   const [selectedAvatar, setSelectedAvatar] = useState(null);
   const [selectedGesture, setSelectedGesture] = useState(null);
   const [selectedEmotion, setSelectedEmotion] = useState(null);
-  const [recentEmotion, setRecentEmotion] = useState(null); // Track the most recent emotion
-  const [recentGesture, setRecentGesture] = useState(null); // Track the most recent gesture
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
   const [activeTab, setActiveTab] = useState("gestures");
   const [currentCategory, setCurrentCategory] = useState("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -70,11 +67,6 @@ const AvatarGestureEmotionUI = () => {
   const [sequenceSearch, setSequenceSearch] = useState("");
   const [filteredEffectsData, setFilteredEffectsData] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-
-  // Add this function to filter sequences
-  const filteredSequences = sequences.filter((sequence) =>
-    sequence.sequenceName.toLowerCase().includes(sequenceSearch.toLowerCase())
-  );
 
   const getUserEmail = () => {
     if (typeof window !== "undefined" && localStorage.getItem("userEmail")) {
@@ -314,30 +306,6 @@ const AvatarGestureEmotionUI = () => {
     setSelectedGesture(null);
   }, [activeTab]);
 
-  const fetchExistingEffects = async (type, name) => {
-    if (!selectedAvatar) return null;
-
-    try {
-      const email = getUserEmail();
-      const response = await axios.get(
-        `http://192.168.1.141:3001/avatar-effects/getAllEffects`,
-        {
-          params: {
-            email,
-            avatarID: selectedAvatar.id,
-          },
-        }
-      );
-
-      const effects = response.data || [];
-      return effects.find(
-        (effect) => effect.type === type && effect.name === name
-      );
-    } catch (error) {
-      console.error("Error fetching existing effects:", error);
-      return null;
-    }
-  };
   const fetchExistingEmotion = async (emotionName) => {
     if (!selectedAvatar) return null;
 
@@ -1373,15 +1341,17 @@ const AvatarGestureEmotionUI = () => {
     }
   };
 
-  const filteredGestures =
-    currentCategory === "all"
-      ? gestures
-      : gestures.filter((g) => g.category === currentCategory);
+  const filteredGestures = gestures.filter(
+    (g) =>
+      (currentCategory === "all" || g.category === currentCategory) &&
+      g.name.toLowerCase().includes(searchTerm.toLowerCase()) // Filter by search term
+  );
 
-  const filteredEmotions =
-    currentCategory === "all"
-      ? emotions
-      : emotions.filter((e) => e.category === currentCategory);
+  const filteredEmotions = emotions.filter(
+    (e) =>
+      (currentCategory === "all" || e.category === currentCategory) &&
+      e.name.toLowerCase().includes(searchTerm.toLowerCase()) // Filter by search term
+  );
 
   const renderEmotion = (emotion) => (
     <div
@@ -1467,7 +1437,10 @@ const AvatarGestureEmotionUI = () => {
   const closeSequenceModal = () => {
     setIsSequenceModalOpen(false);
   };
-
+  // Add this function to filter sequences
+  const filteredSequences = sequences.filter((sequence) =>
+    sequence.sequenceName.toLowerCase().includes(sequenceSearch.toLowerCase())
+  );
   // Add these functions inside your component
   const isItemSelected = (id) => {
     return selectedSequenceItems.some((item) => item.id === id);
@@ -1553,6 +1526,25 @@ const AvatarGestureEmotionUI = () => {
     }
   };
 
+  const handleDeleteSequence = async (sequence, selectedAvatar) => {
+    try {
+      const email = getUserEmail();
+      const avatarID = selectedAvatar.id;
+      const sequenceID = sequence.id;
+
+      await axios.delete(`http://192.168.1.141:3001/sequences/deleteSequence`, {
+        params: { email, avatarID, sequenceID },
+      });
+
+      toast.success(
+        `Sequence "${sequence.sequenceName}" deleted successfully!`
+      );
+      fetchSequences();
+    } catch (error) {
+      console.error("Error deleting sequence:", error);
+      toast.error("Failed to delete sequence. Please try again.");
+    }
+  };
   const fetchSequences = async () => {
     if (!selectedAvatar) {
       return;
@@ -1676,12 +1668,12 @@ const AvatarGestureEmotionUI = () => {
         {/* Left Panel - Library - Updated to match modal style */}
         <div className="w-72 bg-white shadow rounded-lg mr-4 flex flex-col">
           {/* Library Tabs */}
-          <div className="flex border-b">
+          <div className="flex border-b border-gray-200 mb-2">
             <button
-              className={`flex-1 py-2 ${
+              className={`flex-1 py-2 flex items-center justify-center gap-2 ${
                 activeTab === "gestures"
-                  ? "bg-[#F4E3F8] text-[#9B25A7] font-medium"
-                  : "hover:bg-gray-50"
+                  ? "bg-[#F4E3F8] text-[#9B25A7] font-medium border-b-4 border-[#9B25A7]"
+                  : "hover:bg-gray-50 text-gray-500"
               } ${
                 isEmotionProcessing || isGestureProcessing
                   ? "opacity-50 cursor-not-allowed"
@@ -1694,13 +1686,14 @@ const AvatarGestureEmotionUI = () => {
               }
               disabled={isEmotionProcessing || isGestureProcessing}
             >
-              Gestures
+              <span className="text-lg">👋</span> {/* Gesture Icon */}
+              <span>Gestures</span>
             </button>
             <button
-              className={`flex-1 py-2 ${
+              className={`flex-1 py-2 flex items-center justify-center gap-2 ${
                 activeTab === "emotions"
-                  ? "bg-[#F4E3F8] text-[#9B25A7] font-medium"
-                  : "hover:bg-gray-50"
+                  ? "bg-[#F4E3F8] text-[#9B25A7] font-medium border-b-4 border-[#9B25A7]"
+                  : "hover:bg-gray-50 text-gray-500"
               } ${
                 isEmotionProcessing || isGestureProcessing
                   ? "opacity-50 cursor-not-allowed"
@@ -1713,114 +1706,96 @@ const AvatarGestureEmotionUI = () => {
               }
               disabled={isEmotionProcessing || isGestureProcessing}
             >
-              Emotions
+              <span className="text-lg">😊</span> {/* Emotion Icon */}
+              <span>Emotions</span>
             </button>
           </div>
 
           {/* Search and Filter */}
-          <div className="p-3 border-b">
+          <div className="p-3 border-b border-gray-200">
             <div className="flex mb-2">
               <div className="relative flex-1">
                 <input
                   type="text"
                   placeholder="Search..."
-                  className="w-full bg-white p-2 pl-8 rounded-l-md border border-gray-300 focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent focus:outline-none"
+                  className="w-full bg-white p-2 pl-8 rounded-md border border-gray-300 focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent focus:outline-none"
+                  value={searchTerm} // Bind to searchTerm state
+                  onChange={(e) => setSearchTerm(e.target.value)} // Update searchTerm on input change
                 />
                 <Search
                   size={16}
-                  className="absolute left-2.5 top-2.5 text-gray-400"
+                  className="absolute left-2.5 top-3 text-gray-400"
                 />
               </div>
-              <button className="bg-gray-200 px-3 rounded-r-md border border-gray-300 border-l-0">
-                <Filter size={16} />
-              </button>
-            </div>
-
-            {/* Category Filter */}
-            <div className="flex flex-wrap gap-1">
-              {(activeTab === "gestures"
-                ? gestureCategories
-                : emotionCategories
-              ).map((category) => (
-                <button
-                  key={category}
-                  className={`px-2 py-0.5 text-xs rounded-md ${
-                    currentCategory === category
-                      ? "bg-[#9B25A7] text-white"
-                      : "bg-gray-200 hover:bg-gray-300"
-                  }`}
-                  onClick={() => setCurrentCategory(category)}
-                >
-                  {category === "all" ? "All Categories" : category}
-                </button>
-              ))}
             </div>
           </div>
 
           {/* Library Content */}
           <div className="flex-1 overflow-y-auto p-3">
             {activeTab === "gestures" && (
-              <div className="grid grid-cols-2 gap-3">
-                {filteredGestures.map((gesture) => (
-                  <div
-                    key={gesture.id}
-                    className={`p-3 rounded-lg cursor-pointer transition-colors border ${
-                      selectedGesture?.id === gesture.id
-                        ? "border-[#9B25A7] bg-[#F4E3F8]"
-                        : "border-gray-300 hover:border-[#9B25A7] hover:bg-gray-50"
-                    }`}
-                    onClick={() => handleGestureSelect(gesture)}
-                  >
-                    <div className="text-2xl text-center mb-2">
-                      {gesture.thumbnail}
-                    </div>
-                    {!isGestureProcessing ||
-                    selectedGesture?.id !== gesture.id ? (
-                      <>
-                        <div className="text-xs font-medium text-center truncate">
-                          {gesture.name}
+              <>
+                {filteredGestures.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    {filteredGestures.map((gesture) => (
+                      <div
+                        key={gesture.id}
+                        className={`p-3 rounded-lg cursor-pointer transition-colors border ${
+                          selectedGesture?.id === gesture.id
+                            ? "border-[#9B25A7] bg-[#F4E3F8]"
+                            : "border-gray-300 hover:border-[#9B25A7] hover:bg-gray-50"
+                        }`}
+                        onClick={() => handleGestureSelect(gesture)}
+                      >
+                        <div className="text-2xl text-center mb-2">
+                          {gesture.thumbnail}
                         </div>
-                        <div
-                          className={`text-xs text-center flex items-center justify-center mt-1 ${
-                            selectedGesture?.id === gesture.id
-                              ? "text-[#9B25A7]"
-                              : "text-gray-500"
-                          }`}
-                        >
-                          <Clock size={10} className="mr-0.5" />{" "}
-                          {gesture.duration}s
-                        </div>
-                      </>
-                    ) : (
-                      <div className="flex justify-center mt-2">
-                        <RefreshCw
-                          className="animate-spin text-[#9B25A7]"
-                          size={16}
-                        />
+                        {!isGestureProcessing ||
+                        selectedGesture?.id !== gesture.id ? (
+                          <>
+                            <div className="text-xs font-medium text-center truncate">
+                              {gesture.name}
+                            </div>
+                            <div
+                              className={`text-xs text-center flex items-center justify-center mt-1 ${
+                                selectedGesture?.id === gesture.id
+                                  ? "text-[#9B25A7]"
+                                  : "text-gray-500"
+                              }`}
+                            >
+                              <Clock size={10} className="mr-0.5" />
+                              {gesture.duration}s
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex justify-center mt-2">
+                            <RefreshCw
+                              className="animate-spin text-[#9B25A7]"
+                              size={16}
+                            />
+                          </div>
+                        )}
                       </div>
-                    )}
+                    ))}
                   </div>
-                ))}
-              </div>
+                ) : (
+                  <div className="flex items-center justify-center  text-center text-gray-500">
+                    No gestures available
+                  </div>
+                )}
+              </>
             )}
 
-            {activeTab === "emotions" && (
-              <div className="grid grid-cols-2 gap-3">
-                {filteredEmotions.map((emotion) => renderEmotion(emotion))}
-              </div>
-            )}
-          </div>
-
-          {/* Create New - Updated to match modal style */}
-          <div className="p-3 border-t">
-            <button className="w-full flex items-center justify-center p-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] transition-colors">
-              <Plus size={16} className="mr-1" />
-              {activeTab === "gestures"
-                ? "New Gesture"
-                : activeTab === "emotions"
-                ? "New Emotion"
-                : ""}
-            </button>
+            {activeTab === "emotions" ? (
+              filteredEmotions.length > 0 ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {filteredEmotions.map((emotion) => renderEmotion(emotion))}
+                </div>
+              ) : (
+                <div className="text-center text-gray-500">
+                  No emotions available
+                </div>
+              )
+            ) : null}
           </div>
         </div>
 
@@ -2014,51 +1989,98 @@ const AvatarGestureEmotionUI = () => {
 
                   {/* Scrollable sequence list */}
                   <div className="max-h-[500px] overflow-y-auto pr-1 space-y-4">
-                    {filteredSequences.map((sequence) => (
-                      <div
-                        key={sequence.id}
-                        className="bg-white p-4 rounded-lg border border-gray-300 hover:border-[#9B25A7] hover:bg-gray-50 transition-colors"
-                      >
-                        <div className="font-medium mb-2 flex items-center justify-between">
-                          <span>{sequence.sequenceName}</span>
-                          <div className="text-xs text-gray-500">
-                            {sequence.actions.length} actions
-                          </div>
-                        </div>
-                        <div className="flex mb-2 space-x-2 text-sm overflow-x-auto pb-2">
-                          {sequence.actions.map((action, idx) => (
-                            <span
-                              key={idx}
-                              className="px-2 py-1 bg-gray-100 rounded-md text-xs whitespace-nowrap"
-                            >
-                              {action.actionName}
-                            </span>
-                          ))}
-                        </div>
-                        <div className="flex justify-end space-x-2">
-                          <button
-                            className="p-2 bg-gray-200 rounded-md hover:bg-gray-300"
-                            onClick={() =>
-                              console.log(
-                                `Play sequence ${sequence.sequenceName}`
-                              )
-                            }
-                          >
-                            <Play size={16} />
-                          </button>
-                          <button
-                            className="p-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
-                            onClick={() =>
-                              console.log(
-                                `Edit sequence ${sequence.sequenceName}`
-                              )
-                            }
-                          >
-                            <Plus size={16} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                  {filteredSequences.map((sequence) => (
+  <div
+    key={sequence.id}
+    className="bg-white p-4 rounded-lg border border-gray-300 hover:border-[#9B25A7] hover:bg-gray-50 transition-colors"
+  >
+    {/* Header */}
+    <div className="flex items-center justify-between mb-2 font-medium">
+      <span>{sequence.sequenceName}</span>
+      <span className="text-xs text-gray-500">
+        {sequence.actions.length} actions
+      </span>
+    </div>
+
+    {/* Actions list */}
+    <div className="flex mb-2 space-x-2 text-sm overflow-x-auto pb-2">
+      {sequence.actions.map((action, idx) => (
+        <span
+          key={idx}
+          className="px-2 py-1 bg-gray-100 rounded-md text-xs whitespace-nowrap"
+        >
+          {action.actionName}
+        </span>
+      ))}
+    </div>
+
+    {/* Footer buttons */}
+    <div className="flex justify-end space-x-2">
+      {!sequence.showDeleteConfirmation ? (
+        <>
+          <button
+            aria-label={`Play ${sequence.sequenceName}`}
+            className="p-2 bg-gray-200 rounded-md hover:bg-gray-300"
+            onClick={() =>
+              console.log(`Play sequence ${sequence.sequenceName}`)
+            }
+          >
+            <Play size={16} />
+          </button>
+          <button
+            aria-label={`Edit ${sequence.sequenceName}`}
+            className="p-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
+            onClick={() =>
+              console.log(`Edit sequence ${sequence.sequenceName}`)
+            }
+          >
+            <Plus size={16} />
+          </button>
+          <button
+            aria-label={`Delete ${sequence.sequenceName}`}
+            className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600"
+            onClick={() =>
+              setSequences((prev) =>
+                prev.map((s) =>
+                  s.id === sequence.id
+                    ? { ...s, showDeleteConfirmation: true }
+                    : s
+                )
+              )
+            }
+          >
+            <Trash2 size={16} />
+          </button>
+        </>
+      ) : (
+        <div className="flex items-center space-x-2">
+          <span className="text-sm text-gray-700">Are you sure?</span>
+          <button
+            className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600"
+            onClick={() => handleDeleteSequence(sequence, selectedAvatar)}
+          >
+            Yes
+          </button>
+          <button
+            className="p-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+            onClick={() =>
+              setSequences((prev) =>
+                prev.map((s) =>
+                  s.id === sequence.id
+                    ? { ...s, showDeleteConfirmation: false }
+                    : s
+                )
+              )
+            }
+          >
+            No
+          </button>
+        </div>
+      )}
+    </div>
+  </div>
+))}
+
                     {filteredSequences.length === 0 && (
                       <div className="text-center py-8 text-gray-500">
                         {sequences.length === 0 ? (
