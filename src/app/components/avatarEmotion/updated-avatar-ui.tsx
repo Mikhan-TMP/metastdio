@@ -1899,7 +1899,7 @@ const AvatarGestureEmotionUI = () => {
                         {/* Modal confined to this div */}
                         {isRegenerateModalOpen &&
                           regenerateViewType === view && (
-                            <div className="absolute top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center rounded-lg">
+                            <div className="absolute top-0 left-0 w-full h-full bg-black/50 backdrop-blur-sm flex items-center justify-center rounded-lg">
                               <div className="bg-white rounded-lg shadow-lg p-4 w-64">
                                 <h3 className="text-lg font-medium text-center mb-4">
                                   Choose Regenerate Option
@@ -1989,97 +1989,108 @@ const AvatarGestureEmotionUI = () => {
 
                   {/* Scrollable sequence list */}
                   <div className="max-h-[500px] overflow-y-auto pr-1 space-y-4">
-                  {filteredSequences.map((sequence) => (
-  <div
-    key={sequence.id}
-    className="bg-white p-4 rounded-lg border border-gray-300 hover:border-[#9B25A7] hover:bg-gray-50 transition-colors"
-  >
-    {/* Header */}
-    <div className="flex items-center justify-between mb-2 font-medium">
-      <span>{sequence.sequenceName}</span>
-      <span className="text-xs text-gray-500">
-        {sequence.actions.length} actions
-      </span>
-    </div>
+                    {filteredSequences.map((sequence) => (
+                      <div
+                        key={sequence.id}
+                        className="bg-white p-4 rounded-lg border border-gray-300 hover:border-[#9B25A7] hover:bg-gray-50 transition-colors"
+                      >
+                        {/* Header */}
+                        <div className="flex items-center justify-between mb-2 font-medium">
+                          <span>{sequence.sequenceName}</span>
+                          <span className="text-xs text-gray-500">
+                            {sequence.actions.length} actions
+                          </span>
+                        </div>
 
-    {/* Actions list */}
-    <div className="flex mb-2 space-x-2 text-sm overflow-x-auto pb-2">
-      {sequence.actions.map((action, idx) => (
-        <span
-          key={idx}
-          className="px-2 py-1 bg-gray-100 rounded-md text-xs whitespace-nowrap"
-        >
-          {action.actionName}
-        </span>
-      ))}
-    </div>
+                        {/* Actions list */}
+                        <div className="flex mb-2 space-x-2 text-sm overflow-x-auto pb-2">
+                          {sequence.actions.map((action, idx) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-1 bg-gray-100 rounded-md text-xs whitespace-nowrap"
+                            >
+                              {action.actionName}
+                            </span>
+                          ))}
+                        </div>
 
-    {/* Footer buttons */}
-    <div className="flex justify-end space-x-2">
-      {!sequence.showDeleteConfirmation ? (
-        <>
-          <button
-            aria-label={`Play ${sequence.sequenceName}`}
-            className="p-2 bg-gray-200 rounded-md hover:bg-gray-300"
-            onClick={() =>
-              console.log(`Play sequence ${sequence.sequenceName}`)
-            }
-          >
-            <Play size={16} />
-          </button>
-          <button
-            aria-label={`Edit ${sequence.sequenceName}`}
-            className="p-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
-            onClick={() =>
-              console.log(`Edit sequence ${sequence.sequenceName}`)
-            }
-          >
-            <Plus size={16} />
-          </button>
-          <button
-            aria-label={`Delete ${sequence.sequenceName}`}
-            className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600"
-            onClick={() =>
-              setSequences((prev) =>
-                prev.map((s) =>
-                  s.id === sequence.id
-                    ? { ...s, showDeleteConfirmation: true }
-                    : s
-                )
-              )
-            }
-          >
-            <Trash2 size={16} />
-          </button>
-        </>
-      ) : (
-        <div className="flex items-center space-x-2">
-          <span className="text-sm text-gray-700">Are you sure?</span>
-          <button
-            className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600"
-            onClick={() => handleDeleteSequence(sequence, selectedAvatar)}
-          >
-            Yes
-          </button>
-          <button
-            className="p-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
-            onClick={() =>
-              setSequences((prev) =>
-                prev.map((s) =>
-                  s.id === sequence.id
-                    ? { ...s, showDeleteConfirmation: false }
-                    : s
-                )
-              )
-            }
-          >
-            No
-          </button>
-        </div>
-      )}
-    </div>
-  </div>
-))}
+                        {/* Footer buttons */}
+                        <div className="flex justify-end space-x-2">
+                          {!sequence.showDeleteConfirmation ? (
+                            <>
+                              <button
+                                aria-label={`Play ${sequence.sequenceName}`}
+                                className="p-2 bg-gray-200 rounded-md hover:bg-gray-300"
+                                onClick={() =>
+                                  console.log(
+                                    `Play sequence ${sequence.sequenceName}`
+                                  )
+                                }
+                              >
+                                <Play size={16} />
+                              </button>
+                              <button
+                                aria-label={`Edit ${sequence.sequenceName}`}
+                                className="p-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
+                                onClick={() =>
+                                  console.log(
+                                    `Edit sequence ${sequence.sequenceName}`
+                                  )
+                                }
+                              >
+                                <Plus size={16} />
+                              </button>
+                              <button
+                                aria-label={`Delete ${sequence.sequenceName}`}
+                                className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600"
+                                onClick={() =>
+                                  setSequences((prev) =>
+                                    prev.map((s) =>
+                                      s.id === sequence.id
+                                        ? { ...s, showDeleteConfirmation: true }
+                                        : s
+                                    )
+                                  )
+                                }
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </>
+                          ) : (
+                            <div className="flex items-center space-x-2">
+                              <span className="text-sm text-gray-700">
+                                Are you sure?
+                              </span>
+                              <button
+                                className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600"
+                                onClick={() =>
+                                  handleDeleteSequence(sequence, selectedAvatar)
+                                }
+                              >
+                                Yes
+                              </button>
+                              <button
+                                className="p-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+                                onClick={() =>
+                                  setSequences((prev) =>
+                                    prev.map((s) =>
+                                      s.id === sequence.id
+                                        ? {
+                                            ...s,
+                                            showDeleteConfirmation: false,
+                                          }
+                                        : s
+                                    )
+                                  )
+                                }
+                              >
+                                No
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
 
                     {filteredSequences.length === 0 && (
                       <div className="text-center py-8 text-gray-500">
@@ -2110,7 +2121,7 @@ const AvatarGestureEmotionUI = () => {
                     {/* Sequence Modal */}
 
                     {isSequenceModalOpen && (
-                      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm bg-opacity-50 flex items-center justify-center z-50">
                         <div className="bg-white rounded-lg shadow-lg w-[95%] max-w-6xl max-h-[90vh] overflow-hidden p-6 relative flex flex-col">
                           {/* Close Button */}
                           <button
@@ -2450,7 +2461,7 @@ const AvatarGestureEmotionUI = () => {
 
       {/* Modal - Original style kept for reference */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-4xl p-6 relative">
             <button
               className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"

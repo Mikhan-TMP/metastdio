@@ -699,7 +699,7 @@ const AudioManagerUI = () => {
       )}
 
       {/* Top Navigation */}
-      <div className="flex justify-between items-center p-3 bg-white border-b shadow-sm">
+      <div className="flex justify-between items-center p-3 bg-white border-b border-gray-200 shadow-sm">
         <div className="flex space-x-3">
           <button className="p-2 bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] disabled:bg-[#E3C5F0] flex items-center">
             <Save size={16} className="mr-2" />
@@ -713,9 +713,9 @@ const AudioManagerUI = () => {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Main Content Area */}
-        <div className="w-3/4 bg-white flex flex-col border-r shadow-sm">
+        <div className="w-3/4 bg-white flex flex-col border-r border-gray-200 shadow-sm relative overflow-hidden">
           {/* Folder/Audio Header */}
-          <div className="bg-white p-3 border-b">
+          <div className="bg-white p-3 ">
             <div className="flex justify-between items-center mb-3">
               <h2 className="text-lg font-semibold text-gray-800">
                 {selectedFolder ? (
@@ -820,7 +820,7 @@ const AudioManagerUI = () => {
           </div>
 
           {/* Audio Files Section */}
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 overflow-auto relative">
             {loading.audios ? (
               <div className="flex items-center justify-center p-6">
                 <RefreshCw className="w-8 h-8 text-[#9B25A7] animate-spin" />
@@ -913,11 +913,41 @@ const AudioManagerUI = () => {
               </div>
             )}
           </div>
+
+          {/* Modal for creating a new folder - Rendered inside the parent container */}
+          {isModalOpen && (
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-10">
+              <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+                <h2 className="text-lg font-semibold mb-4">Create New Folder</h2>
+                <input
+                  type="text"
+                  placeholder="Enter folder name"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  className="w-full p-2 border rounded-md mb-4"
+                />
+                <div className="flex justify-end space-x-2">
+                  <button
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={createFolder}
+                    className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Preview & Properties Panel */}
         <div className="w-1/4 bg-white flex flex-col">
-          <div className="flex items-center p-3 border-b bg-gray-50">
+          <div className="flex items-center p-3 border-b border-gray-200 bg-gray-50">
             <h2 className="text-lg font-semibold flex-1 ml-2 text-gray-800">
               Audio Manager
             </h2>
@@ -930,7 +960,7 @@ const AudioManagerUI = () => {
               Save
             </button>
           </div>
-          <div className="p-3 border-b flex items-center">
+          <div className="p-3 border-b border-gray-200 flex items-center">
             <h3 className="text-md font-semibold text-gray-800">
               Preview & Properties
             </h3>
@@ -1411,35 +1441,6 @@ const AudioManagerUI = () => {
         </div>
       </div>
 
-      {/* Modal for creating a new folder */}
-      <Dialog open={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-            <h2 className="text-lg font-semibold mb-4">Create New Folder</h2>
-            <input
-              type="text"
-              placeholder="Enter folder name"
-              value={newFolderName}
-              onChange={(e) => setNewFolderName(e.target.value)}
-              className="w-full p-2 border rounded-md mb-4"
-            />
-            <div className="flex justify-end space-x-2">
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={createFolder}
-                className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      </Dialog>
     </div>
   );
 };

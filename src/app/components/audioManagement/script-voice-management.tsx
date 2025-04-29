@@ -776,7 +776,7 @@ const AudioScript = () => {
       </div>
       {showModal && (
         <div
-          className={`fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-2 sm:p-4 z-50 ${
+          className={`fixed inset-0 flex items-center justify-centerbg-black/50 backdrop-blur-sm bg-opacity-50 p-2 sm:p-4 z-50 ${
             isModalMinimized ? "hidden" : ""
           }`}
         >
@@ -889,7 +889,7 @@ const AudioScript = () => {
       {isModalMinimized && (
         <button
           onClick={() => setIsModalMinimized(false)} // Reopen the modal
-          className="fixed bottom-4 right-4 px-4 py-2 bg-blue-500 text-white rounded-lg shadow-lg hover:bg-blue-600 z-50"
+          className="fixed bottom-4 right-4 px-4 py-2 bg-[#9B25A7] text-white rounded-lg shadow-lg hover:bg-[#7A1C86] z-50"
         >
           Reopen Modal
         </button>

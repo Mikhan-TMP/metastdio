@@ -23,9 +23,7 @@ const StudioGallery = () => {
   const [editType, setEditType] = useState(""); // Editable type
   const [isEditing, setIsEditing] = useState(false); // Editing state
   const email = localStorage.getItem("userEmail");
-
   const studioTypes = ["News", "Podcast", "Meeting", "Education"];
-
   const dropdownRef = useRef(null);
 
   useEffect(() => {
@@ -194,9 +192,9 @@ const StudioGallery = () => {
         pauseOnHover
         theme="colored"
       />
-      <div className="flex h-full bg-gray-50 rounded-2xl shadow-lg px-4 sm:px-6 lg:px-8 mx-4 overflow-hidden">
+      <div className="flex h-full bg-trnsparent rounded-2xl p-4 sm:px-6 lg:px-8 mx-4 overflow-hidden gap-4">
         {/* Left Section: Filters and Gallery */}
-        <div className="w-2/3 max-w-8xl mx-auto rounded-lg h-full flex flex-col">
+        <div className="w-2/3 bg-white rounded-lg shadow-md p-4 flex flex-col">
           <div className="p-4 sm:p-6">
             {/* Settings Section */}
             <div className="mb-4 sm:mb-6">
@@ -336,8 +334,8 @@ const StudioGallery = () => {
           </div>
         </div>
 
-        {/* Right Section: Full Image View */}
-        <div className="w-1/3 bg-white rounded-lg shadow-md p-4 flex flex-col h-fit">
+        {/* Right Section: Studio Preview */}
+        <div className="w-1/3 bg-white rounded-lg shadow-md p-4 flex flex-col">
           <h3 className="text-[#9B25A7] font-bold text-lg sm:text-xl mb-4 sm:mb-6">
             Studio Preview
           </h3>

@@ -921,7 +921,7 @@ const VoiceGenerator = () => {
           open={isFolderModalOpen}
           onClose={() => setIsFolderModalOpen(false)}
         >
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
             <div className="bg-white w-full max-w-md p-6 rounded-2xl shadow-xl space-y-6">
               {/* Title */}
               <h2 className="text-xl font-semibold text-gray-800">
