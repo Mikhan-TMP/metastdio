@@ -1646,7 +1646,7 @@ const AvatarGestureEmotionUI = () => {
         theme="light"
       />
       {/* Top Toolbar - Updated to match modal style */}
-      <div className="flex justify-between items-center p-4 bg-white shadow-sm">
+      <div className="flex justify-between items-center p-4 bg-white shadow-sm rounded-lg">
         <div className="flex items-center">
           <h1 className="text-lg font-semibold text-[#9B25A7]">
             Avatar Gesture & Emotion Editor
