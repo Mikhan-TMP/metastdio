@@ -169,24 +169,30 @@ const AudioManagerUI = () => {
     setAudioProperties((prev) => ({ ...prev, [field]: value }));
   };
 
-  const deleteFolder = async (folderId) => {
+  const [confirmDelete, setConfirmDelete] = useState({
+    isOpen: false,
+    folderId: null,
+  });
+
+  const requestDeleteFolder = (folderId) => {
     if (!email || !folderId) {
       toast.error("Missing required parameters.");
       return;
     }
 
-    if (!window.confirm("Are you sure you want to delete this folder?")) {
-      return;
-    }
+    setConfirmDelete({ isOpen: true, folderId });
+  };
+
+  const handleConfirmDelete = async () => {
+    const folderId = confirmDelete.folderId;
+    setConfirmDelete({ isOpen: false, folderId: null });
+    setIsModalOpen(false);
 
     try {
       const response = await axios.delete(
         `http://192.168.1.141:3001/audio/deleteScript`,
         {
-          params: {
-            email,
-            titleId: folderId,
-          },
+          params: { email, titleId: folderId },
         }
       );
 
@@ -202,19 +208,16 @@ const AudioManagerUI = () => {
       }
     } catch (error) {
       console.error("Delete Folder Error:", error);
-      toast.error(
-        error.response?.data?.message || "Failed to delete folder."
-      );
+      toast.error(error.response?.data?.message || "Failed to delete folder.");
     }
   };
 
-  const deleteAudio = async (audioId) => {
-    if (!email || !selectedFolder?.id || !audioId) {
-      toast.error("Missing required parameters.");
-      return;
-    }
+  const [audioToDelete, setAudioToDelete] = useState(null); // stores audio ID to delete
+  const [showDeleteAudioModal, setShowDeleteAudioModal] = useState(false);
 
-    if (!window.confirm("Are you sure you want to delete this audio?")) {
+  const handleConfirmDeleteAudio = async () => {
+    if (!email || !selectedFolder?.id || !audioToDelete) {
+      toast.error("Missing required parameters.");
       return;
     }
 
@@ -225,14 +228,14 @@ const AudioManagerUI = () => {
           params: {
             email,
             titleId: selectedFolder.id,
-            audioId,
+            audioId: audioToDelete,
           },
         }
       );
 
       if (response.data.status === "success") {
         setAudios((prevAudios) =>
-          prevAudios.filter((audio) => audio.id !== audioId)
+          prevAudios.filter((audio) => audio.id !== audioToDelete)
         );
         toast.success(response.data.message);
       } else {
@@ -240,9 +243,10 @@ const AudioManagerUI = () => {
       }
     } catch (error) {
       console.error("Delete Audio Error:", error);
-      toast.error(
-        error.response?.data?.message || "Failed to delete audio."
-      );
+      toast.error(error.response?.data?.message || "Failed to delete audio.");
+    } finally {
+      setShowDeleteAudioModal(false);
+      setAudioToDelete(null);
     }
   };
 
@@ -272,7 +276,9 @@ const AudioManagerUI = () => {
           networkState: audioRef.current.networkState,
           readyState: audioRef.current.readyState,
         });
-        toast.error(`Failed to load audio: ${audio.name}. Please check the file path.`);
+        toast.error(
+          `Failed to load audio: ${audio.name}. Please check the file path.`
+        );
       };
 
       const playPromise = audioRef.current.play();
@@ -292,9 +298,13 @@ const AudioManagerUI = () => {
             });
 
             if (error.name === "NotSupportedError") {
-              toast.error("Audio format not supported. Please check the file type.");
+              toast.error(
+                "Audio format not supported. Please check the file type."
+              );
             } else if (error.name === "NotAllowedError") {
-              toast.error("Audio playback was prevented. Check browser autoplay settings.");
+              toast.error(
+                "Audio playback was prevented. Check browser autoplay settings."
+              );
             } else {
               toast.error(`Unable to play audio: ${error.message}`);
             }
@@ -437,7 +447,8 @@ const AudioManagerUI = () => {
         }
       );
 
-      const folderId = response.data.id || response.data._id || response.data.titleId;
+      const folderId =
+        response.data.id || response.data._id || response.data.titleId;
 
       if (response.data.status === "success" || folderId) {
         const newFolder = {
@@ -456,7 +467,8 @@ const AudioManagerUI = () => {
     } catch (error) {
       console.error("Create Folder Error:", error);
       toast.error(
-        error.response?.data?.message || "Failed to create folder. Please try again."
+        error.response?.data?.message ||
+          "Failed to create folder. Please try again."
       );
     }
   };
@@ -800,7 +812,7 @@ const AudioManagerUI = () => {
                     </button>
                     <button
                       className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50"
-                      onClick={() => deleteFolder(folder.id)}
+                      onClick={() => requestDeleteFolder(folder.id)}
                     >
                       <Trash2 size={16} />
                     </button>
@@ -891,7 +903,10 @@ const AudioManagerUI = () => {
                         <td className="py-3 px-3">
                           <button
                             className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50"
-                            onClick={() => deleteAudio(audio.id)}
+                            onClick={() => {
+                              setAudioToDelete(audio.id);
+                              setShowDeleteAudioModal(true);
+                            }}
                           >
                             <Trash2 size={16} />
                           </button>
@@ -918,7 +933,9 @@ const AudioManagerUI = () => {
           {isModalOpen && (
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-10">
               <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-                <h2 className="text-lg font-semibold mb-4">Create New Folder</h2>
+                <h2 className="text-lg font-semibold mb-4">
+                  Create New Folder
+                </h2>
                 <input
                   type="text"
                   placeholder="Enter folder name"
@@ -938,6 +955,65 @@ const AudioManagerUI = () => {
                     className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
                   >
                     Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {confirmDelete.isOpen && (
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-10">
+              <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+                <h2 className="text-lg font-semibold mb-4 text-gray-800">
+                  Delete Folder
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  Are you sure you want to delete this folder?
+                </p>
+                <div className="flex justify-end space-x-2">
+                  <button
+                    onClick={() =>
+                      setConfirmDelete({ isOpen: false, folderId: null })
+                    }
+                    className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleConfirmDelete}
+                    className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showDeleteAudioModal && (
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-10">
+              <div className="bg-white p-6 rounded-xl shadow-lg w-[90%] max-w-md">
+                <h2 className="text-lg font-semibold text-gray-800 mb-4">
+                  Delete Audio File
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  Are you sure you want to delete this audio? This action cannot
+                  be undone.
+                </p>
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => setShowDeleteAudioModal(false)}
+                    className="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-100"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleConfirmDeleteAudio();
+                    }}
+                    className="px-4 py-2 text-sm rounded-md bg-red-500 text-white hover:bg-red-600"
+                  >
+                    Delete
                   </button>
                 </div>
               </div>
@@ -1440,7 +1516,6 @@ const AudioManagerUI = () => {
           </div>
         </div>
       </div>
-
     </div>
   );
 };
