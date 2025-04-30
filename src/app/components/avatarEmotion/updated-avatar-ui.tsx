@@ -1427,7 +1427,7 @@ const AvatarGestureEmotionUI = () => {
 
   const openSequenceModal = () => {
     if (!selectedAvatar) {
-      alert("Please select an avatar before proceeding.");
+      toast.error("Please select an avatar before proceeding.");
       return;
     }
     fetchEffects();
@@ -2136,65 +2136,68 @@ const AvatarGestureEmotionUI = () => {
                             <h3 className="text-[#9B25A7] font-bold text-xl">
                               Create New Sequence
                             </h3>
-                            <div className="flex items-center space-x-4">
-                              <input
-                                type="text"
-                                placeholder="Enter sequence name"
-                                className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#9B25A7] focus:outline-none"
-                                value={sequenceName}
-                                onChange={(e) =>
-                                  setSequenceName(e.target.value)
-                                }
-                              />
-                              <button
-                                className={`px-4 py-2 rounded-md ${
-                                  selectedSequenceItems.length >= 2 &&
-                                  sequenceName
-                                    ? "bg-[#9B25A7] text-white hover:bg-[#7A1C86]"
-                                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                                }`}
-                                onClick={handleSaveSequence}
-                                disabled={
-                                  selectedSequenceItems.length < 2 ||
-                                  !sequenceName
-                                }
-                              >
-                                Save Sequence
-                              </button>
-                            </div>
+                            
                           </div>
 
                           {/* Selected Items Preview */}
                           <div className="mb-4">
-                            <h4 className="text-sm font-semibold text-gray-700 mb-2">
-                              Selected Items ({selectedSequenceItems.length}/3)
-                            </h4>
-                            <div className="flex gap-4">
-                              {selectedSequenceItems.map((item, index) => (
-                                <div key={index} className="relative">
-                                  <div className="border border-[#9B25A7] rounded-md p-2 bg-[#F4E3F8]">
-                                    <div className="text-sm font-medium">
-                                      {item.actionName}
-                                    </div>
-                                    <div className="text-xs text-gray-500">
-                                      {item.type === "emotion" ? "😊" : "👋"}{" "}
-                                      {item.type}
-                                    </div>
-                                    <div className="text-xs text-[#9B25A7] mt-1">
-                                      Selected view:{" "}
-                                      {selectedViews[item.id] || "None"}
-                                    </div>
-                                  </div>
-                                  <button
-                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
-                                    onClick={() => removeFromSequence(item.id)}
-                                  >
-                                    ✕
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
+  <h4 className="text-sm font-semibold text-gray-700 mb-2">
+    Selected Items ({selectedSequenceItems.length}/3)
+  </h4>
+
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    {/* Left Column: Selected Items */}
+    <div className="flex gap-4 flex-wrap">
+      {selectedSequenceItems.map((item, index) => (
+        <div key={index} className="relative">
+          <div className="border border-[#9B25A7] rounded-md p-2 bg-[#F4E3F8]">
+            <div className="text-sm font-medium">{item.actionName}</div>
+            <div className="text-xs text-gray-500">
+              {item.type === "emotion" ? "😊" : "👋"} {item.type}
+            </div>
+            <div className="text-xs text-[#9B25A7] mt-1">
+              Selected view: {selectedViews[item.id] || "None"}
+            </div>
+          </div>
+          <button
+            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+            onClick={() => removeFromSequence(item.id)}
+          >
+            ✕
+          </button>
+        </div>
+      ))}
+    </div>
+
+    {/* Right Column: Input and Save Button */}
+    {selectedSequenceItems.length > 0 && (
+    <div className="flex flex-wrap items-center gap-4 mt-4">
+      <div className="flex-1 min-w-[200px]">
+        <input
+          type="text"
+          placeholder="Enter sequence name"
+          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#9B25A7] focus:outline-none"
+          value={sequenceName}
+          onChange={(e) => setSequenceName(e.target.value)}
+        />
+      </div>
+      <button
+        className={`px-4 py-2 rounded-md ${
+          selectedSequenceItems.length >= 2 && sequenceName
+            ? "bg-[#9B25A7] text-white hover:bg-[#7A1C86]"
+            : "bg-gray-300 text-gray-500 cursor-not-allowed"
+        }`}
+        onClick={handleSaveSequence}
+        disabled={selectedSequenceItems.length < 2 || !sequenceName}
+      >
+        Save Sequence
+      </button>
+    </div>
+  )}
+  </div>
+</div>
+
+<div className="h-px bg-gray-200 mb-4 mt-2"></div>
 
                           {/* Search Bar */}
 
@@ -2206,10 +2209,10 @@ const AvatarGestureEmotionUI = () => {
                               value={searchTerm}
                               onChange={(e) => setSearchTerm(e.target.value)}
                             />
-                            <Search
+                            {/* <Search
                               size={16}
                               className="absolute left-2.5 top-2.5 text-gray-400"
-                            />
+                            /> */}
                           </div>
 
                           {/* Content Scroll Area */}
@@ -2223,7 +2226,7 @@ const AvatarGestureEmotionUI = () => {
                                 {filteredEffectsData.map((effect) => (
                                   <div
                                     key={effect._id}
-                                    className="border border-gray-300 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
+                                    className=" rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
                                   >
                                     {effect.Emotions?.length > 0 && (
                                       <div className="mb-4">
