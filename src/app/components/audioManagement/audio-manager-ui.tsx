@@ -190,12 +190,9 @@ const AudioManagerUI = () => {
     setIsModalOpen(false);
 
     try {
-      const response = await backendURL.delete(
-        `/audio/deleteScript`,
-        {
-          params: { email, titleId: folderId },
-        }
-      );
+      const response = await backendURL.delete(`/audio/deleteScript`, {
+        params: { email, titleId: folderId },
+      });
 
       if (response.data.status === "success") {
         setFolders((prevFolders) =>
@@ -223,16 +220,13 @@ const AudioManagerUI = () => {
     }
 
     try {
-      const response = await backendURL.delete(
-        `/audio/deleteAudio`,
-        {
-          params: {
-            email,
-            titleId: selectedFolder.id,
-            audioId: audioToDelete,
-          },
-        }
-      );
+      const response = await backendURL.delete(`/audio/deleteAudio`, {
+        params: {
+          email,
+          titleId: selectedFolder.id,
+          audioId: audioToDelete,
+        },
+      });
 
       if (response.data.status === "success") {
         setAudios((prevAudios) =>
@@ -343,15 +337,12 @@ const AudioManagerUI = () => {
     try {
       console.log("Fetching folders with email:", email);
 
-      const response = await backendURL.get(
-        `/audio/getAllScript`,
-        {
-          params: { email },
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await backendURL.get(`/audio/getAllScript`, {
+        params: { email },
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
       console.log("Raw API Response:", {
         status: response.status,
@@ -488,15 +479,12 @@ const AudioManagerUI = () => {
     setError((prev) => ({ ...prev, audios: null }));
 
     try {
-      const response = await backendURL.get(
-        `/audio/getScript`,
-        {
-          params: {
-            email,
-            titleId: folderId,
-          },
-        }
-      );
+      const response = await backendURL.get(`/audio/getScript`, {
+        params: {
+          email,
+          titleId: folderId,
+        },
+      });
 
       console.log("Full Audios API Response:", response.data);
 
@@ -583,20 +571,16 @@ const AudioManagerUI = () => {
         noiseReduction: audioProperties.noiseReduction,
       };
 
-      const response = await backendURL.patch(
-        `/audio/updateAudio`,
-        payload,
-        {
-          params: {
-            email,
-            titleId: selectedFolder.id,
-            audioId: String(selectedAudio.id),
-          },
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await backendURL.patch(`/audio/updateAudio`, payload, {
+        params: {
+          email,
+          titleId: selectedFolder.id,
+          audioId: String(selectedAudio.id),
+        },
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
       if (response.data.status === "success") {
         setSelectedAudio({ ...selectedAudio, ...payload });

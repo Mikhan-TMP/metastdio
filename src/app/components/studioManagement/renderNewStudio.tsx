@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Upload, RefreshCw, ChevronDown, Plus } from "lucide-react";
 import { motion } from "framer-motion";
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import { backendURL } from "../../../../utils/api";
 
 const RenderNewStudio = () => {
@@ -47,7 +47,7 @@ const RenderNewStudio = () => {
 
     setIsLoading(true);
     setError("");
-    
+
     const toastId = toast.loading("Generating your studio...");
 
     try {
@@ -89,7 +89,7 @@ const RenderNewStudio = () => {
         render: "Studio generated successfully!",
         type: "success",
         isLoading: false,
-        autoClose: 3000
+        autoClose: 3000,
       });
     } catch (err) {
       console.error("Fetch Error:", err);
@@ -97,7 +97,7 @@ const RenderNewStudio = () => {
         render: `Failed to generate: ${err.message}`,
         type: "error",
         isLoading: false,
-        autoClose: 3000
+        autoClose: 3000,
       });
     } finally {
       setIsLoading(false);
@@ -140,18 +140,21 @@ const RenderNewStudio = () => {
       reader.onloadend = async () => {
         const base64Image = reader.result.split(",")[1]; // Extract base64 string
 
-        const response = await fetch(`${backendURL.defaults.baseURL}/studio/addStudio`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            name: promptText,
-            email: "forehead614@gmail.com",
-            image: base64Image,
-            type: style,
-          }),
-        });
+        const response = await fetch(
+          `${backendURL.defaults.baseURL}/studio/addStudio`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              name: promptText,
+              email: "forehead614@gmail.com",
+              image: base64Image,
+              type: style,
+            }),
+          }
+        );
 
         if (!response.ok) {
           console.error("API Error:", response.status, response.statusText);
@@ -164,7 +167,7 @@ const RenderNewStudio = () => {
           render: "Studio saved successfully!",
           type: "success",
           isLoading: false,
-          autoClose: 3000
+          autoClose: 3000,
         });
       };
 
@@ -175,7 +178,7 @@ const RenderNewStudio = () => {
         render: `Failed to save: ${err.message}`,
         type: "error",
         isLoading: false,
-        autoClose: 3000
+        autoClose: 3000,
       });
     } finally {
       setIsLoading(false);
@@ -186,7 +189,6 @@ const RenderNewStudio = () => {
 
   return (
     <div className="flex flex-row flex-wrap justify-between items-center content-center gap-y-5 h-full w-full p-6">
-
       {/* Reference Image Upload & AI Generation Prompt */}
       <div className="flex flex-col md:flex-row items-start p-6 gap-6 w-full bg-white shadow-md rounded-2xl">
         {/* Reference Image Upload */}
@@ -251,12 +253,22 @@ const RenderNewStudio = () => {
           />
 
           <button
-            className={`w-full px-4 py-3 bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] flex items-center justify-center transition font-medium
+            className={`w-full px-4 py-3 rounded-lg flex items-center justify-center transition font-medium ${
+              isLoading
+                ? "bg-[#E3C5F0] text-gray-200 cursor-not-allowed"
+                : "bg-[#9B25A7] text-white hover:bg-[#7A1C86]"
             }`}
             onClick={handleSubmit}
             disabled={isLoading}
           >
-            {isLoading ? "Generating..." : "Generate Studio"}
+            {isLoading ? (
+              <>
+                <RefreshCw className="animate-spin mr-2" />
+                Generating...
+              </>
+            ) : (
+              "Generate Studio"
+            )}
           </button>
         </div>
       </div>

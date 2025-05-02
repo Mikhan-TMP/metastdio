@@ -9,8 +9,8 @@ import {
   Plus,
 } from "lucide-react";
 import axios from "axios";
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import { backendURL } from "../../../../utils/api";
 
 const StudioGallery = () => {
@@ -47,27 +47,30 @@ const StudioGallery = () => {
 
       const params = {
         email,
-        ...(styleFilter && styleFilter !== "All" ? { studioType: styleFilter } : {}),
+        ...(styleFilter && styleFilter !== "All"
+          ? { studioType: styleFilter }
+          : {}),
         ...(nameFilter ? { name: nameFilter } : {}),
       };
 
-      await toast.promise(
-        backendURL.get(`/studio/getStudios`, { params }),
-        {
-          pending: 'Loading studios...',
-          success: 'Studios loaded successfully',
-          error: 'Failed to load studios'
-        }
-      ).then(response => {
-        const fetchedStudios = response.data.map((studio, index) => ({
-          id: studio.id || index,
-          imgSrc: `${backendURL.defaults.baseURL}${studio.imgSrc}`.replace(/([^:]\/)\/+/g, "$1"),
-          name: studio.name || `Studio ${index + 1}`,
-          studioType: studio.studioType,
-        }));
-        setGalleryStudioList(fetchedStudios);
-      });
-
+      await toast
+        .promise(backendURL.get(`/studio/getStudios`, { params }), {
+          pending: "Loading studios...",
+          success: "Studios loaded successfully",
+          error: "Failed to load studios",
+        })
+        .then((response) => {
+          const fetchedStudios = response.data.map((studio, index) => ({
+            id: studio.id || index,
+            imgSrc: `${backendURL.defaults.baseURL}${studio.imgSrc}`.replace(
+              /([^:]\/)\/+/g,
+              "$1"
+            ),
+            name: studio.name || `Studio ${index + 1}`,
+            studioType: studio.studioType,
+          }));
+          setGalleryStudioList(fetchedStudios);
+        });
     } catch (error) {
       setGalleryStudioList([]);
     } finally {
@@ -85,19 +88,21 @@ const StudioGallery = () => {
 
     try {
       const email = localStorage.getItem("userEmail") || "test@example.com";
-      
+
       await toast.promise(
         backendURL.delete(
           `/studio/deleteStudio?email=${email}&id=${selectedStudio.id}`
         ),
         {
-          pending: 'Deleting studio...',
-          success: 'Studio deleted successfully',
+          pending: "Deleting studio...",
+          success: "Studio deleted successfully",
           error: {
             render({ data }) {
-              return `Failed to delete studio: ${data?.response?.data?.message || 'Unknown error'}`;
-            }
-          }
+              return `Failed to delete studio: ${
+                data?.response?.data?.message || "Unknown error"
+              }`;
+            },
+          },
         }
       );
 
@@ -125,26 +130,24 @@ const StudioGallery = () => {
       const email = localStorage.getItem("userEmail") || "test@example.com";
 
       await toast.promise(
-        backendURL.patch(
-          `/studio/updateStudio`,
-          null,
-          {
-            params: {
-              email,
-              name: editName,
-              id: selectedStudio.id,
-              type: editType,
-            },
-          }
-        ),
+        backendURL.patch(`/studio/updateStudio`, null, {
+          params: {
+            email,
+            name: editName,
+            id: selectedStudio.id,
+            type: editType,
+          },
+        }),
         {
-          pending: 'Updating studio...',
-          success: 'Studio updated successfully',
+          pending: "Updating studio...",
+          success: "Studio updated successfully",
           error: {
             render({ data }) {
-              return `Failed to update studio: ${data?.response?.data?.message || 'Unknown error'}`;
-            }
-          }
+              return `Failed to update studio: ${
+                data?.response?.data?.message || "Unknown error"
+              }`;
+            },
+          },
         }
       );
 
@@ -309,7 +312,9 @@ const StudioGallery = () => {
                           />
                         </div>
                         <div className="p-4">
-                          <h3 className="font-medium truncate">{studio.name}</h3>
+                          <h3 className="font-medium truncate">
+                            {studio.name}
+                          </h3>
                           <p className="text-sm text-gray-500 mt-1">
                             {studio.studioType || "Unknown Type"}
                           </p>

@@ -312,15 +312,12 @@ const AvatarGestureEmotionUI = () => {
 
     try {
       const email = getUserEmail();
-      const response = await backendURL.get(
-        `/avatar-effects/getAllEffects`,
-        {
-          params: {
-            email,
-            avatarID: selectedAvatar.id,
-          },
-        }
-      );
+      const response = await backendURL.get(`/avatar-effects/getAllEffects`, {
+        params: {
+          email,
+          avatarID: selectedAvatar.id,
+        },
+      });
 
       const effects = response.data || [];
       // Find the emotion with the required name and all image properties
@@ -363,15 +360,12 @@ const AvatarGestureEmotionUI = () => {
 
     try {
       const email = getUserEmail();
-      const response = await backendURL.get(
-        `/avatar-effects/getAllEffects`,
-        {
-          params: {
-            email,
-            avatarID: selectedAvatar.id,
-          },
-        }
-      );
+      const response = await backendURL.get(`/avatar-effects/getAllEffects`, {
+        params: {
+          email,
+          avatarID: selectedAvatar.id,
+        },
+      });
 
       const effects = response.data || [];
       const existingGesture = effects.find(
@@ -462,10 +456,7 @@ const AvatarGestureEmotionUI = () => {
         ...(searchName ? { name: searchName } : {}),
       };
 
-      const response = await backendURL.get(
-        `/avatar/getAvatars`,
-        { params }
-      );
+      const response = await backendURL.get(`/avatar/getAvatars`, { params });
       console.log("API Response:", response.data);
 
       const fetchedAvatars = response.data.map((avatar, index) => ({
@@ -507,15 +498,12 @@ const AvatarGestureEmotionUI = () => {
       // Fetch current views from the API to ensure all views are included
       let currentViews = { front: null, side: null, back: null, close: null };
       try {
-        const response = await backendURL.get(
-          "/avatarfx/getAvatarViews",
-          {
-            params: {
-              email,
-              avatarID: selectedAvatar.id,
-            },
-          }
-        );
+        const response = await backendURL.get("/avatarfx/getAvatarViews", {
+          params: {
+            email,
+            avatarID: selectedAvatar.id,
+          },
+        });
 
         const views = response.data?.cameraViews || {};
         currentViews = {
@@ -571,13 +559,9 @@ const AvatarGestureEmotionUI = () => {
       );
 
       // Send payload to API
-      await backendURL.post(
-        "/avatarfx/initializeAvatarFx",
-        payload,
-        {
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      await backendURL.post("/avatarfx/initializeAvatarFx", payload, {
+        headers: { "Content-Type": "application/json" },
+      });
 
       // Update state with the generated images
       setGeneratedImages(updatedViews);
@@ -815,12 +799,9 @@ const AvatarGestureEmotionUI = () => {
       // Step 1: First fetch the current views from the API
       let currentViews;
       try {
-        const response = await backendURL.get(
-          "/avatarfx/getAvatarViews",
-          {
-            params: { email, avatarID },
-          }
-        );
+        const response = await backendURL.get("/avatarfx/getAvatarViews", {
+          params: { email, avatarID },
+        });
 
         // Extract existing views, ensuring we preserve the base64 data
         currentViews = {
@@ -888,13 +869,9 @@ const AvatarGestureEmotionUI = () => {
       };
 
       // Send the complete payload to the API
-      await backendURL.post(
-        "/avatarfx/initializeAvatarFx",
-        payload,
-        {
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      await backendURL.post("/avatarfx/initializeAvatarFx", payload, {
+        headers: { "Content-Type": "application/json" },
+      });
 
       // Step 5: Update local state with new images
       setGeneratedImages({
@@ -1142,15 +1119,12 @@ const AvatarGestureEmotionUI = () => {
       const email = getUserEmail();
 
       // Check what's currently stored in the API
-      const response = await backendURL.get(
-        `/avatarfx/getAvatarViews`,
-        {
-          params: {
-            email,
-            avatarID: selectedAvatar.id,
-          },
-        }
-      );
+      const response = await backendURL.get(`/avatarfx/getAvatarViews`, {
+        params: {
+          email,
+          avatarID: selectedAvatar.id,
+        },
+      });
 
       console.log("Currently stored avatar views:", response.data);
 
@@ -1168,15 +1142,12 @@ const AvatarGestureEmotionUI = () => {
       try {
         const email = getUserEmail();
 
-        const response = await backendURL.get(
-          `/avatarfx/getAvatarViews`,
-          {
-            params: {
-              email,
-              avatarID: selectedAvatar.id,
-            },
-          }
-        );
+        const response = await backendURL.get(`/avatarfx/getAvatarViews`, {
+          params: {
+            email,
+            avatarID: selectedAvatar.id,
+          },
+        });
 
         if (response.data?.cameraViews) {
           const views = {
@@ -1412,12 +1383,9 @@ const AvatarGestureEmotionUI = () => {
     setIsLoadingEffects(true);
     try {
       const email = getUserEmail();
-      const response = await backendURL.get(
-        `/avatar-effects/getAllEffects`,
-        {
-          params: { email, avatarID: selectedAvatar.id },
-        }
-      );
+      const response = await backendURL.get(`/avatar-effects/getAllEffects`, {
+        params: { email, avatarID: selectedAvatar.id },
+      });
       setEffectsData(response.data || []);
     } catch (error) {
       console.error("Error fetching effects:", error);
@@ -1508,10 +1476,7 @@ const AvatarGestureEmotionUI = () => {
         })),
       };
 
-      await backendURL.post(
-        "/sequences/addSequence",
-        payload
-      );
+      await backendURL.post("/sequences/addSequence", payload);
 
       toast.success("Sequence saved successfully!");
       setSequenceName("");
@@ -1553,15 +1518,12 @@ const AvatarGestureEmotionUI = () => {
 
     try {
       const email = getUserEmail();
-      const response = await backendURL.get(
-        `/sequences/getAllSequences`,
-        {
-          params: {
-            email,
-            avatarID: selectedAvatar.id,
-          },
-        }
-      );
+      const response = await backendURL.get(`/sequences/getAllSequences`, {
+        params: {
+          email,
+          avatarID: selectedAvatar.id,
+        },
+      });
 
       // Combine all sequences from different objects
       const allSequences = response.data.reduce((acc, item) => {
@@ -2137,68 +2099,79 @@ const AvatarGestureEmotionUI = () => {
                             <h3 className="text-[#9B25A7] font-bold text-xl">
                               Create New Sequence
                             </h3>
-                            
                           </div>
 
                           {/* Selected Items Preview */}
                           <div className="mb-4">
-  <h4 className="text-sm font-semibold text-gray-700 mb-2">
-    Selected Items ({selectedSequenceItems.length}/3)
-  </h4>
+                            <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                              Selected Items ({selectedSequenceItems.length}/3)
+                            </h4>
 
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-    {/* Left Column: Selected Items */}
-    <div className="flex gap-4 flex-wrap">
-      {selectedSequenceItems.map((item, index) => (
-        <div key={index} className="relative">
-          <div className="border border-[#9B25A7] rounded-md p-2 bg-[#F4E3F8]">
-            <div className="text-sm font-medium">{item.actionName}</div>
-            <div className="text-xs text-gray-500">
-              {item.type === "emotion" ? "😊" : "👋"} {item.type}
-            </div>
-            <div className="text-xs text-[#9B25A7] mt-1">
-              Selected view: {selectedViews[item.id] || "None"}
-            </div>
-          </div>
-          <button
-            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
-            onClick={() => removeFromSequence(item.id)}
-          >
-            ✕
-          </button>
-        </div>
-      ))}
-    </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              {/* Left Column: Selected Items */}
+                              <div className="flex gap-4 flex-wrap">
+                                {selectedSequenceItems.map((item, index) => (
+                                  <div key={index} className="relative">
+                                    <div className="border border-[#9B25A7] rounded-md p-2 bg-[#F4E3F8]">
+                                      <div className="text-sm font-medium">
+                                        {item.actionName}
+                                      </div>
+                                      <div className="text-xs text-gray-500">
+                                        {item.type === "emotion" ? "😊" : "👋"}{" "}
+                                        {item.type}
+                                      </div>
+                                      <div className="text-xs text-[#9B25A7] mt-1">
+                                        Selected view:{" "}
+                                        {selectedViews[item.id] || "None"}
+                                      </div>
+                                    </div>
+                                    <button
+                                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                                      onClick={() =>
+                                        removeFromSequence(item.id)
+                                      }
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
 
-    {/* Right Column: Input and Save Button */}
-    {selectedSequenceItems.length > 0 && (
-    <div className="flex flex-wrap items-center gap-4 mt-4">
-      <div className="flex-1 min-w-[200px]">
-        <input
-          type="text"
-          placeholder="Enter sequence name"
-          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#9B25A7] focus:outline-none"
-          value={sequenceName}
-          onChange={(e) => setSequenceName(e.target.value)}
-        />
-      </div>
-      <button
-        className={`px-4 py-2 rounded-md ${
-          selectedSequenceItems.length >= 2 && sequenceName
-            ? "bg-[#9B25A7] text-white hover:bg-[#7A1C86]"
-            : "bg-gray-300 text-gray-500 cursor-not-allowed"
-        }`}
-        onClick={handleSaveSequence}
-        disabled={selectedSequenceItems.length < 2 || !sequenceName}
-      >
-        Save Sequence
-      </button>
-    </div>
-  )}
-  </div>
-</div>
+                              {/* Right Column: Input and Save Button */}
+                              {selectedSequenceItems.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-4 mt-4">
+                                  <div className="flex-1 min-w-[200px]">
+                                    <input
+                                      type="text"
+                                      placeholder="Enter sequence name"
+                                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#9B25A7] focus:outline-none"
+                                      value={sequenceName}
+                                      onChange={(e) =>
+                                        setSequenceName(e.target.value)
+                                      }
+                                    />
+                                  </div>
+                                  <button
+                                    className={`px-4 py-2 rounded-md ${
+                                      selectedSequenceItems.length >= 2 &&
+                                      sequenceName
+                                        ? "bg-[#9B25A7] text-white hover:bg-[#7A1C86]"
+                                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                    }`}
+                                    onClick={handleSaveSequence}
+                                    disabled={
+                                      selectedSequenceItems.length < 2 ||
+                                      !sequenceName
+                                    }
+                                  >
+                                    Save Sequence
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
 
-<div className="h-px bg-gray-200 mb-4 mt-2"></div>
+                          <div className="h-px bg-gray-200 mb-4 mt-2"></div>
 
                           {/* Search Bar */}
 

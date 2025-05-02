@@ -16,7 +16,6 @@ import JSZip from "jszip";
 import { ToastContainer, toast } from "react-toastify";
 import { backendURL } from "../../../../utils/api";
 
-
 const VoiceGenerator = () => {
   const [textInput, setTextInput] = useState("");
   const [voiceSelection, setVoiceSelection] = useState("Male");
@@ -113,13 +112,10 @@ const VoiceGenerator = () => {
 
   const fetchFolders = async () => {
     try {
-      const response = await backendURL.get(
-        "/audio/getAllScript",
-        {
-          params: { email },
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      const response = await backendURL.get("/audio/getAllScript", {
+        params: { email },
+        headers: { "Content-Type": "application/json" },
+      });
 
       if (
         response.data.status === "success" &&
@@ -388,16 +384,12 @@ const VoiceGenerator = () => {
         )
       );
 
-      const saveResponse = await backendURL.post(
-        "/audio/addAudio",
-        payload,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-          timeout: 10000,
-        }
-      );
+      const saveResponse = await backendURL.post("/audio/addAudio", payload, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        timeout: 10000,
+      });
 
       console.log("Save to library response:", saveResponse);
 
@@ -556,23 +548,25 @@ const VoiceGenerator = () => {
       console.log("Payload before sending:", JSON.stringify(payload, null, 2));
 
       try {
-        const apiResponse = await backendURL.post(
-          "/audio/addAudio",
-          payload,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-            timeout: 10000,
-          }
-        );
+        const apiResponse = await backendURL.post("/audio/addAudio", payload, {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          timeout: 10000,
+        });
 
         console.log("Full API Response:", apiResponse);
 
         if (apiResponse.status === 200 || apiResponse.status === 201) {
-          showNotification("Audio files successfully sent to the API.", "success");
+          showNotification(
+            "Audio files successfully sent to the API.",
+            "success"
+          );
         } else {
-          showNotification(`API responded with status: ${apiResponse.status}`, "error");
+          showNotification(
+            `API responded with status: ${apiResponse.status}`,
+            "error"
+          );
         }
       } catch (apiError) {
         console.error("API Error Details:", {
@@ -590,9 +584,15 @@ const VoiceGenerator = () => {
             "error"
           );
         } else if (apiError.request) {
-          showNotification("No response received from the API. Check network connection.", "error");
+          showNotification(
+            "No response received from the API. Check network connection.",
+            "error"
+          );
         } else {
-          showNotification(`Error setting up API request: ${apiError.message}`, "error");
+          showNotification(
+            `Error setting up API request: ${apiError.message}`,
+            "error"
+          );
         }
       }
     } catch (error) {
