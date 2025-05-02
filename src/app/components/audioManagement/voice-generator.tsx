@@ -14,6 +14,7 @@ import axios from "axios";
 import Dialog from "@mui/material/Dialog";
 import JSZip from "jszip";
 import { ToastContainer, toast } from "react-toastify";
+import { backendURL } from "../../../../utils/api";
 
 
 const VoiceGenerator = () => {
@@ -112,8 +113,8 @@ const VoiceGenerator = () => {
 
   const fetchFolders = async () => {
     try {
-      const response = await axios.get(
-        "http://192.168.1.141:3001/audio/getAllScript",
+      const response = await backendURL.get(
+        "/audio/getAllScript",
         {
           params: { email },
           headers: { "Content-Type": "application/json" },
@@ -387,8 +388,8 @@ const VoiceGenerator = () => {
         )
       );
 
-      const saveResponse = await axios.post(
-        "http://192.168.1.141:3001/audio/addAudio",
+      const saveResponse = await backendURL.post(
+        "/audio/addAudio",
         payload,
         {
           headers: {
@@ -448,8 +449,8 @@ const VoiceGenerator = () => {
     try {
       showNotification("Creating folder...", "generating");
 
-      const response = await axios.post(
-        "http://192.168.1.141:3001/audio/addAudio",
+      const response = await backendURL.post(
+        "/audio/addAudio",
         {
           email,
           title: newFolderName.trim(),
@@ -555,8 +556,8 @@ const VoiceGenerator = () => {
       console.log("Payload before sending:", JSON.stringify(payload, null, 2));
 
       try {
-        const apiResponse = await axios.post(
-          "http://192.168.1.141:3001/audio/addAudio",
+        const apiResponse = await backendURL.post(
+          "/audio/addAudio",
           payload,
           {
             headers: {

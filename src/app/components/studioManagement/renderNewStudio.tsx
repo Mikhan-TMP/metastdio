@@ -3,6 +3,7 @@ import { Upload, RefreshCw, ChevronDown, Plus } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { backendURL } from "../../../../utils/api";
 
 const RenderNewStudio = () => {
   const [promptText, setPromptText] = useState("");
@@ -139,21 +140,18 @@ const RenderNewStudio = () => {
       reader.onloadend = async () => {
         const base64Image = reader.result.split(",")[1]; // Extract base64 string
 
-        const response = await fetch(
-          "http://192.168.1.141:3001/studio/addStudio",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              name: promptText,
-              email: "forehead614@gmail.com",
-              image: base64Image,
-              type: style,
-            }),
-          }
-        );
+        const response = await fetch(`${backendURL.defaults.baseURL}/studio/addStudio`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: promptText,
+            email: "forehead614@gmail.com",
+            image: base64Image,
+            type: style,
+          }),
+        });
 
         if (!response.ok) {
           console.error("API Error:", response.status, response.statusText);

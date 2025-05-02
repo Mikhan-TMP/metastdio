@@ -11,6 +11,7 @@ import {
 import axios from "axios";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { backendURL } from "../../../../utils/api";
 
 const StudioGallery = () => {
   const [galleryStudioList, setGalleryStudioList] = useState([]);
@@ -51,7 +52,7 @@ const StudioGallery = () => {
       };
 
       await toast.promise(
-        axios.get(`http://192.168.1.141:3001/studio/getStudios`, { params }),
+        backendURL.get(`/studio/getStudios`, { params }),
         {
           pending: 'Loading studios...',
           success: 'Studios loaded successfully',
@@ -60,7 +61,7 @@ const StudioGallery = () => {
       ).then(response => {
         const fetchedStudios = response.data.map((studio, index) => ({
           id: studio.id || index,
-          imgSrc: `http://192.168.1.141:3001${studio.imgSrc}`.replace(/([^:]\/)\/+/g, "$1"),
+          imgSrc: `${backendURL.defaults.baseURL}${studio.imgSrc}`.replace(/([^:]\/)\/+/g, "$1"),
           name: studio.name || `Studio ${index + 1}`,
           studioType: studio.studioType,
         }));
@@ -86,8 +87,8 @@ const StudioGallery = () => {
       const email = localStorage.getItem("userEmail") || "test@example.com";
       
       await toast.promise(
-        axios.delete(
-          `http://192.168.1.141:3001/studio/deleteStudio?email=${email}&id=${selectedStudio.id}`
+        backendURL.delete(
+          `/studio/deleteStudio?email=${email}&id=${selectedStudio.id}`
         ),
         {
           pending: 'Deleting studio...',
@@ -124,8 +125,8 @@ const StudioGallery = () => {
       const email = localStorage.getItem("userEmail") || "test@example.com";
 
       await toast.promise(
-        axios.patch(
-          `http://192.168.1.141:3001/studio/updateStudio`,
+        backendURL.patch(
+          `/studio/updateStudio`,
           null,
           {
             params: {

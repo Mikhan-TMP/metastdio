@@ -44,6 +44,7 @@ import {
 import { Dialog } from "@headlessui/react"; // Example: Using Headless UI for modal
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { backendURL } from "../../../../utils/api";
 
 const Alert = ({ message, type, onClose }) => {
   return (
@@ -189,8 +190,8 @@ const AudioManagerUI = () => {
     setIsModalOpen(false);
 
     try {
-      const response = await axios.delete(
-        `http://192.168.1.141:3001/audio/deleteScript`,
+      const response = await backendURL.delete(
+        `/audio/deleteScript`,
         {
           params: { email, titleId: folderId },
         }
@@ -222,8 +223,8 @@ const AudioManagerUI = () => {
     }
 
     try {
-      const response = await axios.delete(
-        `http://192.168.1.141:3001/audio/deleteAudio`,
+      const response = await backendURL.delete(
+        `/audio/deleteAudio`,
         {
           params: {
             email,
@@ -342,8 +343,8 @@ const AudioManagerUI = () => {
     try {
       console.log("Fetching folders with email:", email);
 
-      const response = await axios.get(
-        `http://192.168.1.141:3001/audio/getAllScript`,
+      const response = await backendURL.get(
+        `/audio/getAllScript`,
         {
           params: { email },
           headers: {
@@ -433,8 +434,8 @@ const AudioManagerUI = () => {
 
     try {
       toast.info("Creating folder...");
-      const response = await axios.post(
-        "http://192.168.1.141:3001/audio/addAudio",
+      const response = await backendURL.post(
+        "/audio/addAudio",
         {
           email,
           title: newFolderName.trim(),
@@ -487,8 +488,8 @@ const AudioManagerUI = () => {
     setError((prev) => ({ ...prev, audios: null }));
 
     try {
-      const response = await axios.get(
-        `http://192.168.1.141:3001/audio/getScript`,
+      const response = await backendURL.get(
+        `/audio/getScript`,
         {
           params: {
             email,
@@ -512,7 +513,7 @@ const AudioManagerUI = () => {
             speaker: audio.speaker || "Unknown Speaker",
             type: audio.type ? audio.type.toLowerCase() : "dialogue",
             duration: "0:30",
-            path: `http://192.168.1.141:3001${audio.audioSrc}`.replace(
+            path: `${backendURL.defaults.baseURL}${audio.audioSrc}`.replace(
               /([^:]\/)\/+/g,
               "$1"
             ),
@@ -582,8 +583,8 @@ const AudioManagerUI = () => {
         noiseReduction: audioProperties.noiseReduction,
       };
 
-      const response = await axios.patch(
-        `http://192.168.1.141:3001/audio/updateAudio`,
+      const response = await backendURL.patch(
+        `/audio/updateAudio`,
         payload,
         {
           params: {

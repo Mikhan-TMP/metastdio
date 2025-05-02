@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ToastContainer, toast } from "react-toastify";
+import { backendURL } from "../../../../utils/api";
 
 const AvatarGestureEmotionUI = () => {
   const [avatars, setAvatars] = useState([]);
@@ -267,8 +268,8 @@ const AvatarGestureEmotionUI = () => {
 
       try {
         const email = getUserEmail();
-        const response = await axios.get(
-          `http://192.168.1.141:3001/avatarfx/getAvatarBaseCameraViews`,
+        const response = await backendURL.get(
+          `/avatarfx/getAvatarBaseCameraViews`,
           {
             params: {
               email,
@@ -280,16 +281,16 @@ const AvatarGestureEmotionUI = () => {
         const { cameraViews } = response.data || {};
         setGeneratedImages({
           front: cameraViews?.front?.src
-            ? `http://192.168.1.141:3001${cameraViews.front.src}`
+            ? `${backendURL.defaults.baseURL}${cameraViews.front.src}`
             : null,
           side: cameraViews?.side?.src
-            ? `http://192.168.1.141:3001${cameraViews.side.src}`
+            ? `${backendURL.defaults.baseURL}${cameraViews.side.src}`
             : null,
           back: cameraViews?.back?.src
-            ? `http://192.168.1.141:3001${cameraViews.back.src}`
+            ? `${backendURL.defaults.baseURL}${cameraViews.back.src}`
             : null,
           close: cameraViews?.close_up?.src
-            ? `http://192.168.1.141:3001${cameraViews.close_up.src}`
+            ? `${backendURL.defaults.baseURL}${cameraViews.close_up.src}`
             : null,
         });
       } catch (error) {
@@ -311,8 +312,8 @@ const AvatarGestureEmotionUI = () => {
 
     try {
       const email = getUserEmail();
-      const response = await axios.get(
-        `http://192.168.1.141:3001/avatar-effects/getAllEffects`,
+      const response = await backendURL.get(
+        `/avatar-effects/getAllEffects`,
         {
           params: {
             email,
@@ -362,8 +363,8 @@ const AvatarGestureEmotionUI = () => {
 
     try {
       const email = getUserEmail();
-      const response = await axios.get(
-        `http://192.168.1.141:3001/avatar-effects/getAllEffects`,
+      const response = await backendURL.get(
+        `/avatar-effects/getAllEffects`,
         {
           params: {
             email,
@@ -387,10 +388,10 @@ const AvatarGestureEmotionUI = () => {
 
         if (gestureData) {
           setGeneratedImages({
-            front: `http://192.168.1.141:3001${gestureData.front}`,
-            back: `http://192.168.1.141:3001${gestureData.back}`,
-            side: `http://192.168.1.141:3001${gestureData.side}`,
-            close: `http://192.168.1.141:3001${gestureData.close_up}`,
+            front: `${backendURL.defaults.baseURL}${gestureData.front}`,
+            back: `${backendURL.defaults.baseURL}${gestureData.back}`,
+            side: `${backendURL.defaults.baseURL}${gestureData.side}`,
+            close: `${backendURL.defaults.baseURL}${gestureData.close_up}`,
           });
           toast.info(`Gesture "${gesture.name}" is displayed.`);
           return;
@@ -429,10 +430,10 @@ const AvatarGestureEmotionUI = () => {
 
         if (emotionData) {
           setGeneratedImages({
-            front: `http://192.168.1.141:3001${emotionData.front}`,
-            back: `http://192.168.1.141:3001${emotionData.back}`,
-            side: `http://192.168.1.141:3001${emotionData.side}`,
-            close: `http://192.168.1.141:3001${emotionData.close_up}`,
+            front: `${backendURL.defaults.baseURL}${emotionData.front}`,
+            back: `${backendURL.defaults.baseURL}${emotionData.back}`,
+            side: `${backendURL.defaults.baseURL}${emotionData.side}`,
+            close: `${backendURL.defaults.baseURL}${emotionData.close_up}`,
           });
           toast.info(`Emotion "${emotion.name}" is displayed.`);
           return;
@@ -461,8 +462,8 @@ const AvatarGestureEmotionUI = () => {
         ...(searchName ? { name: searchName } : {}),
       };
 
-      const response = await axios.get(
-        `http://192.168.1.141:3001/avatar/getAvatars`,
+      const response = await backendURL.get(
+        `/avatar/getAvatars`,
         { params }
       );
       console.log("API Response:", response.data);
@@ -470,7 +471,7 @@ const AvatarGestureEmotionUI = () => {
       const fetchedAvatars = response.data.map((avatar, index) => ({
         id: avatar.id || index,
         // Option 1: Store image URL directly if available
-        imgSrc: `http://192.168.1.141:3001${avatar.imgSrc}`.replace(
+        imgSrc: `${backendURL.defaults.baseURL}${avatar.imgSrc}`.replace(
           /([^:]\/)\/+/g,
           "$1"
         ),
@@ -506,8 +507,8 @@ const AvatarGestureEmotionUI = () => {
       // Fetch current views from the API to ensure all views are included
       let currentViews = { front: null, side: null, back: null, close: null };
       try {
-        const response = await axios.get(
-          "http://192.168.1.141:3001/avatarfx/getAvatarViews",
+        const response = await backendURL.get(
+          "/avatarfx/getAvatarViews",
           {
             params: {
               email,
@@ -570,8 +571,8 @@ const AvatarGestureEmotionUI = () => {
       );
 
       // Send payload to API
-      await axios.post(
-        "http://192.168.1.141:3001/avatarfx/initializeAvatarFx",
+      await backendURL.post(
+        "/avatarfx/initializeAvatarFx",
         payload,
         {
           headers: { "Content-Type": "application/json" },
@@ -650,7 +651,7 @@ const AvatarGestureEmotionUI = () => {
         );
       }
 
-      await axios.post("http://192.168.1.141:3001/avatar-effects", apiForm, {
+      await backendURL.post("/avatar-effects", apiForm, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
@@ -729,7 +730,7 @@ const AvatarGestureEmotionUI = () => {
         }
       });
 
-      await axios.post("http://192.168.1.141:3001/avatar-effects", apiForm, {
+      await backendURL.post("/avatar-effects", apiForm, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
@@ -814,8 +815,8 @@ const AvatarGestureEmotionUI = () => {
       // Step 1: First fetch the current views from the API
       let currentViews;
       try {
-        const response = await axios.get(
-          "http://192.168.1.141:3001/avatarfx/getAvatarViews",
+        const response = await backendURL.get(
+          "/avatarfx/getAvatarViews",
           {
             params: { email, avatarID },
           }
@@ -887,8 +888,8 @@ const AvatarGestureEmotionUI = () => {
       };
 
       // Send the complete payload to the API
-      await axios.post(
-        "http://192.168.1.141:3001/avatarfx/initializeAvatarFx",
+      await backendURL.post(
+        "/avatarfx/initializeAvatarFx",
         payload,
         {
           headers: { "Content-Type": "application/json" },
@@ -998,7 +999,7 @@ const AvatarGestureEmotionUI = () => {
         }
       }
 
-      await axios.post("http://192.168.1.141:3001/avatar-effects", apiForm, {
+      await backendURL.post("/avatar-effects", apiForm, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
@@ -1109,7 +1110,7 @@ const AvatarGestureEmotionUI = () => {
         }
       }
 
-      await axios.post("http://192.168.1.141:3001/avatar-effects", apiForm, {
+      await backendURL.post("/avatar-effects", apiForm, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
@@ -1141,8 +1142,8 @@ const AvatarGestureEmotionUI = () => {
       const email = getUserEmail();
 
       // Check what's currently stored in the API
-      const response = await axios.get(
-        `http://192.168.1.141:3001/avatarfx/getAvatarViews`,
+      const response = await backendURL.get(
+        `/avatarfx/getAvatarViews`,
         {
           params: {
             email,
@@ -1167,8 +1168,8 @@ const AvatarGestureEmotionUI = () => {
       try {
         const email = getUserEmail();
 
-        const response = await axios.get(
-          `http://192.168.1.141:3001/avatarfx/getAvatarViews`,
+        const response = await backendURL.get(
+          `/avatarfx/getAvatarViews`,
           {
             params: {
               email,
@@ -1302,8 +1303,8 @@ const AvatarGestureEmotionUI = () => {
       const email = getUserEmail();
 
       // Fetch the default camera views for the active avatar
-      const response = await axios.get(
-        "http://192.168.1.141:3001/avatarfx/getAvatarBaseCameraViews",
+      const response = await backendURL.get(
+        "/avatarfx/getAvatarBaseCameraViews",
         {
           params: {
             email,
@@ -1317,16 +1318,16 @@ const AvatarGestureEmotionUI = () => {
       // Update the state with the default camera views
       setGeneratedImages({
         front: cameraViews?.front?.src
-          ? `http://192.168.1.141:3001${cameraViews.front.src}`
+          ? `${backendURL.defaults.baseURL}${cameraViews.front.src}`
           : null,
         side: cameraViews?.side?.src
-          ? `http://192.168.1.141:3001${cameraViews.side.src}`
+          ? `${backendURL.defaults.baseURL}${cameraViews.side.src}`
           : null,
         back: cameraViews?.back?.src
-          ? `http://192.168.1.141:3001${cameraViews.back.src}`
+          ? `${backendURL.defaults.baseURL}${cameraViews.back.src}`
           : null,
         close: cameraViews?.close_up?.src
-          ? `http://192.168.1.141:3001${cameraViews.close_up.src}`
+          ? `${backendURL.defaults.baseURL}${cameraViews.close_up.src}`
           : null,
       });
 
@@ -1411,8 +1412,8 @@ const AvatarGestureEmotionUI = () => {
     setIsLoadingEffects(true);
     try {
       const email = getUserEmail();
-      const response = await axios.get(
-        `http://192.168.1.141:3001/avatar-effects/getAllEffects`,
+      const response = await backendURL.get(
+        `/avatar-effects/getAllEffects`,
         {
           params: { email, avatarID: selectedAvatar.id },
         }
@@ -1507,8 +1508,8 @@ const AvatarGestureEmotionUI = () => {
         })),
       };
 
-      await axios.post(
-        "http://192.168.1.141:3001/sequences/addSequence",
+      await backendURL.post(
+        "/sequences/addSequence",
         payload
       );
 
@@ -1532,7 +1533,7 @@ const AvatarGestureEmotionUI = () => {
       const avatarID = selectedAvatar.id;
       const sequenceID = sequence.id;
 
-      await axios.delete(`http://192.168.1.141:3001/sequences/deleteSequence`, {
+      await backendURL.delete(`/sequences/deleteSequence`, {
         params: { email, avatarID, sequenceID },
       });
 
@@ -1552,8 +1553,8 @@ const AvatarGestureEmotionUI = () => {
 
     try {
       const email = getUserEmail();
-      const response = await axios.get(
-        `http://192.168.1.141:3001/sequences/getAllSequences`,
+      const response = await backendURL.get(
+        `/sequences/getAllSequences`,
         {
           params: {
             email,
@@ -2285,7 +2286,7 @@ const AvatarGestureEmotionUI = () => {
                                                       >
                                                         <div className="aspect-square w-full overflow-hidden rounded-md">
                                                           <img
-                                                            src={`http://192.168.1.141:3001${emotion[view]}`}
+                                                            src={`${backendURL.defaults.baseURL}${emotion[view]}`}
                                                             alt={`${emotion.name} ${view}`}
                                                             className="w-full h-full object-contain"
                                                           />
@@ -2390,7 +2391,7 @@ const AvatarGestureEmotionUI = () => {
                                                       >
                                                         <div className="aspect-square w-full overflow-hidden rounded-md">
                                                           <img
-                                                            src={`http://192.168.1.141:3001${gesture[view]}`}
+                                                            src={`${backendURL.defaults.baseURL}${gesture[view]}`}
                                                             alt={`${gesture.name} ${view}`}
                                                             className="w-full h-full object-contain"
                                                           />

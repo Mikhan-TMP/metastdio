@@ -4,6 +4,8 @@ import axios from "axios";
 import { AnimatePresence, motion } from "framer-motion";
 import CameraModal from './CameraModal';
 import { ToastContainer, toast } from 'react-toastify';
+import { backendURL } from "../../../../utils/api";
+
 
 
 
@@ -192,15 +194,15 @@ const AvatarManagement = () => {
         ...(searchName ? { name: searchName } : {}),
       };
 
-      const response = await axios.get(
-        `http://192.168.1.141:3001/avatar/getAvatars`,
+      const response = await backendURL.get(
+        `/avatar/getAvatars`,
         { params }
       );
       console.log("API Response:", response.data);
 
       const fetchedAvatars = response.data.map((avatar) => ({
         id: avatar.id,
-        imgSrc: `http://192.168.1.141:3001${avatar.imgSrc}`.replace(/([^:]\/)\/+/g, "$1"), // Fix double slashes
+        imgSrc: `${backendURL.defaults.baseURL}${avatar.imgSrc}`.replace(/([^:]\/)\/+/g, "$1"), // Fix double slashes
         name: avatar.name,
         style: avatar.style,
       }));
@@ -285,7 +287,7 @@ const AvatarManagement = () => {
 
         // Show toast.promise and send data to API
         const response = await toast.promise(
-          axios.post("http://192.168.1.141:3001/avatar/addAvatar", payload),
+          backendURL.post("/avatar/addAvatar", payload),
           {
             pending: "Saving avatar...",
             success: "Avatar added to your collection!",
@@ -357,8 +359,8 @@ const AvatarManagement = () => {
       }
 
       // Use PATCH method for updating the avatar name
-      const response = await axios.patch(
-        `http://192.168.1.141:3001/avatar/updateAvatar?id=${avatarId}&email=${email}&name=${newName}`
+      const response = await backendURL.patch(
+        `/avatar/updateAvatar?id=${avatarId}&email=${email}&name=${newName}`
       );
 
       if (response.data.status === "success") {
@@ -409,8 +411,8 @@ const AvatarManagement = () => {
 
       // Use PATCH method for deleting the avatar
       const email = localStorage.getItem("userEmail");
-      const response = await axios.delete(
-        `http://192.168.1.141:3001/avatar/delete?id=${avatarId}&email=${email}`
+      const response = await backendURL.delete(
+        `/avatar/delete?id=${avatarId}&email=${email}`
       );
 
       if (response.data.status === "success") {

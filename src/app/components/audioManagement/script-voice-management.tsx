@@ -8,13 +8,14 @@ import {
   RefreshCw,
   ChevronDown,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, backIn } from "framer-motion";
 import ResponsiveTabs from "./ResponsiveTabs";
 import AudioManagerUI from "./audio-manager-ui"; // Import the AudioManagerUI component
 import VoiceGenerator from "./voice-generator"; // Import the VoiceGenerator component
 import JSZip from "jszip"; // Import JSZip for extracting zip files
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { backendURL } from "../../../../utils/api";
 
 const AudioScript = () => {
   const [currentView, setCurrentView] = useState("script");
@@ -41,7 +42,7 @@ const AudioScript = () => {
   const [style, setStyle] = useState(""); // Define style state
   const [zipUrl, setZipUrl] = useState(""); // Define zipUrl state
   const [isModalMinimized, setIsModalMinimized] = useState(false); // New state for modal minimization
-
+  
   // Show modal after 2 seconds if there's a generated script
   useEffect(() => {
     if (generatedScript) {
@@ -292,21 +293,28 @@ const AudioScript = () => {
     }
   };
 
+  const [isSentToAPI, setIsSentToAPI] = useState(false); // New state to track if the audio has been sent
+
   const handleSendAudioToAPI = async () => {
     if (!zipUrl) {
       toast.error("No zip file available to process.");
       return;
     }
-
+  
+    if (isSentToAPI) {
+      toast.info("Audio has already been sent to the API.");
+      return;
+    }
+  
     try {
       // Fetch the zip file
       const response = await fetch(zipUrl);
       const zipBlob = await response.blob();
-
+  
       // Extract files from the zip
       const zip = await JSZip.loadAsync(zipBlob);
       const audioFiles = [];
-
+  
       for (const fileName of Object.keys(zip.files)) {
         const file = zip.files[fileName];
         if (!file.dir) {
@@ -325,70 +333,47 @@ const AudioScript = () => {
           });
         }
       }
-
+  
       // Retrieve email from localStorage
       const email = localStorage.getItem("userEmail");
       if (!email) {
         toast.error("No email found in localStorage.");
         return;
       }
-
+  
       // Prepare payload
       const folderTitle = scriptTitle || "Untitled"; // Use scriptTitle or fallback to "Untitled"
       const payload = {
         email: email,
         title: folderTitle,
-        audio: audioFiles, //[]
+        audio: audioFiles,
       };
-
+  
       console.log("Payload before sending:", JSON.stringify(payload, null, 2)); // Detailed payload logging
-
+  
       // Send to API
-      try {
-        const apiResponse = await axios.post(
-          "http://192.168.1.141:3001/audio/addAudio",
-          payload,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-            timeout: 10000, // 10-second timeout
-          }
-        );
-
-        console.log("Full API Response:", apiResponse);
-
-        if (apiResponse.status === 200 || apiResponse.status === 201) {
-          toast.success("Audio files successfully sent to the API.");
-        } else {
-          toast.error(`API responded with status: ${apiResponse.status}`);
+      const apiResponse = await backendURL.post(
+        "/audio/addAudio",
+        payload,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          timeout: 10000, // 10-second timeout
         }
-      } catch (apiError) {
-        console.error("API Error Details:", {
-          message: apiError.message,
-          response: apiError.response?.data,
-          status: apiError.response?.status,
-          headers: apiError.response?.headers,
-        });
-
-        if (apiError.response) {
-          // The request was made and the server responded with a status code
-          toast.error(
-            `Error sending to API: ${
-              apiError.response.status
-            } - ${JSON.stringify(apiError.response.data)}`
-          );
-        } else if (apiError.request) {
-          // The request was made but no response was received
-          toast.error("No response received from the API. Check network connection.");
-        } else {
-          // Something happened in setting up the request
-          toast.error(`Error setting up API request: ${apiError.message}`);
-        }
+      );
+  
+      console.log("Full API Response:", apiResponse);
+  
+      if (apiResponse.status === 200 || apiResponse.status === 201) {
+        toast.success("Audio files successfully sent to the API.");
+        setIsSentToAPI(true); // Disable the button after successful API call
+      } else {
+        toast.error(`API responded with status: ${apiResponse.status}`);
       }
     } catch (error) {
-      console.error("Zip Processing Error:", error);
-      toast.error(`Error processing zip file: ${error.message}`);
+      console.error("Error sending audio to API:", error);
+      toast.error("Failed to send audio to the API. Please try again.");
     }
   };
 
@@ -593,12 +578,17 @@ const AudioScript = () => {
               style={{ color: "black" }}
             />
 
-            <button
-              onClick={handleGenerateScript}
-              className="w-full px-4 py-2 bg-[#9B25A7] text-white rounded hover:bg-[#871f90] text-sm md:text-base"
-            >
-              Generate Script
-            </button>
+<button
+  onClick={handleGenerateScript}
+  disabled={isGeneratingScript} // Disable the button when generating
+  className={`w-full px-4 py-2 rounded text-sm md:text-base text-white ${
+    isGeneratingScript
+      ? "bg-gray-400 cursor-not-allowed" // Disabled style
+      : "bg-[#9B25A7] hover:bg-[#871f90]" // Enabled style
+  }`}
+>
+  {isGeneratingScript ? "Generating..." : "Generate Script"}
+</button>
           </div>
         </div>
       </div>
@@ -855,11 +845,14 @@ const AudioScript = () => {
                       Download Zip
                     </a>
                     <button
-                      onClick={handleSendAudioToAPI}
-                      className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] transition-colors"
-                    >
-                      Send to API
-                    </button>
+  onClick={handleSendAudioToAPI}
+  disabled={isSentToAPI} // Disable the button if already sent
+  className={`px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] transition-colors ${
+    isSentToAPI ? "cursor-not-allowed opacity-50" : ""
+  }`}
+>
+  {isSentToAPI ? "Sent" : "Send to API"}
+</button>
                   </div>
                 )}
               </div>
