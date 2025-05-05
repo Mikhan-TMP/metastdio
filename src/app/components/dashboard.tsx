@@ -172,7 +172,7 @@ const Page = () => {
           </nav>
 
           {/* Content */}
-          <main className="max-w-8xl mx-auto pt-4 px-2 pb-4 rounded-2xl w-full min-h-[120vh]">
+          <main className="max-w-8xl mx-auto pt-4 px-2 pb-4 rounded-2xl w-full min-h-[100vh]">
             {navigationItems.find((item) => item.id === currentView)?.component}
           </main>
         </div>
