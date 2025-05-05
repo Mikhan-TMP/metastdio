@@ -42,6 +42,9 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { Dialog } from "@headlessui/react"; // Example: Using Headless UI for modal
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { backendURL } from "../../../../utils/api";
 
 const Alert = ({ message, type, onClose }) => {
   return (
@@ -167,26 +170,29 @@ const AudioManagerUI = () => {
     setAudioProperties((prev) => ({ ...prev, [field]: value }));
   };
 
-  const deleteFolder = async (folderId) => {
+  const [confirmDelete, setConfirmDelete] = useState({
+    isOpen: false,
+    folderId: null,
+  });
+
+  const requestDeleteFolder = (folderId) => {
     if (!email || !folderId) {
-      setAlert({ message: "Missing required parameters.", type: "error" });
+      toast.error("Missing required parameters.");
       return;
     }
 
-    if (!window.confirm("Are you sure you want to delete this folder?")) {
-      return;
-    }
+    setConfirmDelete({ isOpen: true, folderId });
+  };
+
+  const handleConfirmDelete = async () => {
+    const folderId = confirmDelete.folderId;
+    setConfirmDelete({ isOpen: false, folderId: null });
+    setIsModalOpen(false);
 
     try {
-      const response = await axios.delete(
-        `http://192.168.1.141:3001/audio/deleteScript`,
-        {
-          params: {
-            email,
-            titleId: folderId,
-          },
-        }
-      );
+      const response = await backendURL.delete(`/audio/deleteScript`, {
+        params: { email, titleId: folderId },
+      });
 
       if (response.data.status === "success") {
         setFolders((prevFolders) =>
@@ -194,59 +200,48 @@ const AudioManagerUI = () => {
         );
         setSelectedFolder(null);
         setAudios([]);
-        setAlert({ message: response.data.message, type: "success" });
+        toast.success(response.data.message);
       } else {
         throw new Error(response.data.message || "Failed to delete folder.");
       }
     } catch (error) {
       console.error("Delete Folder Error:", error);
-      setAlert({
-        message: error.response?.data?.message || "Failed to delete folder.",
-        type: "error",
-      });
-    } finally {
-      setTimeout(() => setAlert({ message: "", type: "" }), 3000);
+      toast.error(error.response?.data?.message || "Failed to delete folder.");
     }
   };
 
-  const deleteAudio = async (audioId) => {
-    if (!email || !selectedFolder?.id || !audioId) {
-      setAlert({ message: "Missing required parameters.", type: "error" });
-      return;
-    }
+  const [audioToDelete, setAudioToDelete] = useState(null); // stores audio ID to delete
+  const [showDeleteAudioModal, setShowDeleteAudioModal] = useState(false);
 
-    if (!window.confirm("Are you sure you want to delete this audio?")) {
+  const handleConfirmDeleteAudio = async () => {
+    if (!email || !selectedFolder?.id || !audioToDelete) {
+      toast.error("Missing required parameters.");
       return;
     }
 
     try {
-      const response = await axios.delete(
-        `http://192.168.1.141:3001/audio/deleteAudio`,
-        {
-          params: {
-            email,
-            titleId: selectedFolder.id,
-            audioId,
-          },
-        }
-      );
+      const response = await backendURL.delete(`/audio/deleteAudio`, {
+        params: {
+          email,
+          titleId: selectedFolder.id,
+          audioId: audioToDelete,
+        },
+      });
 
       if (response.data.status === "success") {
         setAudios((prevAudios) =>
-          prevAudios.filter((audio) => audio.id !== audioId)
+          prevAudios.filter((audio) => audio.id !== audioToDelete)
         );
-        setAlert({ message: response.data.message, type: "success" });
+        toast.success(response.data.message);
       } else {
         throw new Error(response.data.message || "Failed to delete audio.");
       }
     } catch (error) {
       console.error("Delete Audio Error:", error);
-      setAlert({
-        message: error.response?.data?.message || "Failed to delete audio.",
-        type: "error",
-      });
+      toast.error(error.response?.data?.message || "Failed to delete audio.");
     } finally {
-      setTimeout(() => setAlert({ message: "", type: "" }), 3000);
+      setShowDeleteAudioModal(false);
+      setAudioToDelete(null);
     }
   };
 
@@ -259,7 +254,7 @@ const AudioManagerUI = () => {
 
     if (!audio.path) {
       console.error("No valid audio path provided");
-      alert("Unable to play audio: Invalid file path");
+      toast.error("Unable to play audio: Invalid file path");
       return;
     }
 
@@ -276,7 +271,7 @@ const AudioManagerUI = () => {
           networkState: audioRef.current.networkState,
           readyState: audioRef.current.readyState,
         });
-        alert(
+        toast.error(
           `Failed to load audio: ${audio.name}. Please check the file path.`
         );
       };
@@ -298,13 +293,15 @@ const AudioManagerUI = () => {
             });
 
             if (error.name === "NotSupportedError") {
-              alert("Audio format not supported. Please check the file type.");
+              toast.error(
+                "Audio format not supported. Please check the file type."
+              );
             } else if (error.name === "NotAllowedError") {
-              alert(
+              toast.error(
                 "Audio playback was prevented. Check browser autoplay settings."
               );
             } else {
-              alert(`Unable to play audio: ${error.message}`);
+              toast.error(`Unable to play audio: ${error.message}`);
             }
 
             setIsPlaying(false);
@@ -315,7 +312,7 @@ const AudioManagerUI = () => {
         name: error.name,
         message: error.message,
       });
-      alert(`Error setting up audio playback: ${error.message}`);
+      toast.error(`Error setting up audio playback: ${error.message}`);
     }
   };
 
@@ -340,15 +337,12 @@ const AudioManagerUI = () => {
     try {
       console.log("Fetching folders with email:", email);
 
-      const response = await axios.get(
-        `http://192.168.1.141:3001/audio/getAllScript`,
-        {
-          params: { email },
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await backendURL.get(`/audio/getAllScript`, {
+        params: { email },
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
       console.log("Raw API Response:", {
         status: response.status,
@@ -418,82 +412,58 @@ const AudioManagerUI = () => {
     }
   };
 
+  const createFolder = async () => {
+    if (!newFolderName.trim()) {
+      toast.error("Folder name cannot be empty.");
+      return;
+    }
 
-const createFolder = async () => {
-  if (!newFolderName.trim()) {
-    setAlert({ message: "Folder name cannot be empty.", type: "error" });
-    return;
-  }
+    if (!email) {
+      toast.error("User email not found.");
+      return;
+    }
 
-  if (!email) {
-    setAlert({ message: "User email not found.", type: "error" });
-    return;
-  }
-
-  try {
-    setAlert({ message: "Creating folder...", type: "generating" });
-    
-    const response = await axios.post(
-      "http://192.168.1.141:3001/audio/addAudio",
-      {
-        email,
-        title: newFolderName.trim(),
-        audio: [],
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
+    try {
+      toast.info("Creating folder...");
+      const response = await backendURL.post(
+        "/audio/addAudio",
+        {
+          email,
+          title: newFolderName.trim(),
+          audio: [],
         },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const folderId =
+        response.data.id || response.data._id || response.data.titleId;
+
+      if (response.data.status === "success" || folderId) {
+        const newFolder = {
+          id: folderId || `temp-${Date.now()}`,
+          name: newFolderName.trim(),
+        };
+
+        setFolders((prevFolders) => [...prevFolders, newFolder]);
+        setIsModalOpen(false);
+        setNewFolderName("");
+        toast.success("Folder created successfully.");
+        setTimeout(() => fetchFolders(), 500);
+      } else {
+        throw new Error(response.data.message || "Failed to create folder.");
       }
-    );
-
-    console.log("Create folder response:", response.data);
-
-    // Check for any id in the response - it might be in a different field
-    const folderId = response.data.id || response.data._id || response.data.titleId;
-    
-    if (response.data.status === "success" || folderId) {
-      const newFolder = { 
-        id: folderId || `temp-${Date.now()}`, 
-        name: newFolderName.trim() 
-      };
-
-      // Update folders state immediately
-      setFolders(prevFolders => [...prevFolders, newFolder]);
-      
-      // Close modal and clear the input
-      setIsModalOpen(false);
-      setNewFolderName("");
-      
-      setAlert({ message: "Folder created successfully.", type: "success" });
-      
-      // Wait a moment before fetching folders to give the server time to complete
-      setTimeout(() => fetchFolders(), 500);
-    } else {
-      throw new Error(response.data.message || "Failed to create folder.");
+    } catch (error) {
+      console.error("Create Folder Error:", error);
+      toast.error(
+        error.response?.data?.message ||
+          "Failed to create folder. Please try again."
+      );
     }
-  } catch (error) {
-    console.error("Create Folder Error:", error);
-    console.error("Error details:", {
-      message: error.message,
-      response: error.response?.data,
-      status: error.response?.status
-    });
-
-    let errorMessage = "Failed to create folder. Please try again.";
-    
-    if (error.code === "ERR_NETWORK") {
-      errorMessage = "Network error. Please check your connection.";
-    } else if (error.response && error.response.data && error.response.data.message) {
-      errorMessage = error.response.data.message;
-    }
-
-    setAlert({
-      message: errorMessage,
-      type: "error",
-    });
-  }
-};
+  };
 
   useEffect(() => {
     fetchFolders();
@@ -509,15 +479,12 @@ const createFolder = async () => {
     setError((prev) => ({ ...prev, audios: null }));
 
     try {
-      const response = await axios.get(
-        `http://192.168.1.141:3001/audio/getScript`,
-        {
-          params: {
-            email,
-            titleId: folderId,
-          },
-        }
-      );
+      const response = await backendURL.get(`/audio/getScript`, {
+        params: {
+          email,
+          titleId: folderId,
+        },
+      });
 
       console.log("Full Audios API Response:", response.data);
 
@@ -534,7 +501,7 @@ const createFolder = async () => {
             speaker: audio.speaker || "Unknown Speaker",
             type: audio.type ? audio.type.toLowerCase() : "dialogue",
             duration: "0:30",
-            path: `http://192.168.1.141:3001${audio.audioSrc}`.replace(
+            path: `${backendURL.defaults.baseURL}${audio.audioSrc}`.replace(
               /([^:]\/)\/+/g,
               "$1"
             ),
@@ -579,38 +546,19 @@ const createFolder = async () => {
 
   const saveAudioProperties = async () => {
     try {
-      // Debugging logs
-      console.log("Debugging selectedAudio:", selectedAudio);
-      console.log("selectedAudio.id:", selectedAudio?.id);
-      console.log("Type of selectedAudio.id:", typeof selectedAudio?.id);
-
-      // Validate required inputs
       if (!selectedAudio || !selectedAudio.id) {
-        setAlert({
-          message: "Invalid audio selected. Please try again.",
-          type: "error",
-        });
-        console.error("Error: Invalid selectedAudio object:", selectedAudio);
+        toast.error("Invalid audio selected. Please try again.");
         return;
       }
       if (!selectedFolder || !selectedFolder.id) {
-        setAlert({ message: "No folder selected.", type: "error" });
+        toast.error("No folder selected.");
         return;
       }
       if (!email) {
-        setAlert({ message: "User email not found.", type: "error" });
+        toast.error("User email not found.");
         return;
       }
 
-      const formattedAudioId = String(selectedAudio.id); // Ensure it's a string
-
-      // Debugging logs for API request
-      console.log("Sending API Request with:");
-      console.log("audioId:", formattedAudioId);
-      console.log("titleId:", selectedFolder?.id);
-      console.log("email:", email);
-
-      // Prepare payload
       const payload = {
         name: audioProperties.name.trim(),
         category: audioProperties.category,
@@ -623,27 +571,16 @@ const createFolder = async () => {
         noiseReduction: audioProperties.noiseReduction,
       };
 
-      // API request
-      const apiUrl = `http://192.168.1.141:3001/audio/updateAudio`;
-
-      console.log("Sending request to:", apiUrl);
-      console.log("Payload:", payload);
-
-      const response = await axios.patch(apiUrl, payload, {
+      const response = await backendURL.patch(`/audio/updateAudio`, payload, {
         params: {
           email,
           titleId: selectedFolder.id,
-          audioId: formattedAudioId,
+          audioId: String(selectedAudio.id),
         },
         headers: {
           "Content-Type": "application/json",
-          Accept: "application/json",
         },
-        timeout: 10000, // 10 seconds timeout
       });
-
-      // Handle response
-      console.log("API Response:", response);
 
       if (response.data.status === "success") {
         setSelectedAudio({ ...selectedAudio, ...payload });
@@ -652,35 +589,17 @@ const createFolder = async () => {
             audio.id === selectedAudio.id ? { ...audio, ...payload } : audio
           )
         );
-        setAlert({ message: response.data.message, type: "success" });
-      } else if (response.data.status === "info") {
-        setAlert({ message: response.data.message, type: "info" });
+        toast.success(response.data.message);
       } else {
         throw new Error(response.data.message || "Unexpected server response.");
       }
     } catch (error) {
       console.error("Audio Update Error:", error);
-
-      let errorMessage = "Update failed. Please try again.";
-      if (error.response) {
-        console.error("Server Response:", error.response);
-        errorMessage = `Error ${error.response.status}: ${
-          error.response.data?.message || "Server error."
-        }`;
-      } else if (error.request) {
-        console.error("No response received:", error.request);
-        errorMessage = "No response from server. Check your connection.";
-      } else {
-        console.error("Request Error:", error.message);
-        errorMessage = `Error: ${error.message}`;
-      }
-
-      setAlert({ message: errorMessage, type: "error" });
-    } finally {
-      setTimeout(() => setAlert({ message: "", type: "" }), 3000);
+      toast.error(
+        error.response?.data?.message || "Update failed. Please try again."
+      );
     }
   };
-
 
   const getCategories = () => {
     const audioData = getAudioData();
@@ -703,7 +622,7 @@ const createFolder = async () => {
   const handleSelectAudio = (audio) => {
     if (!audio || !audio.id) {
       console.error("Invalid audio selected:", audio);
-      alert("Invalid audio selected. Please try again.");
+      toast.error("Invalid audio selected. Please try again.");
       return;
     }
     setSelectedAudio(audio);
@@ -760,6 +679,7 @@ const createFolder = async () => {
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
+      <ToastContainer />
       {/* Alert Component */}
       <Alert
         message={alert.message}
@@ -776,7 +696,7 @@ const createFolder = async () => {
       )}
 
       {/* Top Navigation */}
-      <div className="flex justify-between items-center p-3 bg-white border-b shadow-sm">
+      <div className="flex justify-between items-center p-3 bg-white border-b border-gray-200 shadow-sm">
         <div className="flex space-x-3">
           <button className="p-2 bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] disabled:bg-[#E3C5F0] flex items-center">
             <Save size={16} className="mr-2" />
@@ -790,9 +710,9 @@ const createFolder = async () => {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Main Content Area */}
-        <div className="w-3/4 bg-white flex flex-col border-r shadow-sm">
+        <div className="w-3/4 bg-white flex flex-col border-r border-gray-200 shadow-sm relative overflow-hidden">
           {/* Folder/Audio Header */}
-          <div className="bg-white p-3 border-b">
+          <div className="bg-white p-3 ">
             <div className="flex justify-between items-center mb-3">
               <h2 className="text-lg font-semibold text-gray-800">
                 {selectedFolder ? (
@@ -877,7 +797,7 @@ const createFolder = async () => {
                     </button>
                     <button
                       className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50"
-                      onClick={() => deleteFolder(folder.id)}
+                      onClick={() => requestDeleteFolder(folder.id)}
                     >
                       <Trash2 size={16} />
                     </button>
@@ -897,7 +817,7 @@ const createFolder = async () => {
           </div>
 
           {/* Audio Files Section */}
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 overflow-auto relative">
             {loading.audios ? (
               <div className="flex items-center justify-center p-6">
                 <RefreshCw className="w-8 h-8 text-[#9B25A7] animate-spin" />
@@ -968,7 +888,10 @@ const createFolder = async () => {
                         <td className="py-3 px-3">
                           <button
                             className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50"
-                            onClick={() => deleteAudio(audio.id)}
+                            onClick={() => {
+                              setAudioToDelete(audio.id);
+                              setShowDeleteAudioModal(true);
+                            }}
                           >
                             <Trash2 size={16} />
                           </button>
@@ -990,11 +913,102 @@ const createFolder = async () => {
               </div>
             )}
           </div>
+
+          {/* Modal for creating a new folder - Rendered inside the parent container */}
+          {isModalOpen && (
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-10">
+              <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+                <h2 className="text-lg font-semibold mb-4">
+                  Create New Folder
+                </h2>
+                <input
+                  type="text"
+                  placeholder="Enter folder name"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  className="w-full p-2 border rounded-md mb-4"
+                />
+                <div className="flex justify-end space-x-2">
+                  <button
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={createFolder}
+                    className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {confirmDelete.isOpen && (
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-10">
+              <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+                <h2 className="text-lg font-semibold mb-4 text-gray-800">
+                  Delete Folder
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  Are you sure you want to delete this folder?
+                </p>
+                <div className="flex justify-end space-x-2">
+                  <button
+                    onClick={() =>
+                      setConfirmDelete({ isOpen: false, folderId: null })
+                    }
+                    className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleConfirmDelete}
+                    className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showDeleteAudioModal && (
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-10">
+              <div className="bg-white p-6 rounded-xl shadow-lg w-[90%] max-w-md">
+                <h2 className="text-lg font-semibold text-gray-800 mb-4">
+                  Delete Audio File
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  Are you sure you want to delete this audio? This action cannot
+                  be undone.
+                </p>
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => setShowDeleteAudioModal(false)}
+                    className="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-100"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleConfirmDeleteAudio();
+                    }}
+                    className="px-4 py-2 text-sm rounded-md bg-red-500 text-white hover:bg-red-600"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Preview & Properties Panel */}
         <div className="w-1/4 bg-white flex flex-col">
-          <div className="flex items-center p-3 border-b bg-gray-50">
+          <div className="flex items-center p-3 border-b border-gray-200 bg-gray-50">
             <h2 className="text-lg font-semibold flex-1 ml-2 text-gray-800">
               Audio Manager
             </h2>
@@ -1007,7 +1021,7 @@ const createFolder = async () => {
               Save
             </button>
           </div>
-          <div className="p-3 border-b flex items-center">
+          <div className="p-3 border-b border-gray-200 flex items-center">
             <h3 className="text-md font-semibold text-gray-800">
               Preview & Properties
             </h3>
@@ -1487,36 +1501,6 @@ const createFolder = async () => {
           </div>
         </div>
       </div>
-
-      {/* Modal for creating a new folder */}
-      <Dialog open={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-            <h2 className="text-lg font-semibold mb-4">Create New Folder</h2>
-            <input
-              type="text"
-              placeholder="Enter folder name"
-              value={newFolderName}
-              onChange={(e) => setNewFolderName(e.target.value)}
-              className="w-full p-2 border rounded-md mb-4"
-            />
-            <div className="flex justify-end space-x-2">
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={createFolder}
-                className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86]"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      </Dialog>
     </div>
   );
 };

@@ -5,7 +5,7 @@ export default function ResponsiveTabs({ currentView, setCurrentView }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   return (
-    <div className="flex justify-center px-4">
+    <div className="flex justify-center px-4 shadow-sm rounded-b-md">
       <div className="bg-white p-4 rounded-[12px] w-full max-w-[900px] sm:w-[90%] md:w-[80%] lg:w-[70%] h-auto">
         {/* Dropdown for small screens */}
         <div className="sm:hidden relative">

@@ -14,80 +14,7 @@ import axios from "axios";
 import Dialog from "@mui/material/Dialog";
 import JSZip from "jszip";
 import { ToastContainer, toast } from "react-toastify";
-
-const Alert = ({ message, type, onClose }) => {
-  return (
-    <AnimatePresence>
-      {message && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8, y: -20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.8, y: -20 }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
-          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 z-50"
-        >
-          <div
-            className={`relative max-w-xs sm:max-w-sm w-full p-3 sm:p-5 rounded-lg shadow-lg flex items-center gap-2 sm:gap-3 border ${
-              type === "success"
-                ? "bg-green-100 text-green-800 border-green-300"
-                : type === "generating" || type === "info"
-                ? "bg-blue-100 text-blue-800 border-blue-300"
-                : "bg-red-100 text-red-800 border-red-300"
-            }`}
-          >
-            {/* Icon */}
-            {type === "success" ? (
-              <svg
-                className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M5 13l4 4L19 7"
-                ></path>
-              </svg>
-            ) : type === "generating" || type === "info" ? (
-              <RefreshCw className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 animate-spin flex-shrink-0" />
-            ) : (
-              <svg
-                className="w-5 h-5 sm:w-6 sm:h-6 text-red-600 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                ></path>
-              </svg>
-            )}
-
-            {/* Message */}
-            <p className="font-semibold text-xs sm:text-sm md:text-base">
-              {message}
-            </p>
-
-            {/* Close Button */}
-            <motion.button
-              whileHover={{ scale: 1.2 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={onClose}
-              className="absolute top-1 right-1 sm:top-2 sm:right-2 text-gray-600 hover:text-gray-900 transition-all"
-            >
-              &times;
-            </motion.button>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-};
+import { backendURL } from "../../../../utils/api";
 
 const VoiceGenerator = () => {
   const [textInput, setTextInput] = useState("");
@@ -185,13 +112,10 @@ const VoiceGenerator = () => {
 
   const fetchFolders = async () => {
     try {
-      const response = await axios.get(
-        "http://192.168.1.141:3001/audio/getAllScript",
-        {
-          params: { email },
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      const response = await backendURL.get("/audio/getAllScript", {
+        params: { email },
+        headers: { "Content-Type": "application/json" },
+      });
 
       if (
         response.data.status === "success" &&
@@ -460,16 +384,12 @@ const VoiceGenerator = () => {
         )
       );
 
-      const saveResponse = await axios.post(
-        "http://192.168.1.141:3001/audio/addAudio",
-        payload,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-          timeout: 10000,
-        }
-      );
+      const saveResponse = await backendURL.post("/audio/addAudio", payload, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        timeout: 10000,
+      });
 
       console.log("Save to library response:", saveResponse);
 
@@ -521,8 +441,8 @@ const VoiceGenerator = () => {
     try {
       showNotification("Creating folder...", "generating");
 
-      const response = await axios.post(
-        "http://192.168.1.141:3001/audio/addAudio",
+      const response = await backendURL.post(
+        "/audio/addAudio",
         {
           email,
           title: newFolderName.trim(),
@@ -628,23 +548,25 @@ const VoiceGenerator = () => {
       console.log("Payload before sending:", JSON.stringify(payload, null, 2));
 
       try {
-        const apiResponse = await axios.post(
-          "http://192.168.1.141:3001/audio/addAudio",
-          payload,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-            timeout: 10000,
-          }
-        );
+        const apiResponse = await backendURL.post("/audio/addAudio", payload, {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          timeout: 10000,
+        });
 
         console.log("Full API Response:", apiResponse);
 
         if (apiResponse.status === 200 || apiResponse.status === 201) {
-          showNotification("Audio files successfully sent to the API.", "success");
+          showNotification(
+            "Audio files successfully sent to the API.",
+            "success"
+          );
         } else {
-          showNotification(`API responded with status: ${apiResponse.status}`, "error");
+          showNotification(
+            `API responded with status: ${apiResponse.status}`,
+            "error"
+          );
         }
       } catch (apiError) {
         console.error("API Error Details:", {
@@ -662,9 +584,15 @@ const VoiceGenerator = () => {
             "error"
           );
         } else if (apiError.request) {
-          showNotification("No response received from the API. Check network connection.", "error");
+          showNotification(
+            "No response received from the API. Check network connection.",
+            "error"
+          );
         } else {
-          showNotification(`Error setting up API request: ${apiError.message}`, "error");
+          showNotification(
+            `Error setting up API request: ${apiError.message}`,
+            "error"
+          );
         }
       }
     } catch (error) {
@@ -994,7 +922,7 @@ const VoiceGenerator = () => {
           open={isFolderModalOpen}
           onClose={() => setIsFolderModalOpen(false)}
         >
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
             <div className="bg-white w-full max-w-md p-6 rounded-2xl shadow-xl space-y-6">
               {/* Title */}
               <h2 className="text-xl font-semibold text-gray-800">

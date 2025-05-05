@@ -1,11 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Upload, Save, Download, X, RefreshCw, ChevronDown, Pencil, Trash2, Camera} from "lucide-react";
+import {
+  Plus,
+  Upload,
+  Save,
+  Download,
+  X,
+  RefreshCw,
+  ChevronDown,
+  Pencil,
+  Trash2,
+  Camera,
+} from "lucide-react";
 import axios from "axios";
 import { AnimatePresence, motion } from "framer-motion";
-import CameraModal from './CameraModal';
-import { ToastContainer, toast } from 'react-toastify';
-
-
+import CameraModal from "./CameraModal";
+import { ToastContainer, toast } from "react-toastify";
+import { backendURL } from "../../../../utils/api";
 
 const AvatarManagement = () => {
   const preExistingAvatars = [];
@@ -58,16 +68,16 @@ const AvatarManagement = () => {
       toast.error("Please fill in all required fields.");
       return;
     }
-  
+
     const avatarPrompt = `Create a detailed avatar with the following characteristics:
       - Gender: ${gender}
       - Skin: ${skin}
       - Style: ${generationStyle}
     `;
-  
+
     const formData = new FormData();
     formData.append("prompt", avatarPrompt);
-  
+
     if (referenceImage) {
       if (referenceImage instanceof File) {
         formData.append("referenceImage", referenceImage);
@@ -76,10 +86,10 @@ const AvatarManagement = () => {
         return;
       }
     }
-  
+
     setIsGenerating(true);
     setGeneratedAvatar(null);
-  
+
     try {
       const response = await toast.promise(
         axios.post(
@@ -97,24 +107,27 @@ const AvatarManagement = () => {
           success: "Avatar generated successfully!",
           error: {
             render({ data }) {
-              const err = data.response?.data?.message || data.message || "Unknown error occurred";
+              const err =
+                data.response?.data?.message ||
+                data.message ||
+                "Unknown error occurred";
               return `Failed to generate avatar: ${err}`;
             },
           },
         }
       );
-  
+
       // Process blob and create object URL
       const blob = new Blob([response.data], { type: "image/png" });
       const imageUrl = URL.createObjectURL(blob);
-  
+
       const newAvatar = {
         id: Date.now(),
         imgSrc: imageUrl,
         name: avatarName || `${gender} ${generationStyle} Avatar`,
         blob,
       };
-  
+
       setGeneratedAvatar(newAvatar);
     } catch (error) {
       console.error("Error generating avatar:", error);
@@ -123,10 +136,9 @@ const AvatarManagement = () => {
       setIsGenerating(false);
     }
   };
-  
 
   const handleDownloadAvatar = () => {
-     if (generatedAvatar) {
+    if (generatedAvatar) {
       console.log("Generated Avatar:", generatedAvatar);
       const fileName = downloadFileName || "generated_avatar";
       const link = document.createElement("a");
@@ -165,7 +177,9 @@ const AvatarManagement = () => {
   };
 
   const handleCameraCapture = (imageBlob: Blob) => {
-    setReferenceImage(new File([imageBlob], 'camera-photo.jpg', { type: 'image/jpeg' }));
+    setReferenceImage(
+      new File([imageBlob], "camera-photo.jpg", { type: "image/jpeg" })
+    );
   };
 
   const StylesOption = [
@@ -192,15 +206,15 @@ const AvatarManagement = () => {
         ...(searchName ? { name: searchName } : {}),
       };
 
-      const response = await axios.get(
-        `http://192.168.1.141:3001/avatar/getAvatars`,
-        { params }
-      );
+      const response = await backendURL.get(`/avatar/getAvatars`, { params });
       console.log("API Response:", response.data);
 
       const fetchedAvatars = response.data.map((avatar) => ({
         id: avatar.id,
-        imgSrc: `http://192.168.1.141:3001${avatar.imgSrc}`.replace(/([^:]\/)\/+/g, "$1"), // Fix double slashes
+        imgSrc: `${backendURL.defaults.baseURL}${avatar.imgSrc}`.replace(
+          /([^:]\/)\/+/g,
+          "$1"
+        ), // Fix double slashes
         name: avatar.name,
         style: avatar.style,
       }));
@@ -244,14 +258,13 @@ const AvatarManagement = () => {
 
   const handleSaveAvatar = async () => {
     if (!downloadFileName.trim()) {
-      toast.info("Please provide a name for the avatar.")
+      toast.info("Please provide a name for the avatar.");
       // showNotification("Please provide a file name for the avatar.", "error");
       return;
     }
 
     if (generatedAvatar?.blob) {
       try {
-
         // Create a function to read the file as Base64
         const readFileAsDataURL = (blob) => {
           return new Promise((resolve, reject) => {
@@ -285,19 +298,21 @@ const AvatarManagement = () => {
 
         // Show toast.promise and send data to API
         const response = await toast.promise(
-          axios.post("http://192.168.1.141:3001/avatar/addAvatar", payload),
+          backendURL.post("/avatar/addAvatar", payload),
           {
             pending: "Saving avatar...",
             success: "Avatar added to your collection!",
             error: {
               render({ data }) {
-                const errMsg = data?.response?.data?.message || data?.message || "Unknown error occurred";
+                const errMsg =
+                  data?.response?.data?.message ||
+                  data?.message ||
+                  "Unknown error occurred";
                 return `Failed to save avatar: ${errMsg}`;
               },
             },
           }
         );
-
 
         const data = response.data;
         console.log("Avatar saved to the database:", data);
@@ -319,7 +334,7 @@ const AvatarManagement = () => {
           //Reset all the data after they input the avatar
           setGeneratedAvatar(null);
           setDownloadFileName("");
-          setGenerationStyle("");  // Changed from setStyle to setGenerationStyle
+          setGenerationStyle(""); // Changed from setStyle to setGenerationStyle
           setGender("");
           setSkin("");
           setReferenceImage(null);
@@ -334,11 +349,10 @@ const AvatarManagement = () => {
       toast.error("No Avatar to save. Please try again.");
     }
   };
-
   const handleNameSave = async () => {
     if (!selectedAvatar) {
       // showNotification("No avatar selected to update.", "error");
-      toast.info("No avatar selected to update.")
+      toast.info("No avatar selected to update.");
       return;
     }
 
@@ -358,8 +372,8 @@ const AvatarManagement = () => {
       }
 
       // Use PATCH method for updating the avatar name
-      const response = await axios.patch(
-        `http://192.168.1.141:3001/avatar/updateAvatar?id=${avatarId}&email=${email}&name=${newName}`
+      const response = await backendURL.patch(
+        `/avatar/updateAvatar?id=${avatarId}&email=${email}&name=${newName}`
       );
 
       if (response.data.status === "success") {
@@ -370,7 +384,7 @@ const AvatarManagement = () => {
         );
         setIsEditing(false);
         // showNotification("Avatar name updated successfully!", "success");
-        toast.success("Avatar name updated successfully!")
+        toast.success("Avatar name updated successfully!");
       } else {
         throw new Error(
           response.data.message || "Failed to update avatar name"
@@ -410,8 +424,8 @@ const AvatarManagement = () => {
 
       // Use PATCH method for deleting the avatar
       const email = localStorage.getItem("userEmail");
-      const response = await axios.delete(
-        `http://192.168.1.141:3001/avatar/delete?id=${avatarId}&email=${email}`
+      const response = await backendURL.delete(
+        `/avatar/delete?id=${avatarId}&email=${email}`
       );
 
       if (response.data.status === "success") {
@@ -430,302 +444,302 @@ const AvatarManagement = () => {
 
   return (
     // CONTAINER
-    <div className = "px-[100px] flex flex-col"> 
+    <div className="px-[100px] flex flex-col">
       {/* MAIN CONTENT */}
       <div className="grid grid-cols-6 grid-rows-6 gap-5">
-          {/* UPPER LEFT - FILTER */}
-          <div className="col-span-4 row-span-2 bg-white p-4 rounded-xl shadow-lg">
-            {/* FILTER */}
-            <div className="mb-4 sm:mb-6">
-              <h3 className="text-[#9B25A7] font-bold text-lg sm:text-xl ">
-                Settings
-              </h3>
-              <hr className="border-t border-[#9B25A7] my-4" />
-              <div className="flex flex-col gap-4">
-                <div className="w-full">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Avatar Name
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Enter Avatar Name"
-                    value={avatarName}
-                    onChange={handleAvatarNameChange}
-                    className="w-full p-2 sm:p-3 border border-[#9B25A7] rounded-md text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent focus:outline-none"
-                  />
-                </div>
-                {/* Dropdown */}
-                <div className="w-full">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Avatar Style
-                  </label>
-                  <div className="relative">
-                    <button
-                      className="w-full p-2 sm:p-3 border border-[#9B25A7] rounded-md text-sm text-gray-700 flex justify-between items-center focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent"
-                      onClick={() => setFilterDropdownOpen(!filterDropdownOpen)}
-                    >
-                      <span>{style || "Select an Option"}</span>
-                      <ChevronDown
-                        size={16}
-                        className={`transition-transform ${
-                          filterDropdownOpen ? "rotate-180" : ""
-                        }`}
-                      />
-                    </button>
-                    {filterDropdownOpen && (
-                      <div className="absolute w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-10">
-                        {[
-                          "All",
-                          "Realistic",
-                          "Cartoon",
-                          "Anime",
-                          "Fantasy",
-                          "Surrealism",
-                          "Steampunk",
-                        ].map((option) => (
-                          <div
-                            key={option}
-                            className="p-2 sm:p-3 hover:bg-[#E3C5F0] text-sm cursor-pointer"
-                            onClick={() => handleStyleChange(option)}
-                          >
-                            {option}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
+        {/* UPPER LEFT - FILTER */}
+        <div className="col-span-4 row-span-2 bg-white p-4 rounded-xl shadow-lg">
+          {/* FILTER */}
+          <div className="mb-4 sm:mb-6">
+            <h3 className="text-[#9B25A7] font-bold text-lg sm:text-xl ">
+              Settings
+            </h3>
+            <hr className="border-t border-[#9B25A7] my-4" />
+            <div className="flex flex-col gap-4">
+              <div className="w-full">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Avatar Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter Avatar Name"
+                  value={avatarName}
+                  onChange={handleAvatarNameChange}
+                  className="w-full p-2 sm:p-3 border border-[#9B25A7] rounded-md text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent focus:outline-none"
+                />
               </div>
-            </div>
-          </div>
-          {/* WHOLE RIGHT PANEL - AVATAR PREVIEW*/}
-          <div className="col-span-6 row-span-6 col-start-5 bg-white p-4 rounded-xl shadow-lg">
-            <div className="md:col-span-5  flex flex-col h-fit">
-              <h3 className="text-[#9B25A7] font-bold text-lg sm:text-xl">
-                Avatar Preview
-              </h3>
-              <hr className="border-t border-[#9B25A7] my-4" />
-              <div className="flex-1 flex items-center justify-center rounded-lg overflow-auto">
-                {selectedAvatar ? (
-                  <div className="flex flex-row gap-4 bg-white rounded-lg overflow-auto p-4 w-[550px] " >
-                    <div className="relative mb-4 flex justify-center w-[500px] h-[700px]  rounded-md p-3">
-                      <img
-                        src={selectedAvatar.imgSrc}
-                        alt={selectedAvatar.name}
-                        className="rounded-lg w-full h-full object-cover"
-                      />
-                    </div>
-
-                    <div className="flex flex-col justify-between w-full h-[700px]">
-                      <div className="space-y-2 mb-4 w-full shrink-0">
-                        <div className="space-y-2 mb-4 w-full">
-                          <label className="block text-sm font-medium text-gray-700">
-                            Name
-                          </label>
-                          <div className="flex items-center border rounded-lg p-2 w-full">
-                            {isEditing ? (
-                              <input
-                                type="text"
-                                value={editedName}
-                                onChange={(e) => setEditedName(e.target.value)}
-                                className="flex-grow outline-none px-2"
-                                autoFocus
-                              />
-                            ) : (
-                              <span className="flex-grow">
-                                {selectedAvatar.name.charAt(0).toUpperCase() +
-                                  selectedAvatar.name.slice(1)}
-                              </span>
-                            )}
-                            {!isEditing && (
-                              <Pencil
-                                size={20}
-                                className="text-gray-500 cursor-pointer"
-                                onClick={handleNameEdit}
-                              />
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-2 mb-4 w-full">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                              ID
-                            </label>
-                            <div className="bg-gray-100 rounded-lg p-2 w-full">
-                              {selectedAvatar.id}
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                              Style
-                            </label>
-                            <div className="bg-gray-100 rounded-lg p-2 w-full">
-                              {(selectedAvatar.style || "N/A").replace(
-                                /^\w/,
-                                (c) => c.toUpperCase()
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2 w-full">
-                        {isEditing ? (
-                          <>
-                            <button
-                              className="w-full bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-[#7A1C86] transition"
-                              onClick={handleNameSave}
-                            >
-                              <Save size={16} /> Save Changes
-                            </button>
-                            <button
-                              className="w-full bg-gray-500 text-white py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-600 transition"
-                              onClick={() => setIsEditing(false)}
-                            >
-                              Cancel
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              className="w-full bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] py-2 rounded-lg flex items-center justify-center gap-2 transition"
-                              onClick={() => setIsEditing(true)}
-                            >
-                              <Pencil size={16} /> Edit Avatar
-                            </button>
-                            <button
-                              className="w-full bg-white border border-[#9B25A7] text-[#9B25A7] py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-[#F4E3F8] transition"
-                              onClick={handleDownloadSelectedAvatar}
-                            >
-                              <Download size={16} /> Download Avatar
-                            </button>
-                            <button
-                              className="w-full bg-[#D31515] text-white py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-red-600 transition"
-                              onClick={handleDeleteAvatar}
-                            >
-                              <Trash2 size={16} /> Delete
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center text-gray-500 p-8">
-                    <div className="w-32 h-32 sm:w-40 sm:h-40 mx-auto border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center mb-4">
-                      <Plus size={32} className="text-gray-300" />
-                    </div>
-                    <p className="text-base sm:text-lg">No Avatar Selected</p>
-                    <p className="text-sm mt-2 max-w-md mx-auto">
-                      {myAvatars.length === 0
-                        ? style
-                          ? `No avatars available in ${style} style. Try selecting a different style or create a new avatar.`
-                          : "No avatars exist in your collection. Start by creating your first avatar!"
-                        : "Choose an avatar from the list or create a new one"}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-          {/* BOTTOM LEFT - AVATAR SELECTION */}
-          <div className="col-span-4 row-span-4 row-start-3 bg-white p-4 rounded-xl shadow-lg">
-            <div className="flex-1 flex flex-col min-h-fit">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <h3 className="text-[#9B25A7] font-bold text-lg sm:text-xl">
-                  My Avatars
-                </h3>
-                <div className="flex flex-wrap gap-2">
+              {/* Dropdown */}
+              <div className="w-full">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Avatar Style
+                </label>
+                <div className="relative">
                   <button
-                    className="w-full sm:w-auto bg-[#9B25A7] text-white text-sm py-2 px-4 cursor-pointer rounded-md flex items-center gap-1 hover:bg-[#7A1C86] transition-colors"
-                    onClick={() => setIsModalOpen(true)}
+                    className="w-full p-2 sm:p-3 border border-[#9B25A7] rounded-md text-sm text-gray-700 flex justify-between items-center focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent"
+                    onClick={() => setFilterDropdownOpen(!filterDropdownOpen)}
                   >
-                    <Plus size={16} /> New Avatar
-                  </button>
-                  <label className="w-full sm:w-auto bg-white border border-[#9B25A7] text-[#9B25A7] text-sm py-2 px-4 rounded-md flex items-center gap-1 cursor-pointer hover:bg-[#F4E3F8] transition-colors">
-                    <Upload size={16} /> Import
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      // onChange={handleFileUpload}
+                    <span>{style || "Select an Option"}</span>
+                    <ChevronDown
+                      size={16}
+                      className={`transition-transform ${
+                        filterDropdownOpen ? "rotate-180" : ""
+                      }`}
                     />
-                  </label>
-                </div>
-              </div>
-              <hr className="border-t border-[#9B25A7] my-4" />
-              {/* Scrollable grid container with fixed max-height */}
-              <div className="max-h-[600px] overflow-y-auto p-4">
-                {isLoading ? (
-                  <div className="flex items-center justify-center h-full">
-                    <RefreshCw className="w-8 h-8 text-[#9B25A7] animate-spin" />
-                  </div>
-                ) : myAvatars.length > 0 ? (
-                  <div className="h-[calc(100vh - 400px)] overflow-y-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
-                    {myAvatars.map((avatar) => (
-                      <div
-                        key={avatar.id}
-                        className={`border ${
-                          selectedAvatar?.id === avatar.id
-                            ? "border-[#9B25A7] bg-[#F4E3F8]"
-                            : "border-gray-300"
-                        } rounded-lg p-3 cursor-pointer transition-all hover:shadow-md`}
-                        onClick={() => setSelectedAvatar(avatar)}
-                      >
-                        {/* Existing avatar card content remains the same */}
-                        <div className="flex justify-center items-center overflow-hidden rounded-lg mb-2">
-                          <div className="w-auto max-w-[80px] md:max-w-[96px] lg:max-w-[112px] aspect-[9/16]">
-                            <img
-                              src={avatar.imgSrc}
-                              alt={avatar.name}
-                              className="w-full h-full object-cover rounded-lg"
-                              onError={(e) => {
-                                console.error("Image load error:", {
-                                  id: avatar.id,
-                                  style: avatar.style,
-                                  imgSrcStart:
-                                    avatar.imgSrc?.substring(0, 50) + "...",
-                                });
-                                e.target.onerror = null;
-                                e.target.src = "placeholder-avatar.png";
-                              }}
-                            />
-                          </div>
+                  </button>
+                  {filterDropdownOpen && (
+                    <div className="absolute w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-10">
+                      {[
+                        "All",
+                        "Realistic",
+                        "Cartoon",
+                        "Anime",
+                        "Fantasy",
+                        "Surrealism",
+                        "Steampunk",
+                      ].map((option) => (
+                        <div
+                          key={option}
+                          className="p-2 sm:p-3 hover:bg-[#E3C5F0] text-sm cursor-pointer"
+                          onClick={() => handleStyleChange(option)}
+                        >
+                          {option}
                         </div>
-                        <p className="text-center text-sm font-medium truncate">
-                          {avatar.name}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-                    <div className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center mb-4">
-                      <Plus size={32} className="text-gray-300" />
+                      ))}
                     </div>
-                    <p className="text-lg font-medium mb-2">
-                      No Avatars Available
-                    </p>
-                    <p className="text-sm text-center max-w-md">
-                      {style !== ""
-                        ? `No avatars found in ${style} style category. Try selecting a different style or create a new avatar.`
-                        : "No avatars exist in your collection. Try generating one or import from your device."}
-                    </p>
-                    <button
-                      onClick={() => setIsModalOpen(true)}
-                      className="mt-4 px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] transition-colors flex items-center gap-2"
-                    >
-                      <Plus size={16} /> Create New Avatar
-                    </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
           </div>
+        </div>
+        {/* WHOLE RIGHT PANEL - AVATAR PREVIEW*/}
+        <div className="col-span-6 row-span-6 col-start-5 bg-white p-4 rounded-xl shadow-lg">
+          <div className="md:col-span-5  flex flex-col h-fit">
+            <h3 className="text-[#9B25A7] font-bold text-lg sm:text-xl">
+              Avatar Preview
+            </h3>
+            <hr className="border-t border-[#9B25A7] my-4" />
+            <div className="flex-1 flex items-center justify-center rounded-lg overflow-auto">
+              {selectedAvatar ? (
+                <div className="flex flex-row gap-4 bg-white rounded-lg overflow-auto p-4 w-[550px] ">
+                  <div className="relative mb-4 flex justify-center w-[500px] h-[700px]  rounded-md p-3">
+                    <img
+                      src={selectedAvatar.imgSrc}
+                      alt={selectedAvatar.name}
+                      className="rounded-lg w-full h-full object-cover"
+                    />
+                  </div>
+
+                  <div className="flex flex-col justify-between w-full h-[700px]">
+                    <div className="space-y-2 mb-4 w-full shrink-0">
+                      <div className="space-y-2 mb-4 w-full">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Name
+                        </label>
+                        <div className="flex items-center border rounded-lg p-2 w-full">
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editedName}
+                              onChange={(e) => setEditedName(e.target.value)}
+                              className="flex-grow outline-none px-2"
+                              autoFocus
+                            />
+                          ) : (
+                            <span className="flex-grow">
+                              {selectedAvatar.name.charAt(0).toUpperCase() +
+                                selectedAvatar.name.slice(1)}
+                            </span>
+                          )}
+                          {!isEditing && (
+                            <Pencil
+                              size={20}
+                              className="text-gray-500 cursor-pointer"
+                              onClick={handleNameEdit}
+                            />
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-2 mb-4 w-full">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">
+                            ID
+                          </label>
+                          <div className="bg-gray-100 rounded-lg p-2 w-full">
+                            {selectedAvatar.id}
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">
+                            Style
+                          </label>
+                          <div className="bg-gray-100 rounded-lg p-2 w-full">
+                            {(selectedAvatar.style || "N/A").replace(
+                              /^\w/,
+                              (c) => c.toUpperCase()
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 w-full">
+                      {isEditing ? (
+                        <>
+                          <button
+                            className="w-full bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-[#7A1C86] transition"
+                            onClick={handleNameSave}
+                          >
+                            <Save size={16} /> Save Changes
+                          </button>
+                          <button
+                            className="w-full bg-gray-500 text-white py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-600 transition"
+                            onClick={() => setIsEditing(false)}
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            className="w-full bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] py-2 rounded-lg flex items-center justify-center gap-2 transition"
+                            onClick={() => setIsEditing(true)}
+                          >
+                            <Pencil size={16} /> Edit Avatar
+                          </button>
+                          <button
+                            className="w-full bg-white border border-[#9B25A7] text-[#9B25A7] py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-[#F4E3F8] transition"
+                            onClick={handleDownloadSelectedAvatar}
+                          >
+                            <Download size={16} /> Download Avatar
+                          </button>
+                          <button
+                            className="w-full bg-[#D31515] text-white py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-red-600 transition"
+                            onClick={handleDeleteAvatar}
+                          >
+                            <Trash2 size={16} /> Delete
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center text-gray-500 p-8">
+                  <div className="w-32 h-32 sm:w-40 sm:h-40 mx-auto border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center mb-4">
+                    <Plus size={32} className="text-gray-300" />
+                  </div>
+                  <p className="text-base sm:text-lg">No Avatar Selected</p>
+                  <p className="text-sm mt-2 max-w-md mx-auto">
+                    {myAvatars.length === 0
+                      ? style
+                        ? `No avatars available in ${style} style. Try selecting a different style or create a new avatar.`
+                        : "No avatars exist in your collection. Start by creating your first avatar!"
+                      : "Choose an avatar from the list or create a new one"}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        {/* BOTTOM LEFT - AVATAR SELECTION */}
+        <div className="col-span-4 row-span-4 row-start-3 bg-white p-4 rounded-xl shadow-lg">
+          <div className="flex-1 flex flex-col min-h-fit">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <h3 className="text-[#9B25A7] font-bold text-lg sm:text-xl">
+                My Avatars
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  className="w-full sm:w-auto bg-[#9B25A7] text-white text-sm py-2 px-4 cursor-pointer rounded-md flex items-center gap-1 hover:bg-[#7A1C86] transition-colors"
+                  onClick={() => setIsModalOpen(true)}
+                >
+                  <Plus size={16} /> New Avatar
+                </button>
+                <label className="w-full sm:w-auto bg-white border border-[#9B25A7] text-[#9B25A7] text-sm py-2 px-4 rounded-md flex items-center gap-1 cursor-pointer hover:bg-[#F4E3F8] transition-colors">
+                  <Upload size={16} /> Import
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    // onChange={handleFileUpload}
+                  />
+                </label>
+              </div>
+            </div>
+            <hr className="border-t border-[#9B25A7] my-4" />
+            {/* Scrollable grid container with fixed max-height */}
+            <div className="max-h-[600px] overflow-y-auto p-4">
+              {isLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <RefreshCw className="w-8 h-8 text-[#9B25A7] animate-spin" />
+                </div>
+              ) : myAvatars.length > 0 ? (
+                <div className="h-[calc(100vh - 400px)] overflow-y-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
+                  {myAvatars.map((avatar) => (
+                    <div
+                      key={avatar.id}
+                      className={`border ${
+                        selectedAvatar?.id === avatar.id
+                          ? "border-[#9B25A7] bg-[#F4E3F8]"
+                          : "border-gray-300"
+                      } rounded-lg p-3 cursor-pointer transition-all hover:shadow-md`}
+                      onClick={() => setSelectedAvatar(avatar)}
+                    >
+                      {/* Existing avatar card content remains the same */}
+                      <div className="flex justify-center items-center overflow-hidden rounded-lg mb-2">
+                        <div className="w-auto max-w-[80px] md:max-w-[96px] lg:max-w-[112px] aspect-[9/16]">
+                          <img
+                            src={avatar.imgSrc}
+                            alt={avatar.name}
+                            className="w-full h-full object-cover rounded-lg"
+                            onError={(e) => {
+                              console.error("Image load error:", {
+                                id: avatar.id,
+                                style: avatar.style,
+                                imgSrcStart:
+                                  avatar.imgSrc?.substring(0, 50) + "...",
+                              });
+                              e.target.onerror = null;
+                              e.target.src = "placeholder-avatar.png";
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <p className="text-center text-sm font-medium truncate">
+                        {avatar.name}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+                  <div className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center mb-4">
+                    <Plus size={32} className="text-gray-300" />
+                  </div>
+                  <p className="text-lg font-medium mb-2">
+                    No Avatars Available
+                  </p>
+                  <p className="text-sm text-center max-w-md">
+                    {style !== ""
+                      ? `No avatars found in ${style} style category. Try selecting a different style or create a new avatar.`
+                      : "No avatars exist in your collection. Try generating one or import from your device."}
+                  </p>
+                  <button
+                    onClick={() => setIsModalOpen(true)}
+                    className="mt-4 px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] transition-colors flex items-center gap-2"
+                  >
+                    <Plus size={16} /> Create New Avatar
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
       {/* OTHER CONTENTS */}
-       {/* Modal for New Avatar - Fixed dimensions with internal scrolling */}
+      {/* Modal for New Avatar - Fixed dimensions with internal scrolling */}
       {isModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 z-50">
           <div className="relative bg-white p-6 rounded-lg shadow-xl w-full max-w-5xl flex flex-col lg:flex-row max-h-[90vh] gap-4 overflow-hidden">
@@ -733,7 +747,7 @@ const AvatarManagement = () => {
             <button
               onClick={() => {
                 setIsModalOpen(false);
-                setGenerationStyle("");  // Reset generation style when closing modal
+                setGenerationStyle(""); // Reset generation style when closing modal
                 setGender("");
                 setSkin("");
                 setReferenceImage(null);
@@ -761,7 +775,9 @@ const AvatarManagement = () => {
                   <div className="relative">
                     <button
                       className="w-full p-3 border border-gray-300 rounded-lg text-sm text-gray-700 flex justify-between items-center focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent"
-                      onClick={() => setGenerationDropdownOpen(!generationDropdownOpen)}
+                      onClick={() =>
+                        setGenerationDropdownOpen(!generationDropdownOpen)
+                      }
                     >
                       <span>{generationStyle || "Select Style"}</span>
                       <ChevronDown
@@ -879,7 +895,6 @@ const AvatarManagement = () => {
                     </button>
                   </div>
                 </div>
-
 
                 {/* Reference Image Preview */}
                 {referenceImage && (
@@ -1008,7 +1023,6 @@ const AvatarManagement = () => {
         onCapture={handleCameraCapture}
       />
 
-  
       <ToastContainer
         position="top-right"
         autoClose={3000}
@@ -1029,7 +1043,7 @@ const AvatarManagement = () => {
           onCapture={handleCameraCapture}
         />
       )}
-    </div> 
+    </div>
   );
 };
 

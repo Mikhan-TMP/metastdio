@@ -8,11 +8,14 @@ import {
   RefreshCw,
   ChevronDown,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, backIn } from "framer-motion";
 import ResponsiveTabs from "./ResponsiveTabs";
 import AudioManagerUI from "./audio-manager-ui"; // Import the AudioManagerUI component
 import VoiceGenerator from "./voice-generator"; // Import the VoiceGenerator component
 import JSZip from "jszip"; // Import JSZip for extracting zip files
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { backendURL } from "../../../../utils/api";
 
 const AudioScript = () => {
   const [currentView, setCurrentView] = useState("script");
@@ -103,7 +106,7 @@ const AudioScript = () => {
       !voiceType ||
       !numberOfScenes
     ) {
-      alert("Please fill in all required fields.");
+      toast.error("Please fill in all required fields.");
       return;
     }
 
@@ -138,14 +141,14 @@ const AudioScript = () => {
         }
       );
       setGeneratedScript(response.data.script);
-      setSuccessMessage("Script generated successfully!");
+      toast.success("Script generated successfully!");
       setErrorMessage("");
     } catch (error) {
       if (axios.isCancel(error)) {
         console.log("Request canceled", error.message);
       } else {
         console.error("Error generating script:", error);
-        setErrorMessage(
+        toast.error(
           "Failed to generate script. Please check the console for more details."
         );
         setSuccessMessage("");
@@ -279,20 +282,25 @@ const AudioScript = () => {
         console.log("Zip Blob Size:", zipBlob.size); // Log blob size for debugging
       }
 
-      setSuccessMessage("Audio and zip files generated successfully!");
+      toast.success("Audio and zip files generated successfully!");
     } catch (error) {
       console.error("Error generating audio and zip files:", error);
-      setErrorMessage(
-        "Failed to generate audio and zip files. Please try again."
-      );
+      toast.error("Failed to generate audio and zip files. Please try again.");
     } finally {
       setIsGeneratingAudio(false);
     }
   };
 
+  const [isSentToAPI, setIsSentToAPI] = useState(false); // New state to track if the audio has been sent
+
   const handleSendAudioToAPI = async () => {
     if (!zipUrl) {
-      alert("No zip file available to process.");
+      toast.error("No zip file available to process.");
+      return;
+    }
+
+    if (isSentToAPI) {
+      toast.info("Audio has already been sent to the API.");
       return;
     }
 
@@ -327,7 +335,7 @@ const AudioScript = () => {
       // Retrieve email from localStorage
       const email = localStorage.getItem("userEmail");
       if (!email) {
-        alert("No email found in localStorage.");
+        toast.error("No email found in localStorage.");
         return;
       }
 
@@ -336,131 +344,31 @@ const AudioScript = () => {
       const payload = {
         email: email,
         title: folderTitle,
-        audio: audioFiles, //[]
+        audio: audioFiles,
       };
 
       console.log("Payload before sending:", JSON.stringify(payload, null, 2)); // Detailed payload logging
 
       // Send to API
-      try {
-        const apiResponse = await axios.post(
-          "http://192.168.1.141:3001/audio/addAudio",
-          payload,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-            timeout: 10000, // 10-second timeout
-          }
-        );
+      const apiResponse = await backendURL.post("/audio/addAudio", payload, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        timeout: 10000, // 10-second timeout
+      });
 
-        console.log("Full API Response:", apiResponse);
+      console.log("Full API Response:", apiResponse);
 
-        if (apiResponse.status === 200 || apiResponse.status === 201) {
-          alert("Audio files successfully sent to the API.");
-        } else {
-          alert(`API responded with status: ${apiResponse.status}`);
-        }
-      } catch (apiError) {
-        console.error("API Error Details:", {
-          message: apiError.message,
-          response: apiError.response?.data,
-          status: apiError.response?.status,
-          headers: apiError.response?.headers,
-        });
-
-        if (apiError.response) {
-          // The request was made and the server responded with a status code
-          alert(
-            `Error sending to API: ${
-              apiError.response.status
-            } - ${JSON.stringify(apiError.response.data)}`
-          );
-        } else if (apiError.request) {
-          // The request was made but no response was received
-          alert("No response received from the API. Check network connection.");
-        } else {
-          // Something happened in setting up the request
-          alert(`Error setting up API request: ${apiError.message}`);
-        }
+      if (apiResponse.status === 200 || apiResponse.status === 201) {
+        toast.success("Audio files successfully sent to the API.");
+        setIsSentToAPI(true); // Disable the button after successful API call
+      } else {
+        toast.error(`API responded with status: ${apiResponse.status}`);
       }
     } catch (error) {
-      console.error("Zip Processing Error:", error);
-      alert(`Error processing zip file: ${error.message}`);
+      console.error("Error sending audio to API:", error);
+      toast.error("Failed to send audio to the API. Please try again.");
     }
-  };
-
-  // Alert component
-  const Alert = ({ message, type, onClose }) => {
-    return (
-      <AnimatePresence>
-        {message && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8, y: -20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: -20 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
-            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 z-50"
-          >
-            <div
-              className={`relative max-w-sm w-full p-5 rounded-lg shadow-lg flex items-center gap-3 border ${
-                type === "success"
-                  ? "bg-green-100 text-green-800 border-green-300"
-                  : type === "generating"
-                  ? "bg-blue-100 text-blue-800 border-blue-300"
-                  : "bg-red-100 text-red-800 border-red-300"
-              }`}
-            >
-              {/* Icon */}
-              {type === "success" ? (
-                <svg
-                  className="w-6 h-6 text-green-600"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M5 13l4 4L19 7"
-                  ></path>
-                </svg>
-              ) : type === "generating" ? (
-                <RefreshCw className="w-6 h-6 text-blue-600 animate-spin" />
-              ) : (
-                <svg
-                  className="w-6 h-6 text-red-600"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M6 18L18 6M6 6l12 12"
-                  ></path>
-                </svg>
-              )}
-
-              {/* Message */}
-              <p className="font-semibold text-sm md:text-base">{message}</p>
-
-              {/* Close Button */}
-              <motion.button
-                whileHover={{ scale: 1.2 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={onClose}
-                className="absolute top-2 right-2 text-gray-600 hover:text-gray-900 transition-all"
-              >
-                &times;
-              </motion.button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    );
   };
 
   const handleCancelGeneration = () => {
@@ -468,7 +376,7 @@ const AudioScript = () => {
       abortController.abort();
       setIsGeneratingScript(false);
       setAbortController(null);
-      setErrorMessage("Script generation canceled.");
+      toast.info("Script generation canceled.");
     }
   };
 
@@ -656,25 +564,6 @@ const AudioScript = () => {
               />
             </div>
 
-            {/* <div>
-              <label
-                className="block text-sm font-medium text-gray-700 mb-2"
-                style={{ color: "black" }}
-              >
-                Prompt Length
-              </label>
-              <select
-                className="w-full border rounded-lg p-2 md:p-3 bg-white text-gray-700 text-sm"
-                value={promptLength}
-                onChange={(e) => setPromptLength(e.target.value)}
-                style={{ color: "black" }}
-              >
-                <option value="short">Short</option>
-                <option value="medium">Medium</option>
-                <option value="long">Long</option>
-              </select>
-            </div> */}
-
             <textarea
               className="w-full p-2 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-[#9B25A7] focus:border-transparent focus:outline-none"
               placeholder="Enter your script generation prompt..."
@@ -685,25 +574,23 @@ const AudioScript = () => {
 
             <button
               onClick={handleGenerateScript}
-              className="w-full px-4 py-2 bg-[#9B25A7] text-white rounded hover:bg-[#871f90] text-sm md:text-base"
+              disabled={isGeneratingScript} // Disable the button when generating
+              className={`w-full px-4 py-2 rounded text-sm md:text-base text-white ${
+                isGeneratingScript
+                  ? "bg-[#E3C5F0] cursor-not-allowed" // Disabled style
+                  : "bg-[#9B25A7] hover:bg-[#871f90]" // Enabled style
+              }`}
             >
-              Generate Script
+              {isGeneratingScript ? (
+                <span className="flex items-center justify-center">
+                  <RefreshCw size={16} className="animate-spin mr-2" />{" "}
+                  Generating...
+                </span>
+              ) : (
+                "Generate Script"
+              )}
             </button>
           </div>
-
-          {/* Success Message Modal */}
-          <Alert
-            message={successMessage}
-            type="success"
-            onClose={() => setSuccessMessage("")}
-          />
-
-          {/* Error Message Modal */}
-          <Alert
-            message={errorMessage}
-            type="error"
-            onClose={() => setErrorMessage("")}
-          />
         </div>
       </div>
     </div>
@@ -880,7 +767,7 @@ const AudioScript = () => {
       </div>
       {showModal && (
         <div
-          className={`fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-2 sm:p-4 z-50 ${
+          className={`fixed inset-0 flex items-center justify-centerbg-black/50 backdrop-blur-sm bg-opacity-50 p-2 sm:p-4 z-50 ${
             isModalMinimized ? "hidden" : ""
           }`}
         >
@@ -960,9 +847,12 @@ const AudioScript = () => {
                     </a>
                     <button
                       onClick={handleSendAudioToAPI}
-                      className="px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] transition-colors"
+                      disabled={isSentToAPI} // Disable the button if already sent
+                      className={`px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] transition-colors ${
+                        isSentToAPI ? "cursor-not-allowed opacity-50" : ""
+                      }`}
                     >
-                      Send to API
+                      {isSentToAPI ? "Sent" : "Send to API"}
                     </button>
                   </div>
                 )}
@@ -979,16 +869,19 @@ const AudioScript = () => {
                     disabled={isGeneratingAudio}
                     className="w-full sm:w-auto px-4 py-2 bg-[#9B25A7] text-white rounded-md hover:bg-[#7A1C86] transition-colors flex items-center justify-center gap-2 disabled:bg-[#E3C5F0]"
                   >
-                    <Volume2 size={16} />
-                    {isGeneratingAudio ? "Generating..." : "Generate Audio"}
+                    {isGeneratingAudio ? (
+                      <span className="flex items-center justify-center">
+                        <RefreshCw size={16} className="animate-spin mr-2" />{" "}
+                        Generating...
+                      </span>
+                    ) : (
+                      <>
+                        <Volume2 size={16} />
+                        Generate Audio
+                      </>
+                    )}
                   </button>
                 </div>
-                {/* <button
-            onClick={() => setShowModal(false)}
-            className="w-full sm:w-auto px-6 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
-          >
-            Close
-          </button> */}
               </div>
             </div>
           </div>
@@ -999,20 +892,15 @@ const AudioScript = () => {
       {isModalMinimized && (
         <button
           onClick={() => setIsModalMinimized(false)} // Reopen the modal
-          className="fixed bottom-4 right-4 px-4 py-2 bg-blue-500 text-white rounded-lg shadow-lg hover:bg-blue-600 z-50"
+          className="fixed bottom-4 right-4 px-4 py-2 bg-[#9B25A7] text-white rounded-lg shadow-lg hover:bg-[#7A1C86] z-50"
         >
           Reopen Modal
         </button>
       )}
 
       {/* Loading Notice */}
-      {isGeneratingScript && (
-        <Alert
-          message="Generating script, please wait..."
-          type="generating"
-          onClose={handleCancelGeneration}
-        />
-      )}
+      {isGeneratingScript && toast.info("Generating script, please wait...")}
+      <ToastContainer />
     </div>
   );
 };

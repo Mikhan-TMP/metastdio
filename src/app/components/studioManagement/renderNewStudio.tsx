@@ -1,74 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Upload, RefreshCw, ChevronDown, Plus } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
-
-// Alert component
-const Alert = ({ message, type, onClose }) => {
-  return (
-    <AnimatePresence>
-      {message && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8, y: -20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.8, y: -20 }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
-          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 z-50"
-        >
-          <div
-            className={`relative max-w-sm w-full p-5 rounded-lg shadow-lg flex items-center gap-3 border ${
-              type === "success"
-                ? "bg-green-100 text-green-800 border-green-300"
-                : type === "generating"
-                ? "bg-blue-100 text-blue-800 border-blue-300"
-                : "bg-red-100 text-red-800 border-red-300"
-            }`}
-          >
-            {type === "success" ? (
-              <svg
-                className="w-6 h-6 text-green-600"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M5 13l4 4L19 7"
-                ></path>
-              </svg>
-            ) : type === "generating" ? (
-              <RefreshCw className="w-6 h-6 text-blue-600 animate-spin" />
-            ) : (
-              <svg
-                className="w-6 h-6 text-red-600"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                ></path>
-              </svg>
-            )}
-            <p className="font-semibold text-sm md:text-base">{message}</p>
-            <motion.button
-              whileHover={{ scale: 1.2 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={onClose}
-              className="absolute top-2 right-2 text-black-600 hover:text-black-900 transition-all"
-            >
-              &times;
-            </motion.button>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-};
+import { motion } from "framer-motion";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { backendURL } from "../../../../utils/api";
 
 const RenderNewStudio = () => {
   const [promptText, setPromptText] = useState("");
@@ -77,10 +12,8 @@ const RenderNewStudio = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [generatedImageUrl, setGeneratedImageUrl] = useState("");
-  const [notification, setNotification] = useState("");
-  const [notificationType, setNotificationType] = useState("");
-  const [dropdownOpen, setDropdownOpen] = useState(false); // Define dropdownOpen state
-  const [style, setStyle] = useState(""); // Define style state
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [style, setStyle] = useState("");
 
   // Cleanup previous object URLs
   useEffect(() => {
@@ -108,14 +41,14 @@ const RenderNewStudio = () => {
 
   const handleSubmit = async () => {
     if (!promptText.trim()) {
-      setError("Please enter a prompt.");
+      toast.error("Please enter a prompt.");
       return;
     }
 
     setIsLoading(true);
     setError("");
-    setNotification("Generating your studio...", "generating");
-    setNotificationType("generating");
+
+    const toastId = toast.loading("Generating your studio...");
 
     try {
       const formData = new FormData();
@@ -152,13 +85,20 @@ const RenderNewStudio = () => {
         localStorage.setItem("lastGeneratedImage", imageUrl); // Example usage of localStorage
       }
 
-      setNotification("Studio generated successfully!", "success");
-      setNotificationType("success");
+      toast.update(toastId, {
+        render: "Studio generated successfully!",
+        type: "success",
+        isLoading: false,
+        autoClose: 3000,
+      });
     } catch (err) {
       console.error("Fetch Error:", err);
-      setError(`Failed to generate: ${err.message}`);
-      setNotification(`Failed to generate: ${err.message}`, "error");
-      setNotificationType("error");
+      toast.update(toastId, {
+        render: `Failed to generate: ${err.message}`,
+        type: "error",
+        isLoading: false,
+        autoClose: 3000,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -177,17 +117,19 @@ const RenderNewStudio = () => {
 
   const handleSaveToLibrary = async () => {
     if (!promptText.trim() || !style.trim()) {
-      setError("Both name and type are required.");
+      toast.error("Both name and type are required.");
       return;
     }
 
     if (!generatedImageUrl) {
-      setError("No generated image to save.");
+      toast.error("No generated image to save.");
       return;
     }
 
     setError("");
     setIsLoading(true);
+
+    const toastId = toast.loading("Saving to library...");
 
     try {
       // Convert the image to base64
@@ -199,7 +141,7 @@ const RenderNewStudio = () => {
         const base64Image = reader.result.split(",")[1]; // Extract base64 string
 
         const response = await fetch(
-          "http://192.168.1.141:3001/studio/addStudio",
+          `${backendURL.defaults.baseURL}/studio/addStudio`,
           {
             method: "POST",
             headers: {
@@ -221,16 +163,23 @@ const RenderNewStudio = () => {
 
         const result = await response.json();
         console.log("Studio saved successfully:", result);
-        setNotification("Studio saved successfully!", "success");
-        setNotificationType("success");
+        toast.update(toastId, {
+          render: "Studio saved successfully!",
+          type: "success",
+          isLoading: false,
+          autoClose: 3000,
+        });
       };
 
       reader.readAsDataURL(blob); // Read the blob as a base64 string
     } catch (err) {
       console.error("Save Error:", err);
-      setError(`Failed to save: ${err.message}`);
-      setNotification(`Failed to save: ${err.message}`, "error");
-      setNotificationType("error");
+      toast.update(toastId, {
+        render: `Failed to save: ${err.message}`,
+        type: "error",
+        isLoading: false,
+        autoClose: 3000,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -240,7 +189,6 @@ const RenderNewStudio = () => {
 
   return (
     <div className="flex flex-row flex-wrap justify-between items-center content-center gap-y-5 h-full w-full p-6">
-
       {/* Reference Image Upload & AI Generation Prompt */}
       <div className="flex flex-col md:flex-row items-start p-6 gap-6 w-full bg-white shadow-md rounded-2xl">
         {/* Reference Image Upload */}
@@ -305,12 +253,22 @@ const RenderNewStudio = () => {
           />
 
           <button
-            className={`w-full px-4 py-3 bg-[#9B25A7] text-white rounded-lg hover:bg-[#7A1C86] flex items-center justify-center transition font-medium
+            className={`w-full px-4 py-3 rounded-lg flex items-center justify-center transition font-medium ${
+              isLoading
+                ? "bg-[#E3C5F0] text-gray-200 cursor-not-allowed"
+                : "bg-[#9B25A7] text-white hover:bg-[#7A1C86]"
             }`}
             onClick={handleSubmit}
             disabled={isLoading}
           >
-            {isLoading ? "Generating..." : "Generate Studio"}
+            {isLoading ? (
+              <>
+                <RefreshCw className="animate-spin mr-2" />
+                Generating...
+              </>
+            ) : (
+              "Generate Studio"
+            )}
           </button>
         </div>
       </div>
@@ -395,13 +353,17 @@ const RenderNewStudio = () => {
         </div>
       </div>
 
-      
-
-      {/* Alert Component */}
-      <Alert
-        message={notification}
-        type={notificationType}
-        onClose={() => setNotification("")}
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored"
       />
     </div>
   );
