@@ -27,7 +27,12 @@ import {
   ArrowRight,
 } from "lucide-react";
 
-const SceneManagerSidePanel = () => {
+interface SceneManagerSidePanelProps {
+  onSceneSelect: (scene: any) => void; // Update to pass full scene data
+  activeSceneId: number | null;
+}
+
+const SceneManagerSidePanel = ({ onSceneSelect, activeSceneId }: SceneManagerSidePanelProps) => {
   const [selectedScenes, setSelectedScenes] = useState([1]);
   const [expandedScenes, setExpandedScenes] = useState([0]);
 
@@ -62,10 +67,10 @@ const SceneManagerSidePanel = () => {
   };
 
   const toggleSceneSelect = (id) => {
-    if (selectedScenes.includes(id)) {
-      setSelectedScenes(selectedScenes.filter((sceneId) => sceneId !== id));
-    } else {
-      setSelectedScenes([...selectedScenes, id]);
+    const selectedScene = scenes.find(scene => scene.id === id);
+    if (selectedScene) {
+      setSelectedScenes([id]);
+      onSceneSelect(selectedScene);
     }
   };
 
