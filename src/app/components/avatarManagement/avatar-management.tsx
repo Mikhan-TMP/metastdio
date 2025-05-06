@@ -34,7 +34,6 @@ const AvatarManagement = () => {
   const [notificationType, setNotificationType] = useState("info");
   const [downloadFileName, setDownloadFileName] = useState("");
   const [referenceImage, setReferenceImage] = useState(null);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [avatarName, setAvatarName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -44,10 +43,7 @@ const AvatarManagement = () => {
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
   const [generationDropdownOpen, setGenerationDropdownOpen] = useState(false);
   const startEditing = () => setIsEditing(true);
-  const cancelEditing = () => {
-    setEditedName(selectedStudio.name);
-    setIsEditing(false);
-  };
+
 
   const email = localStorage.getItem("userEmail");
 
@@ -1036,13 +1032,6 @@ const AvatarManagement = () => {
         theme="colored"
       />
 
-      {isCameraModalOpen && (
-        <CameraModal
-          isOpen={isCameraModalOpen}
-          onClose={() => setIsCameraModalOpen(false)}
-          onCapture={handleCameraCapture}
-        />
-      )}
     </div>
   );
 };
