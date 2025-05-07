@@ -39,24 +39,83 @@ const SceneManagerUI = () => {
       },
       effects: ["Text Overlay", "Lower Third"]
     },
-    
+    { 
+      id: 2, 
+      name: "Main Point 1", 
+      duration: "00:40", 
+      thumbnail: "🔍",
+      background: { image: "DataBackground.jpg", video: "" },
+      avatar: { name: "Presenter", gesture: "Pointing", emotion: "Confident" },
+      audio: { 
+        dialogues: ["Let's look at the first point", "As you can see..."],
+        music: "Ambient-Loop.mp3",
+        sfx: []
+      },
+      effects: ["Chart Animation", "Highlight"]
+    },
+    { 
+      id: 3, 
+      name: "Interview", 
+      duration: "00:35", 
+      thumbnail: "🎤",
+      background: { image: "InterviewSet.jpg", video: "" },
+      avatar: { 
+        name: ["Presenter", "Guest"], 
+        gesture: ["Gesturing", "Nodding"], 
+        emotion: ["Curious", "Excited"] 
+      },
+      audio: { 
+        dialogues: ["Tell us about your experience", "Thank you for having me..."],
+        music: "Soft-Background.mp3",
+        sfx: ["Applause"]
+      },
+      effects: ["Split Screen", "Name Tag"]
+    },
+    { 
+      id: 4, 
+      name: "Main Point 2", 
+      duration: "00:30", 
+      thumbnail: "📊",
+      background: { image: "Chart.jpg", video: "DataAnimation.mp4" },
+      avatar: { name: "Presenter", gesture: "Explaining", emotion: "Enthusiastic" },
+      audio: { 
+        dialogues: ["Looking at these results", "We can conclude that..."],
+        music: "Ambient-Loop.mp3",
+        sfx: []
+      },
+      effects: ["Data Highlight", "Zoom In"]
+    },
+    { 
+      id: 5, 
+      name: "Conclusion", 
+      duration: "00:20", 
+      thumbnail: "✨",
+      background: { image: "Summary.jpg", video: "" },
+      avatar: { name: "Presenter", gesture: "Open Arms", emotion: "Satisfied" },
+      audio: { 
+        dialogues: ["In conclusion", "Thank you for watching"],
+        music: "Corporate-Outro.mp3",
+        sfx: ["Chime"]
+      },
+      effects: ["Fade Out", "Text Animation"]
+    }
   ];
   
-  const toggleSceneExpand = (id) => {
-    if (expandedScenes.includes(id)) {
-      setExpandedScenes(expandedScenes.filter(sceneId => sceneId !== id));
-    } else {
-      setExpandedScenes([...expandedScenes, id]);
-    }
-  };
+  // const toggleSceneExpand = (id) => {
+  //   if (expandedScenes.includes(id)) {
+  //     setExpandedScenes(expandedScenes.filter(sceneId => sceneId !== id));
+  //   } else {
+  //     setExpandedScenes([...expandedScenes, id]);
+  //   }
+  // };
   
-  const toggleSceneSelect = (id) => {
-    if (selectedScenes.includes(id)) {
-      setSelectedScenes(selectedScenes.filter(sceneId => sceneId !== id));
-    } else {
-      setSelectedScenes([...selectedScenes, id]);
-    }
-  };
+  // const toggleSceneSelect = (id) => {
+  //   if (selectedScenes.includes(id)) {
+  //     setSelectedScenes(selectedScenes.filter(sceneId => sceneId !== id));
+  //   } else {
+  //     setSelectedScenes([...selectedScenes, id]);
+  //   }
+  // };
   
   return (
     <div className="flex flex-col h-screen bg-gray-100">

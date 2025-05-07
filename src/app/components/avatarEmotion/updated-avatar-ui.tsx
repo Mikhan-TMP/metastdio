@@ -1763,7 +1763,7 @@ const AvatarGestureEmotionUI = () => {
         </div>
 
         {/* Center - Preview and Timeline */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col">
           {/* Preview Area - Updated to match modal style */}
           <div className="flex-1 min-h-0 flex flex-col">
             <div className="flex flex-1">

@@ -324,11 +324,6 @@ const AudioManagerUI = () => {
     );
   };
 
-  const mockFolders = [
-    { id: 1, name: "Highway Subway" },
-    { id: 2, name: "Title Test" },
-    { id: 3, name: "Last Test" },
-  ];
 
   const fetchFolders = async () => {
     setLoading((prev) => ({ ...prev, folders: true }));
