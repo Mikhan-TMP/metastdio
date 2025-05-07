@@ -38,23 +38,65 @@ const SceneManagerSidePanel = ({ onSceneSelect, activeSceneId }: SceneManagerSid
 
   // Mock data
   const scenes = [
-    {
-      id: 0,
-      name: "Opening",
-      duration: "00:15",
+    { 
+      id: 0, 
+      name: "Opening", 
+      duration: "00:15", 
       thumbnail: "🏙️",
       background: { image: "City.jpg", video: "CityTimelapseLoop.mp4" },
-      avatar: {
-        name: "Presenter",
-        gesture: "Standing",
-        emotion: "Professional",
-      },
-      audio: {
-        dialogues: ["Welcome to our presentationnnnnnnnnnnnnnnnnnnnnn"],
+      avatar: { name: "Presenter", gesture: "Standing", emotion: "Professional" },
+      audio: { 
+        dialogues: ["Welcome to our presentation"],
         music: "Corporate-Intro.mp3",
-        sfx: [],
+        sfx: []
       },
-      effects: ["Fade In", "Zoom Slow"],
+      effects: ["Fade In", "Zoom Slow"]
+    },
+    { 
+      id: 1, 
+      name: "Introduction", 
+      duration: "00:25", 
+      thumbnail: "👋",
+      background: { image: "OfficeSpace.jpg", video: "" },
+      avatar: { name: "Presenter", gesture: "Wave", emotion: "Friendly" },
+      audio: { 
+        dialogues: ["Hello everyone", "Today we'll discuss..."],
+        music: "Ambient-Loop.mp3",
+        sfx: ["Notification"]
+      },
+      effects: ["Text Overlay", "Lower Third"]
+    },
+    { 
+      id: 3, 
+      name: "Interview", 
+      duration: "00:35", 
+      thumbnail: "🎤",
+      background: { image: "InterviewSet.jpg", video: "" },
+      avatar: { 
+        name: ["Presenter", "Guest"], 
+        gesture: ["Gesturing", "Nodding"], 
+        emotion: ["Curious", "Excited"] 
+      },
+      audio: { 
+        dialogues: ["Tell us about your experience", "Thank you for having me..."],
+        music: "Soft-Background.mp3",
+        sfx: ["Applause"]
+      },
+      effects: ["Split Screen", "Name Tag"]
+    },
+    { 
+      id: 4, 
+      name: "Main Point 2", 
+      duration: "00:30", 
+      thumbnail: "📊",
+      background: { image: "Chart.jpg", video: "DataAnimation.mp4" },
+      avatar: { name: "Presenter", gesture: "Explaining", emotion: "Enthusiastic" },
+      audio: { 
+        dialogues: ["Looking at these results", "We can conclude that..."],
+        music: "Ambient-Loop.mp3",
+        sfx: []
+      },
+      effects: ["Data Highlight", "Zoom In"]
     },
   ];
 
